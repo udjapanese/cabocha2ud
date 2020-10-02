@@ -1,0 +1,470 @@
+{
+    "column_order": [
+        "include_bpos:word",
+        "include_upos:word",
+        "include_upos:parent_word",
+        "match_xpos:word",
+        "match_xpos:parent_word",
+        "include_jp_origin:word",
+        "include_link:word",
+        "include_child_xpos:word",
+        "include_child_case:word",
+        "appos:word",
+        "conj:word",
+        "check_dep:word",
+        "katuyo:word",
+        "is_disf:word"
+    ],
+    "column_mapping": {
+        "include_link:word": "項を持っている",
+        "include_child_xpos:word": "子が特定の日本語品詞",
+        "appos:word": "同格同士だ",
+        "conj:word": "並列同士だ",
+        "check_dep:word": "掛かり先の数字",
+        "match_xpos:word": "係り元の日本語品詞",
+        "match_xpos:parent_word": "係り先の日本語品詞",
+        "katuyo:word": "品詞の活用",
+        "include_child_case:word": "表層格",
+        "include_bpos:word": "文節位置",
+        "is_disf:word": "いいよどみか？",
+        "include_jp_origin:word": "係り元の原形",
+        "include_upos:word": "係り元UDPOS",
+        "include_upos:parent_word": "係り先UDPOS"
+    },
+    "rule": [
+        {
+            "rule": [
+                ["include_bpos", ["word", ["ROOT"]]]
+            ],
+            "res": "root",
+            "__comment": "ROOTはroot"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["NO_HEAD"]]],
+                ["check_dep", ["word", 0]]
+            ],
+            "res": "root",
+            "__comment": "NO_HEADのためのルール"
+        },
+        {
+            "rule": [
+                ["include_upos", ["word", ["PUNCT"]]]
+            ],
+            "res": "punct",
+            "__comment": "PUNCTはpunct"
+        },
+        {
+            "rule": [
+                ["is_disf", ["word"]]
+            ],
+            "res": "reparandum",
+            "__comment": "言いよどみはreparandum"
+        },
+        {
+            "rule": [
+                ["include_upos", ["word", ["CCONJ"]]]
+            ],
+            "res": "cc",
+            "__comment": "CCONJはcc"
+        },
+        {
+            "rule": [
+                ["include_upos", ["word", ["DET"]]]
+            ],
+            "res": "det",
+            "__comment": "DETはdet"
+        },
+        {
+            "rule": [
+                ["include_upos", ["word", ["INTJ"]]]
+            ],
+            "res": "discourse",
+            "__comment": "INTJはdiscourse"
+        },
+        {
+            "rule": [
+                ["match_xpos", ["word", "^補助記号-ＡＡ"]]
+            ],
+            "res": "discourse",
+            "__comment": "顔文字もdiscourse"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["include_child_case", ["word", ["が"]]]
+            ],
+            "res": "nsubj",
+            "__comment": "表層格「が」"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["include_child_case", ["word", ["は"]]]
+            ],
+            "res": "nsubj",
+            "__comment": "表層格「は」"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["include_child_case", ["word", ["を"]]]
+            ],
+            "res": "obj",
+            "__comment": "表層格「を」"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["include_child_case", ["word", ["の"]]]
+            ],
+            "res": "nmod",
+            "__comment": "表層格「の」"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["include_child_case", ["word", ["も", "に"]]]
+            ],
+            "res": "obl",
+            "__comment": "表層格「も」「に」"
+        },
+        {
+            "rule": [
+                ["include_upos", ["word", ["NUM"]]]
+            ],
+            "res": "nummod",
+            "__comment": "NUMはnummod"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["include_upos", ["word", ["ADV"]]]
+            ],
+            "res": "advmod",
+            "__comment": "主辞がADVならadvmodだ"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["include_upos", ["word", ["ADJ"]]]
+            ],
+            "res": "amod",
+            "__comment": "主辞がADJならamodだ"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["match_xpos", ["word", "^形状詞-[助]+"]],
+                ["include_upos", ["parent_word", ["NOUN"]]]
+            ],
+            "res": "amod",
+            "__comment": "よう,そうの場合"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["match_xpos", ["word", "^形状詞-[助]+"]],
+                ["include_upos", ["parent_word", ["VERB"]]]
+            ],
+            "res": "advcl",
+            "__comment": "よう,そうの場合"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD", "CONT"]]],
+                ["include_upos", ["word", ["PROPN"]]]
+            ],
+            "res": "compound",
+            "__comment": "固有名詞はcompound"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SYN_HEAD", "FUNC"]]],
+                ["include_upos", ["word", ["ADP"]]]
+            ],
+            "res": "case",
+            "__comment": "ADP(助詞-[格副係]助詞)ならcase"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["include_upos", ["word", ["PRON", "NOUN"]]]
+            ],
+            "res": "nmod",
+            "__comment": "PRON, NOUNが主辞ならnmodだろう"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SYN_HEAD", "FUNC", "CONT"]]],
+                ["include_upos", ["word", ["AUX"]]],
+                ["include_jp_origin", ["word", ["だ", "です"]]],
+                ["katuyo", ["word", "終止形"]],
+                ["include_upos", ["word", ["NOUN", "ADJ"]]]
+            ],
+            "res": "cop",
+            "__comment": "「XXだ」の「だ」はcop"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SYN_HEAD", "FUNC", "CONT"]]],
+                ["include_upos", ["word", ["AUX"]]],
+                ["include_jp_origin", ["word", ["だ", "です"]]],
+                ["katuyo", ["word", "終止形"]],
+                ["match_xpos", ["parent_word", ".*名詞.*"]]
+            ],
+            "res": "cop",
+            "__comment": "「XXだ」の「だ」はcop"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["CONT"]]],
+                ["include_upos", ["word", ["PRON"]]]
+            ],
+            "res": "nmod",
+            "__comment": "PRONはCONTでもnmod"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["include_upos", ["word", ["VERB"]]],
+                ["include_upos", ["parent_word", ["VERB", "ADJ"]]]
+            ],
+            "res": "advcl",
+            "__comment": "動詞->動詞or形容詞(orPARTorAUX)"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["include_upos", ["word", ["VERB"]]],
+                ["include_upos", ["parent_word", ["NOUN", "PRON", "NUM"]]]
+            ],
+            "res": "acl",
+            "__comment": "動詞->名詞はacl"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD", "CONT"]]],
+                ["include_upos", ["word", ["PART"]]],
+                ["match_xpos", ["word", ".+形[状容]詞的"]],
+                ["include_upos", ["parent_word", ["NOUN", "PRON", "PROPN", "PART"]]]
+            ],
+            "res": "amod",
+            "__comment": ""
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD", "CONT"]]],
+                ["include_upos", ["word", ["PART"]]],
+                ["match_xpos", ["word", ".+名詞的"]]
+            ],
+            "res": "nmod",
+            "__comment": ""
+        },
+
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["include_jp_origin", ["word", "為る"]],
+                ["include_upos", ["word", ["AUX"]]],
+                ["include_upos", ["parent_word", ["VERB", "ADJ"]]]
+            ],
+            "res": "advcl",
+            "__comment": "動詞->動詞or形容詞(orPARTorAUX)"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["include_jp_origin", ["word", "為る"]],
+                ["include_upos", ["word", ["AUX"]]],
+                ["include_jp_origin", ["parent_word", "為る"]]
+            ],
+            "res": "advcl",
+            "__comment": "動詞->動詞or形容詞(or PART or AUX)"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["include_upos", ["word", ["VERB"]]],
+                ["include_jp_origin", ["parent_word", "為る"]],
+                ["include_upos", ["parent_word", ["AUX"]]]
+            ],
+            "res": "advcl",
+            "__comment": "動詞->動詞or形容詞(or PART or AUX)"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["include_jp_origin", ["word", "為る"]],
+                ["include_upos", ["word", ["AUX"]]],
+                ["include_upos", ["parent_word", ["NOUN", "PRON", "NUM"]]]
+            ],
+            "res": "acl",
+            "__comment": "動詞->名詞はacl x"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["include_jp_origin", ["word", "為る"]],
+                ["include_upos", ["word", ["AUX"]]],
+                ["match_xpos", ["parent_word", "^接尾辞-名詞的"]]
+            ],
+            "res": "acl",
+            "__comment": "動詞->名詞はacl x"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["include_upos", ["word", ["VERB"]]],
+                ["match_xpos", ["parent_word", "^接尾辞-名詞的"]]
+            ],
+            "res": "acl",
+            "__comment": "動詞->名詞はacl x"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["match_xpos", ["word", "^接尾辞-形状詞的"]]
+            ],
+            "res": "amod",
+            "__comment": "動詞->名詞はacl x"
+        },
+
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["include_upos", ["word", ["VERB"]]],
+                ["include_child_xpos", ["parent_word", "^動詞-非自立可能"]]
+            ],
+            "res": "advcl",
+            "__comment": "動詞 -> する"
+        },
+
+        {
+            "rule": [
+                ["include_bpos", ["word", ["SEM_HEAD"]]],
+                ["include_upos", ["word", ["ADP"]]],
+                ["include_upos", ["parent_word", ["NOUN"]]]
+            ],
+            "res": "nmod",
+            "__comment": "? "
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["FUNC", "SYN_HEAD", "CONT"]]],
+                ["include_upos", ["word", ["SCONJ"]]]
+            ],
+            "res": "mark",
+            "__comment": "機能語SCONJはmark x"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["CONT"]]],
+                ["include_upos", ["word", ["SYM", "X"]]]
+            ],
+            "res": "dep",
+            "__comment": "X, SYMはdep x"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["CONT"]]],
+                ["include_upos", ["word", ["ADV"]]]
+            ],
+            "res": "advmod",
+            "__comment": "ADVはadvmod x"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["CONT"]]],
+                ["include_upos", ["word", ["ADJ"]]]
+            ],
+            "res": "amod",
+            "__comment": "ADJはamod x"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["CONT"]]],
+                ["include_upos", ["word", ["NOUN"]]],
+                ["include_upos", ["parent_word", ["NOUN", "PRON", "PROPN", "NUM"]]]
+            ],
+            "res": "compound",
+            "__comment": "名詞複合語"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["CONT"]]],
+                ["include_upos", ["word", ["NOUN"]]]
+            ],
+            "res": "compound",
+            "__comment": "名詞でCONTはcompound x"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["CONT"]]],
+                ["include_upos", ["word", ["PROPN"]]]
+            ],
+            "res": "compound",
+            "__comment": "PROPNはcompound x"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["CONT"]]],
+                ["match_xpos", ["word", ".+-サ変"]],
+                ["include_upos", ["parent_word", ["AUX"]]]
+            ],
+            "res": "compound",
+            "__comment": "サ変 + する"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["CONT"]]],
+                ["include_upos", ["word", ["VERB"]]],
+                ["include_upos", ["parent_word", ["VERB"]]]
+            ],
+            "res": "compound",
+            "__comment": "VERB -> VERBの連結はcompound x"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["CONT"]]],
+                ["match_xpos", ["word", ".+-サ変"]],
+                ["include_upos", ["parent_word", ["NOUN", "NUM"]]]
+            ],
+            "res": "compound",
+            "__comment": "サ変 -> NOUN/NUM は compound x"
+        },
+        {
+            "rule": [
+                ["include_upos", ["word", ["VERB"]]],
+                ["include_upos", ["parent_word", ["NOUN"]]]
+            ],
+            "res": "compound",
+            "__comment": "verb -> nounはcompound"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["FUNC"]]],
+                ["match_xpos", ["word", ".+-サ変"]],
+                ["include_upos", ["parent_word", ["NOUN", "NUM"]]]
+            ],
+            "res": "compound",
+            "__comment": "サ変 -> NOUN/NUM は compound x"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["NO_HEAD", "SYN_HEAD", "FUNC", "CONT"]]],
+                ["include_upos", ["word", ["AUX"]]]
+            ],
+            "res": "aux",
+            "__comment": "のこりのAUXはaux x"
+        },
+        {
+            "rule": [
+                ["include_bpos", ["word", ["NO_HEAD"]]],
+                ["include_upos", ["word", ["X"]]]
+            ],
+            "res": "dep",
+            "__comment": "X dep x"
+        }
+    ]
+}
