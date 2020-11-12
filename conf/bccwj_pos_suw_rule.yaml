@@ -1,0 +1,361 @@
+default:
+- pos           # （短単位の）品詞 (正規表現)
+- base_lexeme   # （短単位の）原型 (文字列)
+- usage         # 長単位の用法 (文字列)
+- luw           # 長単位の品詞 (正規表現)
+- bpos          # BunsetuPositionType (文字列)
+- parent_upos   # かかり先の（短単位の）品詞 (正規表現)
+
+
+rule:
+
+#########################################################
+# ルールの形式 (YAMLはタブに厳しいのでできればタブはスペースに変換すること)
+# 以下のように書くことで「ルール1かつルール2」を満たせばUD_POS名に変換というルールになる
+# - - ルール1の名前名: 該当表現(正規表現or文字列)
+#     ルール2の名前名: 該当表現(正規表現or文字列)
+#     .....
+#   - - UD_POS名
+#########################################################
+
+- - pos: "^形容詞-非自立可能"
+    luw: "助動詞"
+  - - AUX
+
+- - base_lexeme: "無い"
+    luw: "形容詞"
+  - - ADJ
+
+- - base_lexeme: "ない"
+    luw: "助詞"
+  - - AUX
+
+- - pos: "^形容詞-非自立可能"
+    luw: "形容詞"
+  - - ADJ
+
+- - pos: "^形容詞-"
+  - - ADJ
+
+- - pos: "^形状詞-一般"
+  - - ADJ
+
+- - pos: "^形状詞-タリ"
+  - - ADJ
+
+- - pos: "^形状詞-助動詞語幹"
+    bpos: SEM_HEAD
+  - - NOUN
+
+- - pos: "^形状詞-助動詞語幹"
+  - - AUX
+
+# 「かの」も含む　（ひらがなの「こそあど」は不要）
+- - pos: "^連体詞"
+    base_lexeme: "^[こそあど此其彼何]の"
+  - - DET
+
+- - pos: "^連体詞"
+    base_lexeme: "^或る"
+  - - DET
+
+- - pos: "^連体詞"
+    base_lexeme: "^とある"
+  - - DET
+
+- - pos: "^連体詞"
+    base_lexeme: "^我が"
+  - - DET
+
+- - pos: "^連体詞"
+    base_lexeme: "^あらゆる"
+  - - DET
+
+- - pos: "^連体詞"
+    base_lexeme: "^[こそあど此其]"
+  - - PRON
+
+# 「ほんの」
+- - pos: "^連体詞"
+    base_lexeme: "^本の"
+  - - PRON
+
+- - pos: "^連体詞"
+  - - ADJ
+
+- - pos: "^副詞"
+  - - ADV
+
+- - pos: "^感動詞"
+  - - INTJ
+
+- - pos: "接続詞"
+  - - CCONJ
+
+- - luw: "接続詞"
+    bpos: SEM_HEAD
+  - - CCONJ
+
+- - pos: "^助詞-接続助詞"
+    base_lexeme: "^て$"
+  - - SCONJ
+
+- - pos: "助詞-格助詞"
+    base_lexeme: "^と$"
+  - - ADP
+
+- - luw: "助詞-接続助詞"
+  - - SCONJ
+
+- - pos: "^助詞-準体助詞"
+  - - SCONJ
+
+- - pos: "^助詞-副助詞"
+    parent_upos: VERB
+  - - PART
+
+- - pos: "助詞-終助詞"
+  - - PART
+
+- - pos: "助詞-接続助詞"
+  - - SCONJ
+
+- - pos: "助詞-格助詞"
+  - - ADP
+
+- - pos: "助詞-係助詞"
+  - - ADP
+
+- - pos: "助詞-副助詞"
+  - - ADP
+
+- - pos: "^助動詞"
+    base_lexeme: "^き$"
+  - - PART
+
+- - pos: "^助動詞"
+  - - AUX
+
+- - pos: "^接頭辞"
+  - - NOUN
+
+# 語彙素は「っぽい」ではなく「ぽい」
+- - pos: "^接尾辞-形容詞的"
+    base_lexeme: "ぽい"
+  - - PART
+
+- - pos: "^接尾辞-名詞的"
+    base_lexeme: "^さ$"
+  - - PART
+
+- - pos: "^接尾辞-形状詞的"
+  - - PART
+
+- - pos: "^接尾辞-形容詞的"
+  - - AUX
+
+- - pos: "^接尾辞-動詞的"
+  - - PART
+
+- - pos: "^接尾辞"
+  - - NOUN
+
+- - pos: "^動詞-非自立可能"
+    bpos: FUNC
+    base_lexeme: "する"
+  - - AUX
+
+# ルールとして入れておく
+- - pos: "^動詞-非自立可能"
+    bpos: FUNC
+    base_lexeme: "為る"
+  - - AUX
+
+- - pos: "^動詞-非自立可能"
+    bpos: SYN_HEAD
+    base_lexeme: "する"
+  - - AUX
+
+# ルールとして入れておく
+- - pos: "^動詞-非自立可能"
+    bpos: SYN_HEAD
+    base_lexeme: "為る"
+  - - AUX
+
+- - pos: "^動詞-非自立可能"
+    base_lexeme: "すぎる"
+    bpos: SYN_HEAD
+  - - AUX
+
+- - pos: "^動詞-非自立可能"
+    base_lexeme: "すぎる"
+    bpos: FUNC
+  - - AUX
+
+- - pos: "^動詞-非自立可能"
+    base_lexeme: "ある"
+    bpos: SYN_HEAD
+  - - AUX
+
+- - pos: "^動詞-非自立可能"
+    base_lexeme: "ある"
+    bpos: FUNC
+  - - AUX
+
+- - pos: "^動詞-非自立可能"
+    base_lexeme: "いる"
+    bpos: SYN_HEAD
+  - - AUX
+
+- - pos: "^動詞-非自立可能"
+    base_lexeme: "いる"
+    bpos: FUNC
+  - - AUX
+
+- - pos: "^動詞-非自立可能"
+    base_lexeme: "行く"
+    bpos: SYN_HEAD
+  - - AUX
+
+- - pos: "^動詞-非自立可能"
+    base_lexeme: "行く"
+    bpos: FUNC
+  - - AUX
+
+- - pos: "^動詞-非自立可能"
+    bpos: SYN_HEAD
+    base_lexeme: できる
+  - - AUX
+
+- - pos: "^動詞-非自立可能"
+    bpos: FUNC
+    base_lexeme: できる
+  - - AUX
+
+- - pos: "^動詞-非自立可能"
+    bpos: CONT
+  - - AUX
+
+- - pos: "^動詞-非自立可能"
+    bpos: SYN_HEAD
+  - - AUX
+
+- - pos: "^動詞-非自立可能"
+    bpos: FUNC
+  - - AUX
+
+- - pos: "^動詞-一般"
+    base_lexeme: "しれる"
+    luw: "助動詞"
+  - - AUX
+
+- - pos: "^動詞-一般"
+    base_lexeme: "知れる"
+    luw: "助動詞"
+  - - AUX
+
+- - pos: "^名詞-助動詞語幹"
+  - - AUX
+
+- - pos: "^代名詞"
+  - - PRON
+
+- - pos: "^名詞-固有名詞"
+  - - PROPN
+
+- - pos: "^動詞-.*"
+    bpos: ROOT
+  - - VERB
+
+- - pos: "^動詞-.*"
+    bpos: SEM_HEAD
+  - - VERB
+
+- - pos: "^名詞-普通名詞-サ変可能"
+    luw: "動詞"
+  - - VERB
+
+- - pos: "^名詞-普通名詞-サ変可能"
+    luw: "名詞"
+  - - NOUN
+
+- - pos: "^名詞-普通名詞-形状詞可能"
+    luw: "形状詞"
+  - - ADJ
+
+- - pos: "^名詞-普通名詞-形状詞可能"
+    luw: "名詞"
+  - - NOUN
+
+- - pos: "^名詞-普通名詞-サ変形状詞可能"
+    luw: "形状詞"
+  - - ADJ
+
+- - pos: "^名詞-普通名詞-サ変形状詞可能"
+    luw: "動詞"
+  - - VERB
+
+- - pos: "^動詞-"
+  - - VERB
+
+- - pos: "^名詞-普通名詞-サ変形状詞可能"
+  - - NOUN
+
+- - pos: "^名詞-普通名詞-副詞可能"
+    luw: "副詞"
+  - - ADV
+
+- - pos: "^名詞-普通名詞-副詞可能"
+    luw: "副詞"
+  - - ADV
+
+- - pos: "^名詞-普通名詞-副詞可能"
+  - - NOUN
+
+- - pos: "^名詞-普通名詞-助数詞可能"
+    luw: "助数詞"
+  - - NUM
+
+- - pos: "^名詞-普通名詞-助数詞可能"
+  - - NOUN
+
+- - pos: "^名詞-数詞"
+  - - NUM
+
+- - pos: "^名詞-普通名詞"
+  - - NOUN
+
+- - luw: "助詞-副助詞"
+  - - AUX
+
+- - pos: "^補助記号-[句読括]"
+  - - PUNCT
+
+- - pos: "^補助記号-一般"
+    base_lexeme: "^\\*$"
+  - - PUNCT
+
+- - pos: "^補助記号"
+  - - SYM
+
+- - pos: "^絵文字"
+  - - SYM
+
+- - pos: "^記号"
+  - - NOUN
+
+- - pos: "^外国語"
+    luw: "名詞-固有名詞-一般"
+  - - PROPN
+
+- - pos: "^外国語"
+  - - NOUN
+
+- - pos: "^英単語"
+  - - NOUN
+
+- - pos: "^空白"
+  - - X
+
+- - pos: ".*"
+  - - X

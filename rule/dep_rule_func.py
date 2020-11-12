@@ -12,19 +12,55 @@ BPOS_LIST = set([
 
 DEP_RULE_FUNC_LIST = {}
 
+"""
+(include|match|regex)(word|parent|child|semhead|synhead)(pos|xpos|lemma|...)
+include=複数候補のどれかに一致、match=完全一致、regex=正規表現
+word... はターゲットの語からみてどの単語の情報を見るか
+pos... は属性名
+"""
 
-def is_disfluency(word):
+def register_function(target_func):
     """
-        いいよどみがあるか？
+        関数名をそのままルール名として登録
     """
-    s_seg = word.get_sent_segment()
-    return s_seg != -1 and s_seg.name == "Disfluency"
-DEP_RULE_FUNC_LIST["is_disf"] = is_disfluency
+    funcname = target_func.__name__.split("_")
+    assert len(funcname) == 2
+    DEP_RULE_FUNC_LIST[(funcname[0], funcname[1])] = target_func
 
 
-def is_appos(word, parent_word):
+@register_function
+def match_segment(self, word, segment):
     """
-        かかり関係であるかどうか
+        いいよどみがあるか？  match_word_segment("Disfluency")
+    """
+    if word is None:
+        return False
+    for wrd in word:
+        if wrd is None:
+            return False
+        s_seg = wrd.get_sent_segment()
+        if s_seg != -1 and s_seg.name == segment:
+            return True
+    return False
+
+
+def match_groups(self, word, groups):
+    """
+        基本word=parentしか取らないこととする
+    """
+    if self is None or word is None:
+        return False
+    sent = self.get_sentence()
+    word1_pos = sent.get_pos_from_word(self)
+    word2_pos = sent.get_pos_from_word(word)
+    res = sent.get_group(groups, word1_pos, word2_pos)
+    return res != -1
+
+
+# @register_function
+def is_appos(self, word, parent_word):
+    """
+        かかり関係であるかどうか ?
     """
     if word is None or parent_word is None:
         return False
@@ -33,12 +69,12 @@ def is_appos(word, parent_word):
     word2_pos = sent.get_pos_from_word(parent_word)
     res = sent.annotation_list.get_appos(word1_pos, word2_pos)
     return res != -1
-DEP_RULE_FUNC_LIST["appos"] = is_appos
 
 
-def is_conj(word, parent_word):
+# @register_function
+def is_conj(self, word, parent_word):
     """
-        conj関係なのか？
+        conj関係なのか？  ?
     """
     if word is None or parent_word is None:
         return False
@@ -47,140 +83,214 @@ def is_conj(word, parent_word):
     word2_pos = sent.get_pos_from_word(parent_word)
     res = sent.annotation_list.get_conj(word1_pos, word2_pos)
     return res != -1
-DEP_RULE_FUNC_LIST["conj"] = is_conj
 
 
-def check_dep_num(word, dep_num):
+@register_function
+def match_depnum(self, word, depnum):
     """
-         その単語のdep_numであるかどうか
+         その単語のdepnumであるかどうか
     """
+    assert word is None or isinstance(word, list)
     if word is None:
         return False
-    return word.dep_num == dep_num
-DEP_RULE_FUNC_LIST["check_dep"] = check_dep_num
-
-
-def is_katuyo(word, target_katuyo):
-    """
-         その単語はその活用形を持つ
-    """
-    if word is None:
-        return False
-    return target_katuyo in word.get_katuyo()
-DEP_RULE_FUNC_LIST["katuyo"] = is_katuyo
-
-
-def is_match_xpos(word, target_xpos):
-    """
-        その単語はXPOSを持っている
-    """
-    if word is None:
-        return False
-    return re.match(target_xpos, word.get_xpos())
-DEP_RULE_FUNC_LIST["match_xpos"] = is_match_xpos
-
-
-def is_match_luwpos(word, target_xpos):
-    """
-        その単語は長単位品詞を持っている
-    """
-    if word is None:
-        return False
-    return re.match(target_xpos, word.luw_pos)
-DEP_RULE_FUNC_LIST["match_luwpos"] = is_match_luwpos
-
-
-def include_bpos(word, target_bpos):
-    """
-        その単語はそのBPOSの範囲である
-    """
-    assert set(target_bpos).issubset(BPOS_LIST)
-    if word is None:
-        return False
-    return word.ud_misc["BunsetuPositionType"] in target_bpos
-DEP_RULE_FUNC_LIST["include_bpos"] = include_bpos
-
-
-def include_upos(word, target_upos):
-    """
-       その単語はUPOSを持っている
-    """
-    if word is None:
-        return False
-    return word.get_ud_pos() in target_upos
-DEP_RULE_FUNC_LIST["include_upos"] = include_upos
-
-
-def include_child_xpos(word, xpos):
-    """
-        かかられている単語の中にxposを持つ単語があるか否か
-    """
-    if word is None:
-        return False
-    for child_pos in word.doc[word.sent_pos].get_ud_children(word):
-        cword = word.doc[word.sent_pos].get_word_from_tokpos(child_pos - 1)
-        if re.match(xpos, cword.get_xpos()):
+    for wrd in word:
+        if wrd is None:
+            return False
+        if wrd.dep_num == depnum:
             return True
     return False
-DEP_RULE_FUNC_LIST["include_child_xpos"] = include_child_xpos
 
 
-def include_child_upos(word, target_upos):
+@register_function
+def regex_katuyo(self, word, katuyo):
     """
-        かかられている単語の中に該当UPOSを持つ単語があるか否か
+         その単語はその活用形を持つ   match_word_katuyou(target_katuyo)
     """
+    assert word is None or isinstance(word, list)
     if word is None:
         return False
-    for child_pos in word.doc[word.sent_pos].get_ud_children(word):
-        cword = word.doc[word.sent_pos].get_word_from_tokpos(child_pos - 1)
-        if cword.get_ud_pos() in target_upos:
+    for wrd in word:
+        if wrd is None:
+            return False
+        if re.match(katuyo, wrd.get_katuyo()):
             return True
     return False
-DEP_RULE_FUNC_LIST["include_child_upos"] = include_child_upos
 
 
-def is_match_suffix_string(word, re_str):
+@register_function
+def regex_xpos(self, word, xpos):
+    """
+        その単語はXPOSを持っている   regex_word_xpos(xpos)
+    """
+    assert word is None or isinstance(word, list)
+    if word is None:
+        return False
+    for wrd in word:
+        if wrd is None:
+            return False
+        if re.match(xpos, wrd.get_xpos()):
+            return True
+    return False
+
+
+@register_function
+def match_luwpos(self, word, luwpos):
+    """
+        その単語は長単位品詞を持っている   regex_word_luwpos(target_xpos)
+    """
+    assert word is None or isinstance(word, list)
+    if word is None:
+        return False
+    for wrd in word:
+        if wrd is None:
+            return False
+        if wrd.luw_pos == luwpos:
+            return True
+    return False
+
+
+@register_function
+def regex_luwpos(self, word, luwpos):
+    """
+        その単語は長単位品詞を持っている   regex_word_luwpos(target_xpos)
+    """
+    assert word is None or isinstance(word, list)
+    if word is None:
+        return False
+    for wrd in word:
+        if wrd is None:
+            return False
+        if re.match(luwpos, wrd.luw_pos):
+            return True
+    return False
+
+
+@register_function
+def include_bpos(self, word, bpos):
+    """
+        その単語はそのBPOSの範囲である   include_word_bpos(target_bpos)
+    """
+    assert word is None or isinstance(word, list)
+    assert set(bpos).issubset(BPOS_LIST)
+    if word is None:
+        return False
+    for wrd in word:
+        if wrd is None:
+            return False
+        if wrd.ud_misc["BunsetuPositionType"] in bpos:
+            return True
+    return False
+
+
+@register_function
+def include_upos(self, word, upos):
+    """
+       その単語はUPOSを持っている   include_word_upos(target_upos)
+    """
+    assert word is None or isinstance(word, list)
+    if word is None:
+        return False
+    for wrd in word:
+        if wrd is None:
+            return False
+        if wrd.get_ud_pos() in upos:
+            return True
+    return False
+
+
+@register_function
+def regex_suffixstring(self, word, suffixstring):
     """
        その単語からの末尾がre_str表現である
     """
+    assert word is None or isinstance(word, list)
     if word is None:
         return False
-    bunmatu_str = "".join([
-        w.surface for w in word.bunsetu[word.word_pos+1:]
-    ])
-    return re.match(re_str, bunmatu_str)
-DEP_RULE_FUNC_LIST["match_suffix_string"] = is_match_suffix_string
+    for wrd in word:
+        if wrd is None:
+            return False
+        bunmatu_str = "".join([
+            w.surface for w in wrd.bunsetu[wrd.word_pos+1:]
+        ])
+        if re.match(suffixstring, bunmatu_str):
+            return True
+    return False
 
 
+# @register_function
 def is_include_link(word):
     """
         include link information ?
     """
-    return word.link_label != -1
-DEP_RULE_FUNC_LIST["include_link"] = is_include_link
-
-
-def include_jp_origin(word, jp_origin_list):
-    """
-        その単語はjp_origin_listである
-    """
     if word is None:
         return False
-    return word.get_jp_origin() in jp_origin_list
-DEP_RULE_FUNC_LIST["include_jp_origin"] = include_jp_origin
+    return word.link_label != -1
 
 
-def include_child_case(word, target_case):
+@register_function
+def match_lemma(self, word, lemma):
     """
-        かかられている単語の中にcaseがあるか否か
+        その単語の日本語原型はjp_origin_listにある  match_word_lemma()
     """
-    case_set = word.case_set
-    flag = False
-    for case in target_case:
-        if case in case_set:
-            flag = True
-    return flag
-DEP_RULE_FUNC_LIST["include_child_case"] = include_child_case
+    assert word is None or isinstance(word, list)
+    if word is None:
+        return False
+    for wrd in word:
+        if wrd is None:
+            return False
+        if wrd.get_origin() == lemma:
+            return True
+    return False
+
+
+@register_function
+def regex_lemma(self, word, lemma):
+    """
+        その単語の日本語原型はjp_origin_listにある  regex_word_lemma()
+    """
+    assert word is None or isinstance(word, list)
+    if word is None:
+        return False
+    for wrd in word:
+        if wrd is None:
+            return False
+        if re.match(lemma, wrd.get_origin()):
+            return True
+    return False
+
+
+@register_function
+def include_lemma(self, word, lemma):
+    """
+        その単語の日本語原型はjp_origin_listにある  include_word_lemma()
+    """
+    assert word is None or isinstance(word, list)
+    if word is None:
+        return False
+    for wrd in word:
+        if wrd is None:
+            return False
+        if wrd.get_origin() in lemma:
+            return True
+    return False
+
+
+RE_CASE_MATCH = re.compile("助詞-[係格副]助詞")
+@register_function
+def include_case(self, word, case):
+    """
+        指定したcaseがwordに含まれているか（基本的にinclude_child_caseでしか使わない）
+    """
+    assert word is None or isinstance(word, list)
+    if word is None:
+        return False
+    for wrd in word:
+        if wrd is None:
+            return False
+        if RE_CASE_MATCH.match(wrd.get_xpos()):
+            if wrd.get_jp_origin() in case:
+                return True
+    return False
 
 
 def _main():

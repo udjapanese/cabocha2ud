@@ -2,3 +2,4 @@ data-type: gsd
 word-unit: suw
 bunsetu-func: type2
 skip-space: True
+space-marker: hankaku

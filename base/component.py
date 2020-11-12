@@ -25,9 +25,13 @@ class Component(object, metaclass=ABCMeta):
         self.data_type = data_type
         self.word_unit = word_unit
         self.bunsetu_func = bunsetu_func
+        self.debug = False
 
     def __unicode__(self):
         raise NotImplementedError
+
+    def set_debug(self, debug):
+        self.debug = debug
 
     def get_word_unit(self):
         """

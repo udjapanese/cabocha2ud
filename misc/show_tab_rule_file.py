@@ -7,6 +7,8 @@
 import json
 import argparse
 
+import ruamel.yaml
+
 
 def show_word_table(data, writer):
     """
@@ -32,7 +34,7 @@ def show_dep_table(data, writer):
     writer.write(
         "\t".join([data["column_mapping"][k] for k in keys] + ["UD rel"]) + "\n"
     )
-    for rule in data["rule"]:
+    for rule in data["order_rule"]:
         rrr = {}
         for rrule in rule["rule"]:
             kkk = rrule[0] + ":" + rrule[1][0]
@@ -56,7 +58,8 @@ def _main():
     parser.add_argument('-f', '--file-type', choices=["pos", "dep"], default="pos")
     parser.add_argument('-w', '--writer', type=argparse.FileType('w'), default="-")
     args = parser.parse_args()
-    data = json.load(args.base_file)
+    yaml = ruamel.yaml.YAML()
+    data = yaml.load(args.base_file)
     if args.file_type == "pos":
         show_word_table(data, args.writer)
     elif args.file_type == "dep":

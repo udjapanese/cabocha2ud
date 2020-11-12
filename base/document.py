@@ -5,6 +5,7 @@ Document class
 """
 
 import os
+import re
 import xml.etree.ElementTree as ET
 
 from lib.iterate_function import (
@@ -36,6 +37,7 @@ def get_doc_id(doc):
         return doc.doc_attrib_xml.find('sent_id').text.replace('# sent_id = ', '')
 
 
+RE_SAHEN_MATCH = re.compile("^名詞.*サ変.*")
 def __replace_pos_and_label(sent):
     for word in sent.flatten():
         if word.dep_label == "punct":
@@ -46,6 +48,25 @@ def __replace_pos_and_label(sent):
             word.dep_label = "aux"
         if word.en_pos[0] == "AUX" and word.dep_label == "cc":
             word.en_pos[0] = "CCONJ"
+        if word.en_pos[0] == "NOUN" and word.luw_pos == "助動詞":
+            word.en_pos[0] = "AUX"
+        parent = word.get_parent_word()
+        if parent is None:
+            continue
+        if parent.dep_label == 'fixed':
+            word.dep_num = parent.dep_num
+        if word.get_origin() == "する" and RE_SAHEN_MATCH.match(parent.get_xpos()):
+            parent.en_pos[0] = "VERB"
+        if (word.en_pos[0] == "ADP" and word.dep_label == 'fixed'
+                and word.token_pos < parent.token_pos):
+            if parent.dep_label != "case":
+                word.dep_label = 'case'
+                continue
+            if word.token_pos == 1:
+                continue
+            # わりと特殊  B024n_PM25_00027-131
+            word.dep_num = 'case'
+
 
 
 def post_proceeing_function(doc):
@@ -99,7 +120,7 @@ class Document(Component, list):
         # UD掛かり先ラベルを付与
         for sent in self.sentences():
             for word in sent.flatten():
-                detect_ud_label(word)
+                detect_ud_label(word, debug=self.debug)
         # スペースの除去をする
         if is_skip_space:
             skip_jsp_token_from_sentence(self)

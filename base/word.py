@@ -4,9 +4,15 @@
 BCCWJ DepParaPAS class
 """
 
-# import re
+import re
+import string
+
 from base.component import Component, JP_SP_MARK
 from rule.pos import detect_ud_pos
+
+RE_CASE_MATH = re.compile("助詞-[係格副]助詞")
+RE_PROP_MATH = re.compile(".*固有名詞.*")
+RE_ASCII_MATH = re.compile('^[' + string.printable + ']+$')
 
 """
 ['だ', 'た', 'ようだ', 'たい', 'ない', 'なる', 'ある', 'おる', 'ます',
@@ -38,7 +44,8 @@ UNIDIC_ORIGIN_CONV = {
     "得る": "える",
     "チャウ": "ちゃう",
     "知れる": "しれる",
-    "貰える": "もらえる"
+    "貰える": "もらえる",
+    # -------
 }
 
 
@@ -134,8 +141,11 @@ class Word(Component):
             # for dependency information
             "link_label",  # None
             "case_set",   # None
-            # テキストを解析する場合はこれを定義する
-            "parse_text"  # None
+            "parent_word",  # None == self.get_parent_word()
+            "bunsetu_position_type",   #  None == self.ud_misc["BunsetuPositionType"]
+            "child_words",  #  None
+            "sem_head_word",   # None
+            "syn_head_word"   # None
         ]
         super(Word, self).__init__(
             kwargs.get("data_type"), base_file_name=kwargs.get("base_file_name"),
@@ -153,7 +163,7 @@ class Word(Component):
         # 英語の品詞
         self.en_pos = kwargs.get("en_pos", [])
 
-    def __unicode__(self):
+    def __str__(self):
         org = "\t".join(self._token)
         if self.luw_label is not None:
             org = org + "\t" + "\t".join(
@@ -195,7 +205,63 @@ class Word(Component):
             get parent word from doc
         """
         assert self.doc is not None
-        return self.doc[self.sent_pos].get_word_from_tokpos(self.dep_num-1)
+        if self.parent_word is None:
+            self.parant_word = self.doc[self.sent_pos].get_word_from_tokpos(self.dep_num - 1)
+        return self.parant_word
+
+    def get_bunsetu_position_type(self):
+        """
+            get bunsetu_position_type
+        """
+        assert "BunsetuPositionType" in self.ud_misc
+        if self.bunsetu_position_type is not None:
+            return self.bunsetu_position_type
+        self.bunsetu_position_type = self.ud_misc["BunsetuPositionType"]
+        return self.bunsetu_position_type
+
+    def get_bunsetu_position_word(self, bpos):
+        """
+            get word has `bpos` type, the bunsetu position word
+        """
+        assert self.bunsetu is not None
+        for target_wrd in self.bunsetu:
+            if bpos == target_wrd.get_bunsetu_position_type():
+                return target_wrd
+        return None
+
+    def get_surface_case(self):
+        """
+            get surface case (表層格)
+        """
+        if self.case_set is not None:
+            return self.case_set
+        self.case_set = {}
+        for child_pos in self.doc[self.sent_pos].get_ud_children(self, is_reconst=True):
+            cword = self.doc[self.sent_pos].get_word_from_tokpos(child_pos - 1)
+            if RE_CASE_MATH.match(cword.get_xpos()):
+                self.case_set[cword.get_jp_origin()] = None
+        return self.case_set
+
+    def get_link_label(self):
+        if self.link_label is not None:
+            return self.link_label
+        parent_word = self.get_parent_word()
+        self.link_label = -1
+        if parent_word is not None:
+            self.link_label = self.parent_word.get_link(self)
+        if self.link_label != -1:
+            # 格情報を抽出 (ga, o, ni)]
+            self.link_label = self.link_label[0].name.split(":")[-1]
+        return self.link_label
+
+    def get_child_words(self):
+        if self.child_words is not None:
+            return self.child_words
+        self.child_words = []
+        for child_pos in self.doc[self.sent_pos].get_ud_children(self):
+            cword = self.doc[self.sent_pos].get_word_from_tokpos(child_pos - 1)
+            self.child_words.append(cword)
+        return self.child_words
 
     def is_func(self):
         """
@@ -260,8 +326,8 @@ class Word(Component):
         """
             return ud misc text
         """
-        if self.data_type != "gsd":
-            self.ud_misc["BunsetuBILabel"] = "B" if self.word_pos == 0 else "I"
+        # if self.data_type != "gsd":
+        self.ud_misc["BunsetuBILabel"] = "B" if self.word_pos == 0 else "I"
         if self.luw_label is not None:
             self.ud_misc["LUWBILabel"] = self.luw_label
             self.ud_misc["LUWPOS"] = self.luw_pos
@@ -336,6 +402,12 @@ class BCCWJ(Word):
         """
             get origin
         """
+        if RE_PROP_MATH.match(self.get_xpos()):
+            # 固有名詞は表層を返す
+            return self.surface
+        if RE_ASCII_MATH.match(self.surface):
+            # 英数字文字列は
+            return self.surface
         if self.surface == "　":
             return JP_SP_MARK
         if self.origin == "":
@@ -460,6 +532,12 @@ class GSD(Word):
         """
             get origin
         """
+        if RE_PROP_MATH.match(self.get_xpos()):
+            # 固有名詞は表層を返す
+            return self.surface
+        if RE_ASCII_MATH.match(self.surface):
+            # 英数字文字列は
+            return self.surface
         if self.origin == "":
             return "_"
         if self.origin == "です":
@@ -512,15 +590,6 @@ class SUW(BCCWJ):
                 self.luw_yomi = self.luw_features[6]
                 self.luw_pos = "-".join([f for f in self.luw_features[0:3] if f != "*"])
                 self.luw_katuyo = self.luw_features[5]
-        """
-        if len(self._token) >= 4 and self.word_unit == "suw":
-            # 長単位情報も使う
-            self.luw_label = self._token[2]
-            self.luw_origin = self._token[3]
-            self.luw_yomi = self._token[4]
-            self.luw_pos = self._token[5]
-            self.luw_katuyo = self._token[6]
-        """
 
 
 class CHJSUW(CHJ):
@@ -596,35 +665,6 @@ class GSDSUW(GSD):
                 self.luw_yomi = self.luw_features[6]
                 self.luw_pos = self.luw_features[0]
                 self.luw_katuyo = self.luw_features[5]
-    """
-        self.surface = self._token[0]
-        self.features = []
-        #self.origin = self._token[2]
-        self.origin = self._token[9]
-        self.jp_pos = self._token[3].split(",")[0]
-        self.katuyo = self._token[5]
-        self.yomi = self._token[6]
-        self.usage = self._token[7]
-        self.ud_misc["SpaceAfter"] = self._token[8]
-        self.ud_misc["UniDicLemma"] = self._token[2]
-        # const based on BCCWJ
-        fpos = self._token[3].split(",")
-        for _ in range(4-len(fpos)):
-            fpos.append("*")
-        self.features.extend(fpos)
-        self.features.append(self._token[5])
-        self.features.append(self.katuyo)
-        self.features.append(self.yomi)
-        self.features.extend(["*" for _ in range(10)])
-        if len(self._token) >= 4 and self.word_unit == "suw":
-            # 長単位情報も使う
-            self.luw_label = self._token[11]
-            self.luw_origin = self._token[12]
-            self.luw_yomi = self._token[13]
-            self.luw_pos = self._token[14]
-            self.luw_katuyo = self._token[15]
-            self.ud_misc["BunsetuBILabel"] = self._token[10]
-    """
 
 
 class LUW(BCCWJ):

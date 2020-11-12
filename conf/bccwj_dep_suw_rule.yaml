@@ -1,0 +1,1019 @@
+
+
+#  ルールの書き方
+#  すべてのルールは  `func`_`args`_`elements`で構成されている
+#  ex. include_word_upos, regex_word_luwpos
+# （実装されてないものはルールファイル読み込み時点でエラーになる）
+
+func:
+- include    # 指定したリストのいずれかに該当する、かならず引数は配列[]
+- match      # 指定したリストのいずれかに該当する、かならず引数は文字列
+- regex      # 指定したリストのいずれかに該当する、かならず引数は正規表現
+
+args:
+# word: 対象自身
+- word
+# parent: wordの親
+- parent
+# semhead: wordを含んでいる文節のSEM_HEADであるword
+- semhead
+# synhead: wordを含んでいる文節のSYN_HEADであるword
+- synhead
+# child: wordを親とする子単語のリスト（そのうちのひとつが該当すればよい）
+- child
+# parentchild: wordを親とする子単語のリスト（そのうちのひとつが該当すればよい）
+- parentchild
+
+elements:  ## 説明は/cabocha2ud/README.mdもご参照に
+
+# 文節タイプ: bpos (ex. SEM_HEAD, SYM_HEAD, FUNC, CONT....)
+- bpos
+# 日本語（短単位）品詞: xpos (ex. "助詞-格助詞", "接続詞"...)
+- xpos
+# 日本語原型: lemma (ex. "だ", "と", "ない", ...)
+- lemma
+# UD品詞: upos (ex. ROOT, ADP, ...)
+- upos
+# かかり先の番号 (現状0以外使えない)
+- depnum
+# segment (拡張CabochaのSegment, ex. "Disfluency")
+- segment
+# 文末表現 suffixstring (該当のwordの"文節末尾"文字列を確認している ex."Xだ"の"だ")
+- suffixstring
+# 対象語が(格|係|副)助詞かどうか  case (include_child_caseなどでの想定)
+- case
+
+order_rule:
+
+#########################################################
+# ルールの形式 (YAMLはタブに厳しいのでできればタブはスペースに変換すること)
+# 以下のように書くことで「ルール1かつルール2」を満たせばUD labelに変換というルールになる
+# 引数の形はルール名func(regex|include|match)に従う
+# - rule: [
+#     [ルール1の名前名, 引数(正規表現or文字列or配列)],
+#     [ルール2の名前名, 引数(正規表現or文字列or配列)],
+#     ....
+#   ]
+#   res: UD label名
+#########################################################
+
+
+# ROOTはroot
+- rule: [
+    [include_word_bpos, ["ROOT"]],    #  [include_bpos [word, ["ROOT"]]]
+  ]
+  res: root
+
+
+# NO_HEADのためのルール
+- rule: [
+    [include_word_bpos, ["NO_HEAD"]],    #  [include_bpos [word, ["NO_HEAD"]]],
+    [match_word_depnum, 0],    #  [check_dep [word, 0]]
+  ]
+  res: root
+
+
+# PUNCTはpunct
+- rule: [
+    [include_word_upos, ["PUNCT"]],    #  [include_upos [word, ["PUNCT"]]]
+  ]
+  res: punct
+
+
+# 言いよどみはreparandum
+- rule: [
+    [match_word_segment, "Disfluency"],    #  [is_disf [word, ]]
+  ]
+  res: reparandum
+
+
+# CCONJはcc
+- rule: [
+    [include_word_upos, ["CCONJ"]],    #  [include_upos [word, ["CCONJ"]]]
+  ]
+  res: cc
+
+
+# DETはdet
+- rule: [
+    [include_word_upos, ["DET"]],    #  [include_upos [word, ["DET"]]]
+  ]
+  res: det
+
+
+# INTJはdiscourse
+- rule: [
+    [include_word_upos, ["INTJ"]],    #  [include_upos [word, ["INTJ"]]]
+  ]
+  res: discourse
+
+
+# 顔文字もdiscourse
+- rule: [
+    [regex_word_xpos, "^絵文字・記号等"],    #  [match_xpos [word, ^絵文字・記号等]]
+  ]
+  res: discourse
+
+
+# 接続詞の複合語表現
+- rule: [
+    [regex_word_luwpos, "接続詞"],    #  [match_luwpos [word, 接続詞]],
+    [regex_parent_luwpos, "接続詞"],    #  [match_luwpos [parent_word, 接続詞]]
+  ]
+  res: fixed
+
+# 接続詞の複合語表現（さらには）
+- rule: [
+    [include_word_upos, ["ADP"]],    #  [include_upos [word, ADP]],
+    [include_parent_upos, ["CCONJ"]],    #  [include_upos [parent_word, CCONJ]]
+  ]
+  res: fixed
+
+
+# 格助詞の複合語表現（に対する、etc.）
+- rule: [
+    [regex_word_luwpos, "^助詞"],    #  [match_luwpos [word, 助詞-格助詞]],
+    [regex_parent_luwpos, "^助詞"],    #  [match_luwpos [parent_word, 助詞-格助詞]]
+  ]
+  res: fixed
+
+# 親「接続詞」につく「補助記号-一般」はfixed
+- rule: [
+    [regex_word_xpos, "補助記号-一般"],
+    [include_parent_upos, ["CCONJ"]],
+  ]
+  res: fixed
+
+# 親「接続詞」につく「か」はfixed
+- rule: [
+    [match_word_lemma, "か"],
+    [include_word_upos, ["PART"]],
+    [include_parent_upos, ["CCONJ"]],
+  ]
+  res: fixed
+
+# 「かと」fixed
+- rule: [
+    [include_word_lemma, ["と"]],
+    [include_word_upos, ["ADP"]],
+    [match_parent_lemma, "か"],
+    [include_parent_upos, ["PART"]],
+  ]
+  res: fixed
+
+# 「って/な」はfixed
+- rule: [
+    [match_word_lemma, "だ"],
+    [include_word_upos, ["AUX"]],
+    [match_parent_lemma, "って"],
+    [include_parent_upos, ["ADP"]],
+  ]
+  res: fixed
+
+# 「つう/か」はfixed
+- rule: [
+    [include_word_lemma, ["か", "て"]],
+    [include_word_upos, ["PART", "SCONJ"]],
+    [match_parent_lemma, "つう"],
+    [include_parent_upos, ["AUX"]],
+  ]
+  res: fixed
+
+  # 「つう/て」はfixed
+- rule: [
+    [include_word_lemma, ["て"]],
+    [include_word_upos, ["SCONJ"]],
+    [match_parent_lemma, "つう"],
+    [include_parent_upos, ["AUX"]],
+  ]
+  res: fixed
+
+# 「なら/ば」はfixed
+- rule: [
+    [match_word_lemma, "ば"],
+    [include_word_upos, ["PART"]],
+    [match_parent_lemma, "なら"],
+    [include_parent_upos, ["AUX"]],
+  ]
+  res: fixed
+
+# 「だ/けれど」はfixed
+- rule: [
+    [match_word_lemma, "けれど"],
+    [include_word_upos, ["SCONJ"]],
+    [match_parent_lemma, "だ"],
+    [include_parent_upos, ["AUX"]],
+  ]
+  res: fixed
+
+# 「だ/と/すれ(する)/ば」はfixed
+- rule: [
+    [include_word_lemma, ["と", "ば", "する"]],
+    [include_word_upos, ["SCONJ"]],
+    [match_parent_lemma, "だ"],
+    [include_parent_upos, ["AUX"]],
+  ]
+  res: fixed
+
+# 「で/ね（さ）」はfixed
+- rule: [
+    [include_word_lemma, ["さ", "ね"]],
+    [include_word_upos, ["PART"]],
+    [match_parent_lemma, "で"],
+    [include_parent_upos, ["CCONJ"]],
+  ]
+  res: fixed
+
+# 「じゃ/なく/て」はfixed
+- rule: [
+    [include_word_lemma, ["て", "ない"]],
+    [match_parent_lemma, "だ"],
+    [include_parent_upos, ["AUX"]],
+  ]
+  res: fixed
+
+# 「な/の/です/が」はfixed
+- rule: [
+    [include_word_lemma, ["の", "が"]],
+    [include_word_upos, ["SCONJ"]],
+    [match_parent_lemma, "だ"],
+    [include_parent_upos, ["AUX"]],
+  ]
+  res: fixed
+
+- rule: [
+    [include_word_lemma, ["だ"]],
+    [include_word_upos, ["AUX"]],
+    [match_parent_lemma, "だ"],
+    [include_parent_upos, ["AUX"]],
+  ]
+  res: fixed
+
+#  き・て・ね
+- rule: [
+    [include_word_upos, ["SCONJ", "PART", "AUX", "ADP"]],
+    [match_parent_lemma, "来る"],
+    [include_parent_upos, ["AUX"]],
+  ]
+  res: fixed
+
+#  できる
+- rule: [
+    [include_word_upos, ["AUX", "SCONJ", "PART", "ADP"]],
+    [match_parent_lemma, "できる"],
+    [include_parent_upos, ["AUX"]],
+  ]
+  res: fixed
+
+#  すぎる
+- rule: [
+    [include_word_upos, ["AUX", "SCONJ", "PART", "ADP"]],
+    [match_parent_lemma, "すぎる"],
+    [include_parent_upos, ["AUX"]],
+  ]
+  res: fixed
+
+#  だ♪
+- rule: [
+    [regex_word_xpos, "^補助記号-.*"],
+    [regex_parent_lemma, "^だ$"]
+  ]
+  res: fixed
+
+#  ですよ。でしょうか
+- rule: [
+    [include_word_upos, ["PART", "PUNCT"]],
+    [regex_parent_lemma, "^だ$"]
+  ]
+  res: fixed
+
+#  ！！
+- rule: [
+    [regex_word_xpos, "^補助記号-.*"],
+    [include_word_upos, ["PUNCT"]],
+    [regex_parent_xpos, "^補助記号-.*"],
+    [include_parent_upos, ["PUNCT"]],
+  ]
+  res: fixed
+
+#  の/ような/もの とか
+- rule: [
+    [include_word_upos, ["AUX"]],
+    [regex_parent_lemma, "の"],
+    [include_parent_upos, ["ADP"]],
+  ]
+  res: fixed
+
+#  である
+- rule: [
+    [include_word_upos, ["AUX"]],
+    [regex_parent_lemma, "だ"],
+    [include_parent_upos, ["AUX"]],
+  ]
+  res: fixed
+
+#  なければならない、ている、ので
+- rule: [
+    [include_word_upos, ["AUX", "SCONJ"]],
+    [include_parent_upos, ["AUX", "SCONJ"]],
+  ]
+  res: fixed
+
+#  こと/が/できる  ことにする ことになる ことはない
+- rule: [
+    [match_word_luwpos, "助動詞"],
+    [regex_word_lemma, "事"]
+  ]
+  res: aux
+
+#  こと/が/できる  ことにする ことになる ことはない
+- rule: [
+    [regex_word_luwpos, "^助動詞"],
+    [regex_word_xpos, "^助詞-.*"],
+    [include_word_lemma, ["が", "に", "は"]],
+    [regex_parent_luwpos, "助動詞"],
+    [regex_parent_lemma, "事"]
+  ]
+  res: fixed
+
+#  こと/が/できる  ことにする ことになる ことはない
+- rule: [
+    [match_word_luwpos, "助動詞"],
+    [include_word_lemma, ["できる", "する", "なる", "ない", "ある"]],
+    [regex_word_xpos, "^.*詞-非自立可能"],
+    [regex_parent_luwpos, "助動詞"],
+    [regex_parent_lemma, "事"]
+  ]
+  res: fixed
+
+
+# cc だが
+- rule: [
+    [match_word_lemma, "だ"],
+    [include_word_upos, ["AUX"]],    #  [include_upos [word, ["AUX"]]],
+    [regex_word_luwpos, "接続詞"],    #  [match_luwpos [word, 接続詞]]
+  ]
+  res: cc
+
+
+# cc でも では
+- rule: [
+    [match_word_lemma, "で"],    #  [include_jp_origin [word, で]],
+    [include_word_upos, ["ADP"]],    #  [include_upos [word, ["ADP"]]],
+    [regex_word_luwpos, "接続詞"],    #  [match_luwpos [word, 接続詞]]
+  ]
+  res: cc
+
+
+# ADV|VERB <-「と」＋ いう|思う|考える|言う|聞く|答える|みる|頼む|書く|述べる
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_child_case, ["と"]],    #  [include_child_case [word, ["と"]]],
+    [include_word_upos, ["ADJ", "VERB"]],    #  [include_upos [word, ["ADJ", "VERB"]]],
+    [include_parent_lemma, ["いう", "思う", "考える", "言う", "聞く", "答える", "みる", "頼む", "書く", "述べる", "主張", "言い残す"]],    #  [include_jp_origin [parent_word, ["いう", "思う", "考える", "言う", "聞く", "答える", "みる", "頼む", "書く", "述べる", "主張", "言い残す"]]]
+  ]
+  res: ccomp
+
+
+# 「と」＋ いう|思う|考える|言う|聞く|答える|みる|頼む|書く|述べる
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_child_case, ["と"]],    #  [include_child_case [word, ["と"]]],
+    [include_word_upos, ["NOUN"]],    #  [include_upos [word, ["NOUN"]]],
+    [regex_word_luwpos, "^形状詞"],    #  [match_luwpos [word, 形状詞-一般]],
+    [include_parent_lemma, ["いう", "思う", "考える", "言う", "聞く", "答える", "みる", "頼む", "書く", "述べる", "主張", "言い残す"]],    #  [include_jp_origin [parent_word, ["いう", "思う", "考える", "言う", "聞く", "答える", "みる", "頼む", "書く", "述べる", "主張", "言い残す"]]]
+  ]
+  res: ccomp
+
+
+# 「と」＋ いう|思う|考える|言う|聞く|答える|みる|頼む|書く|述べる
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_child_case, ["と"]],    #  [include_child_case [word, ["と"]]],
+    [include_word_upos, ["NOUN"]],    #  [include_upos [word, ["NOUN"]]],
+    [regex_word_suffixstring, "^.*だと$"],    #  [match_suffix_string [word, ^.*だと$]],
+    [include_parent_lemma, ["いう", "思う", "考える", "言う", "聞く", "答える", "みる", "頼む", "書く", "述べる", "主張", "言い残す"]],    #  [include_jp_origin [parent_word, ["いう", "思う", "考える", "言う", "聞く", "答える", "みる", "頼む", "書く", "述べる", "主張", "言い残す"]]]
+  ]
+  res: ccomp
+
+
+# ADJ+さ が
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_child_case, ["が"]],    #  [include_child_case [word, ["が"]]],
+    [include_word_upos, ["ADJ"]],    #  [include_upos [word, ["ADJ"]]],
+    [regex_word_luwpos, "^名詞"],    #  [match_luwpos [word, 名詞-普通名詞-一般]],
+    [regex_word_suffixstring, "^.*が[、,，]?$"],    #  [match_suffix_string [word, ^.*が[、,，]?$]]
+  ]
+  res: nsubj
+
+
+# ADJ+さ を
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_child_case, ["を"]],    #  [include_child_case [word, ["を"]]],
+    [include_word_upos, ["ADJ"]],    #  [include_upos [word, ["ADJ"]]],
+    [regex_word_luwpos, "^名詞"],    #  [match_luwpos [word, 名詞-普通名詞-一般]],
+    [regex_word_suffixstring, "^.*を[、,，]?$"],    #  [match_suffix_string [word, ^.*を[、,，]?$]]
+  ]
+  res: obj
+
+
+# ADJ+さ の
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_child_case, ["の"]],    #  [include_child_case [word, ["の"]]],
+    [include_word_upos, ["ADJ"]],    #  [include_upos [word, ["ADJ"]]],
+    [regex_word_luwpos, "^名詞"],    #  [match_luwpos [word, 名詞-普通名詞-一般]],
+    [regex_word_suffixstring, "^.*の[、,，]?$"],    #  [match_suffix_string [word, ^.*の[、,，]?$]]
+  ]
+  res: nmod
+
+
+# ADJ+さ 動詞
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["ADJ"]],    #  [include_upos [word, ["ADJ"]]],
+    [regex_word_luwpos, "^名詞"],    #  [match_luwpos [word, 名詞-普通名詞-一般]],
+    [include_parent_upos, ["VERB", "ADJ"]],    #  [include_upos [parent_word, ["VERB", "ADJ"]]]
+  ]
+  res: obl
+
+
+# ADJ+さ 名詞
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["ADJ"]],    #  [include_upos [word, ["ADJ"]]],
+    [regex_word_luwpos, "^名詞"],    #  [match_luwpos [word, 名詞-普通名詞-一般]],
+    [include_parent_upos, ["NOUN", "PRON", "PROPN", "NUM"]],    #  [include_upos [parent_word, ["NOUN", "PRON", "PROPN", "NUM"]]]
+  ]
+  res: nmod
+
+
+# 表層格「が」
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_child_case, ["が"]],    #  [include_child_case [word, ["が"]]],
+    [include_word_upos, ["VERB", "ADJ"]],    #  [include_upos [word, ["VERB", "ADJ"]]],
+    [regex_word_suffixstring, "^.*が[、,，]?$"],    #  [match_suffix_string [word, ^.*が[、,，]?$]]
+  ]
+  res: csubj
+
+
+# 名詞+なのが
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_child_case, ["が"]],    #  [include_child_case [word, ["が"]]],
+    [include_word_upos, ["NOUN", "ADV"]],    #  [include_upos [word, ["NOUN", "ADV"]]],
+    [regex_word_suffixstring, "^.*が[、,，]?$"],    #  [match_suffix_string [word, ^.*が[、,，]?$]],
+    [regex_child_xpos, "助動詞"],    #  [include_child_xpos [word, 助動詞]]
+  ]
+  res: csubj
+
+
+# 表層格「が」
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_child_case, ["が"]],    #  [include_child_case [word, ["が"]]],
+    [regex_word_suffixstring, "^.*が[、,，]?$"],    #  [match_suffix_string [word, ^.*が[、,，]?$]]
+  ]
+  res: nsubj
+
+
+# SCONJ(mark)が子に含まれていればNOUN|ADV|ADJである主辞(SEM_HEAD)はadvcl
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["NOUN", "ADV", "ADJ"]],    #  [include_upos [word, ["NOUN", "ADV", "ADJ"]]],
+    [include_child_upos, ["SCONJ"]],    #  [include_child_upos [word, ["SCONJ"]]]
+  ]
+  res: advcl
+
+
+# ...ものの->動詞or形容詞 は advcl （...の が nmod になるのを防ぐ）
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["VERB", "ADJ"]],    #  [include_upos [word, ["VERB", "ADJ"]]],
+    [regex_word_suffixstring, "^.*ものの[、,，]?$"],    #  [match_suffix_string [word, ^.*ものの[、,，]?$]]
+  ]
+  res: advcl
+
+
+# 動詞or形容詞->動詞or形容詞(orPARTorAUX)
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["VERB", "ADJ"]],    #  [include_upos [word, ["VERB", "ADJ"]]],
+    [include_parent_upos, ["VERB", "ADJ"]],    #  [include_upos [parent_word, ["VERB", "ADJ"]]]
+  ]
+  res: advcl
+
+
+# 名詞+だ->動詞or形容詞(orPARTorAUX)
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["NOUN", "PRON", "PROPN", "NUM"]],    #  [include_upos [word, ["NOUN", "PRON", "PROPN", "NUM"]]],
+    [include_parent_upos, ["VERB", "ADJ"]],    #  [include_upos [parent_word, ["VERB", "ADJ"]]],
+    [regex_child_xpos, "助動詞"],    #  [include_child_xpos [word, 助動詞]]
+  ]
+  res: advcl
+
+
+# 主辞がADVならadvmodだ
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["ADV"]],    #  [include_upos [word, ["ADV"]]]
+  ]
+  res: advmod
+
+
+# 表層格「を」
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_child_case, ["を"]],    #  [include_child_case [word, ["を"]]]
+  ]
+  res: obj
+
+
+# 連体節中の主格の「の」
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_child_case, ["の"]],    #  [include_child_case [word, ["の"]]],
+    [include_parent_upos, ["VERB", "ADJ"]],    #  [include_upos [parent_word, ["VERB", "ADJ"]]]
+  ]
+  res: nsubj
+
+
+# 表層格「の」
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_child_case, ["の"]],    #  [include_child_case [word, ["の"]]]
+  ]
+  res: nmod
+
+
+# による、etc.
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [regex_word_suffixstring, "(による|に拠る|に因る|に於ける|における|に対する|にたいする|に関する|にかんする|をめぐる|を巡る|に至る|にいたる|に亘る|にわたる)[、,，]?$"],    #  [match_suffix_string [word, (による|に拠る|に因る|に於ける|における|に対する|にたいする|に関する|にかんする|をめぐる|を巡る|に至る|にいたる|に亘る|にわたる)[、,，]?$]]
+  ]
+  res: nmod
+
+
+# 表層格「も」「に」
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_child_case, ["も", "に"]],    #  [include_child_case [word, ["も", "に"]]]
+  ]
+  res: obl
+
+
+# 用言にかかる名詞はobl
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["NOUN", "PRON", "PROPN"]],    #  [include_upos [word, ["NOUN", "PRON", "PROPN"]]],
+    [include_parent_upos, ["VERB", "ADJ", "ADV"]],    #  [include_upos [parent_word, ["VERB", "ADJ", "ADV"]]],
+    [regex_child_xpos, "助詞-格助詞"],    #  [include_child_xpos [word, 助詞-格助詞]]
+  ]
+  res: obl
+
+
+# では、からは、へは
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [regex_child_xpos, "助詞-格助詞"],    #  [include_child_xpos [word, 助詞-格助詞]],
+    [regex_word_suffixstring, "^.*は[、,，]?$"],    #  [match_suffix_string [word, ^.*は[、,，]?$]]
+  ]
+  res: obl
+
+
+# 表層格「は」
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["VERB"]],    #  [include_upos [word, ["VERB"]]],
+    [regex_word_suffixstring, "^.*は[、,，]?$"],    #  [match_suffix_string [word, ^.*は[、,，]?$]]
+  ]
+  res: csubj
+
+
+# 表層格「は」
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [regex_word_suffixstring, "^.*は[、,，]?$"],    #  [match_suffix_string [word, ^.*は[、,，]?$]]
+  ]
+  res: nsubj
+
+
+# 用言にかかる名詞はobl
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["NOUN", "PRON", "PROPN"]],    #  [include_upos [word, ["NOUN", "PRON", "PROPN"]]],
+    [include_parent_upos, ["VERB", "ADJ", "ADV"]],    #  [include_upos [parent_word, ["VERB", "ADJ", "ADV"]]]
+  ]
+  res: obl
+
+
+# NUMはnummod
+- rule: [
+    [include_word_upos, ["NUM"]],    #  [include_upos [word, ["NUM"]]]
+  ]
+  res: nummod
+
+
+
+# 主辞が連体詞ならamodだ
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["ADJ"]],    #  [include_upos [word, ["ADJ"]]],
+    [regex_word_xpos, "^連体詞"],    #  [match_xpos [word, ^連体詞]]
+  ]
+  res: amod
+
+
+# 動詞->名詞はacl
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["VERB", "ADJ"]],    #  [include_upos [word, ["VERB", "ADJ"]]],
+    [include_parent_upos, ["NOUN", "PRON", "PROPN", "NUM"]],    #  [include_upos [parent_word, ["NOUN", "PRON", "PROPN", "NUM"]]]
+  ]
+  res: acl
+
+
+# 動詞->名詞はacl
+- rule: [
+    [include_word_bpos, ["CONT", "SYN_HEAD"]],    #  [include_bpos [word, ["CONT", "SYN_HEAD"]]],
+    [include_word_upos, ["VERB", "ADJ"]],    #  [include_upos [word, ["VERB", "ADJ"]]],
+    [include_parent_upos, ["ADV"]],    #  [include_upos [parent_word, ["ADV"]]]
+  ]
+  res: acl
+
+
+# 主辞がADJならaclだ
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["ADJ"]],    #  [include_upos [word, ["ADJ"]]]
+  ]
+  res: acl
+
+
+# 名詞+だ->名詞はacl
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["NOUN", "PRON", "PROPN", "NUM"]],    #  [include_upos [word, ["NOUN", "PRON", "PROPN", "NUM"]]],
+    [include_parent_upos, ["NOUN", "PRON", "PROPN", "NUM"]],    #  [include_upos [parent_word, ["NOUN", "PRON", "PROPN", "NUM"]]],
+    [regex_child_xpos, "助動詞"],    #  [include_child_xpos [word, 助動詞]]
+  ]
+  res: acl
+
+
+# よう,そうの場合
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [regex_word_xpos, "^形状詞-[助]+"],    #  [match_xpos [word, ^形状詞-[助]+]],
+    [include_parent_upos, ["NOUN"]],    #  [include_upos [parent_word, ["NOUN"]]]
+  ]
+  res: amod
+
+
+# よう,そうの場合
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [regex_word_xpos, "^形状詞-[助]+"],    #  [match_xpos [word, ^形状詞-[助]+]],
+    [include_parent_upos, ["VERB"]],    #  [include_upos [parent_word, ["VERB"]]]
+  ]
+  res: advcl
+
+
+# 固有名詞はcompound（本当は flat にすべきか）
+- rule: [
+    [include_word_bpos, ["CONT"]],    #  [include_bpos [word, ["CONT"]]],
+    [regex_word_luwpos, "^名詞-固有名詞"],    #  [match_luwpos [word, 名詞-固有名詞]]
+  ]
+  res: compound
+
+
+# ADP(助詞-[格副係]助詞)ならcase
+- rule: [
+    [include_word_bpos, ["CONT", "SYN_HEAD", "FUNC", "SEM_HEAD"]],    #  [include_bpos [word, ["CONT", "SYN_HEAD", "FUNC", "SEM_HEAD"]]],
+    [include_word_upos, ["ADP"]],    #  [include_upos [word, ["ADP"]]]
+  ]
+  res: case
+
+
+# 格助詞相当の名詞は case（際に）
+- rule: [
+    [include_word_bpos, ["CONT", "SYN_HEAD", "FUNC", "SEM_HEAD"]],    #  [include_bpos [word, ["CONT", "SYN_HEAD", "FUNC", "SEM_HEAD"]]],
+    [include_word_upos, ["NOUN"]],    #  [include_upos [word, ["NOUN"]]],
+    [regex_word_luwpos, "^助詞"],    #  [match_luwpos [word, 助詞-格助詞]]
+  ]
+  res: case
+
+
+# PRON, NOUNが主辞ならnmodだろう
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["PRON", "NOUN", "PROPN"]],    #  [include_upos [word, ["PRON", "NOUN", "PROPN"]]]
+  ]
+  res: nmod
+
+
+# 「XXだ」の「だ」はcop。なぜ「なあ」が含まれる？
+- rule: [
+    [include_word_bpos, ["SYN_HEAD", "FUNC", "CONT"]],    #  [include_bpos [word, ["SYN_HEAD", "FUNC", "CONT"]]],
+    [include_word_upos, ["AUX"]],    #  [include_upos [word, ["AUX"]]],
+    [include_word_lemma, ["だ", "です", "なあ"]],    #  [include_jp_origin [word, ["だ", "です", "なあ"]]],
+    [include_parent_upos, ["NOUN", "PRON", "PROPN", "ADJ"]],    #  [include_upos [parent_word, ["NOUN", "PRON", "PROPN"]]]
+  ]
+  res: cop
+
+
+# PARTはmark
+- rule: [
+    [include_word_upos, ["PART"]],    #  [include_upos [word, ["PART"]]]
+  ]
+  res: mark
+
+
+# PRONはCONTでもnmod
+- rule: [
+    [include_word_bpos, ["CONT"]],    #  [include_bpos [word, ["CONT"]]],
+    [include_word_upos, ["PRON"]],    #  [include_upos [word, ["PRON"]]]
+  ]
+  res: nmod
+
+
+#  ?
+- rule: [
+    [include_word_bpos, ["SEM_HEAD", "CONT"]],    #  [include_bpos [word, ["SEM_HEAD", "CONT"]]],
+    [include_word_upos, ["PART"]],    #  [include_upos [word, ["PART"]]],
+    [regex_word_xpos, ".+形[状容]詞的"],    #  [match_xpos [word, .+形[状容]詞的]],
+    [include_parent_upos, ["NOUN", "PRON", "PROPN", "PART"]],    #  [include_upos [parent_word, ["NOUN", "PRON", "PROPN", "PART"]]]
+  ]
+  res: amod
+
+
+#  ?
+- rule: [
+    [include_word_bpos, ["SEM_HEAD", "CONT"]],    #  [include_bpos [word, ["SEM_HEAD", "CONT"]]],
+    [include_word_upos, ["PART"]],    #  [include_upos [word, ["PART"]]],
+    [regex_word_xpos, ".+名詞的"],    #  [match_xpos [word, .+名詞的]]
+  ]
+  res: nmod
+
+
+# 対するはcase?
+- rule: [
+    [match_word_lemma, "対する"],    #  [include_jp_origin [word, 対する]],
+    [regex_word_luwpos, "^助詞"],    #  [match_luwpos [word, 助詞-格助詞]]
+  ]
+  res: case
+
+
+# 動詞->動詞or形容詞
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [match_word_lemma, "する"],    #  [include_jp_origin [word, する]],
+    [include_word_upos, ["AUX"]],    #  [include_upos [word, ["AUX"]]],
+    [include_parent_upos, ["VERB", "ADJ"]],    #  [include_upos [parent_word, ["VERB", "ADJ"]]]
+  ]
+  res: advcl
+
+
+# 動詞->動詞or形容詞(or PART or AUX)
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [match_word_lemma, "する"],    #  [include_jp_origin [word, する]],
+    [include_word_upos, ["AUX"]],    #  [include_upos [word, ["AUX"]]],
+    [match_parent_lemma, "する"],    #  [include_jp_origin [parent_word, する]]
+  ]
+  res: advcl
+
+
+# 動詞->動詞or形容詞(or PART or AUX)
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["VERB"]],    #  [include_upos [word, ["VERB"]]],
+    [match_parent_lemma, "する"],    #  [include_jp_origin [parent_word, する]],
+    [include_parent_upos, ["AUX"]],    #  [include_upos [parent_word, ["AUX"]]]
+  ]
+  res: advcl
+
+
+# 動詞->名詞はacl x
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [match_word_lemma, "する"],    #  [include_jp_origin [word, する]],
+    [include_word_upos, ["AUX"]],    #  [include_upos [word, ["AUX"]]],
+    [include_parent_upos, ["NOUN", "PRON", "NUM"]],    #  [include_upos [parent_word, ["NOUN", "PRON", "NUM"]]]
+  ]
+  res: acl
+
+
+# 動詞->名詞はacl x
+- rule: [
+    [include_word_bpos, ["SEM_HEAD", "SYN_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD", "SYN_HEAD"]]],
+    [match_word_lemma, "する"],    #  [include_jp_origin [word, する]],
+    [include_word_upos, ["AUX"]],    #  [include_upos [word, ["AUX"]]],
+    [regex_parent_xpos, "^接尾辞-名詞的"],    #  [match_xpos [parent_word, ^接尾辞-名詞的]]
+  ]
+  res: acl
+
+
+# 動詞->名詞はacl x
+- rule: [
+    [include_word_bpos, ["SEM_HEAD", "SYN_HEAD", "CONT"]],    #  [include_bpos [word, ["SEM_HEAD", "SYN_HEAD", "CONT"]]],
+    [include_word_upos, ["VERB"]],    #  [include_upos [word, ["VERB"]]],
+    [regex_parent_xpos, "^接尾辞-名詞的"],    #  [match_xpos [parent_word, ^接尾辞-名詞的]]
+  ]
+  res: nmod
+
+
+# 動詞->名詞はacl x
+- rule: [
+    [include_word_bpos, ["SEM_HEAD", "SYN_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD", "SYN_HEAD"]]],
+    [regex_word_xpos, "^接尾辞-形状詞的"],    #  [match_xpos [word, ^接尾辞-形状詞的]]
+  ]
+  res: amod
+
+
+# 動詞 -> する
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["VERB"]],    #  [include_upos [word, ["VERB"]]],
+    [regex_parentchild_xpos, "^動詞-非自立可能"],    #  [include_child_xpos [parent_word, ^動詞-非自立可能]]
+  ]
+  res: advcl
+
+
+# ?
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["ADP"]],    #  [include_upos [word, ["ADP"]]],
+    [include_parent_upos, ["NOUN"]],    #  [include_upos [parent_word, ["NOUN"]]]
+  ]
+  res: nmod
+
+
+# 機能語SCONJはmark x
+- rule: [
+    [include_word_bpos, ["FUNC", "SYN_HEAD", "CONT"]],    #  [include_bpos [word, ["FUNC", "SYN_HEAD", "CONT"]]],
+    [include_word_upos, ["SCONJ"]],    #  [include_upos [word, ["SCONJ"]]]
+  ]
+  res: mark
+
+
+# 中黒・はcompoundとひとまず
+- rule: [
+    [include_word_upos, ["SYM", "X"]],    #  [include_upos [word, ["SYM", "X"]]],
+    [match_word_lemma, "・"],    #  [include_jp_origin [word, ・]]
+  ]
+  res: compound
+
+
+# NOUN系にかかるSYMはcompound
+- rule: [
+    [include_word_bpos, ["CONT"]],    #  [include_bpos [word, ["CONT"]]],
+    [include_word_upos, ["SYM", "X"]],    #  [include_upos [word, ["SYM", "X"]]],
+    [include_parent_upos, ["NOUN", "PRON", "PROPN", "NUM", "SYM"]],    #  [include_upos [parent_word, ["NOUN", "PRON", "PROPN", "NUM", "SYM"]]]
+  ]
+  res: compound
+
+
+# NOUN系にかかる主辞のSYMはnmod
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["SYM", "X"]],    #  [include_upos [word, ["SYM", "X"]]],
+    [include_parent_upos, ["NOUN", "PRON", "PROPN", "NUM", "SYM"]],    #  [include_upos [parent_word, ["NOUN", "PRON", "PROPN", "NUM", "SYM"]]]
+  ]
+  res: nmod
+
+
+# SYMなのだが->動詞  B431n_OY14_17111-1
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],
+    [include_word_upos, ["SYM"]],
+    [include_child_upos, ["AUX"]],
+    [include_child_lemma, ["だ"]],
+    [include_parent_upos, ["VERB"]],
+  ]
+  res: advcl
+
+
+# X, 残りのSYMをpunctとしてみる
+- rule: [
+    [include_word_bpos, ["CONT", "SEM_HEAD", "FUNC", "SYN_HEAD"]],    #  [include_bpos [word, ["CONT", "SEM_HEAD", "FUNC", "SYN_HEAD"]]],
+    [include_word_upos, ["SYM"]],    #  [include_upos [word, ["SYM"]]]
+  ]
+  res: dep
+
+
+# ADVはadvmod x
+- rule: [
+    [include_word_bpos, ["CONT"]],    #  [include_bpos [word, ["CONT"]]],
+    [include_word_upos, ["ADV"]],    #  [include_upos [word, ["ADV"]]]
+  ]
+  res: advmod
+
+
+# ADJはamod x
+- rule: [
+    [include_word_bpos, ["CONT"]],    #  [include_bpos [word, ["CONT"]]],
+    [include_word_upos, ["ADJ"]],    #  [include_upos [word, ["ADJ"]]]
+  ]
+  res: amod
+
+
+# 名詞複合語
+- rule: [
+    [include_word_bpos, ["CONT"]],    #  [include_bpos [word, ["CONT"]]],
+    [include_word_upos, ["NOUN"]],    #  [include_upos [word, ["NOUN"]]],
+    [include_parent_upos, ["NOUN", "PRON", "PROPN", "NUM"]],    #  [include_upos [parent_word, ["NOUN", "PRON", "PROPN", "NUM"]]]
+  ]
+  res: compound
+
+
+# 名詞でCONTはcompound x
+- rule: [
+    [include_word_bpos, ["CONT"]],    #  [include_bpos [word, ["CONT"]]],
+    [include_word_upos, ["NOUN"]],    #  [include_upos [word, ["NOUN"]]]
+  ]
+  res: compound
+
+
+# PROPNはcompound x
+- rule: [
+    [include_word_bpos, ["CONT"]],    #  [include_bpos [word, ["CONT"]]],
+    [include_word_upos, ["PROPN"]],    #  [include_upos [word, ["PROPN"]]]
+  ]
+  res: compound
+
+
+# サ変 + する
+- rule: [
+    [include_word_bpos, ["CONT", "SYN_HEAD"]],    #  [include_bpos [word, ["CONT", "SYN_HEAD"]]],
+    [regex_parent_xpos, ".+-サ変"],    #  [match_xpos [parent_word, .+-サ変]],
+    [include_word_lemma, ["する"]],    #  [include_jp_origin [word, ["する"]]]
+  ]
+  res: compound
+
+
+# VERB -> VERBの連結はcompound x
+- rule: [
+    [include_word_bpos, ["CONT"]],    #  [include_bpos [word, ["CONT"]]],
+    [include_word_upos, ["VERB"]],    #  [include_upos [word, ["VERB"]]],
+    [include_parent_upos, ["VERB"]],    #  [include_upos [parent_word, ["VERB"]]]
+  ]
+  res: compound
+
+
+# サ変 -> NOUN/NUM は compound x
+- rule: [
+    [include_word_bpos, ["CONT"]],    #  [include_bpos [word, ["CONT"]]],
+    [regex_word_xpos, ".+-サ変"],    #  [match_xpos [word, .+-サ変]],
+    [include_parent_upos, ["NOUN", "NUM"]],    #  [include_upos [parent_word, ["NOUN", "NUM"]]]
+  ]
+  res: compound
+
+
+# verb -> nounはcompound
+- rule: [
+    [include_word_upos, ["VERB"]],    #  [include_upos [word, ["VERB"]]],
+    [include_parent_upos, ["NOUN"]],    #  [include_upos [parent_word, ["NOUN"]]]
+  ]
+  res: compound
+
+
+# サ変 -> NOUN/NUM は compound x
+- rule: [
+    [include_word_bpos, ["FUNC"]],    #  [include_bpos [word, ["FUNC"]]],
+    [regex_word_xpos, ".+-サ変"],    #  [match_xpos [word, .+-サ変]],
+    [include_parent_upos, ["NOUN", "NUM"]],    #  [include_upos [parent_word, ["NOUN", "NUM"]]]
+  ]
+  res: compound
+
+
+# のこりのAUXはaux x
+- rule: [
+    [include_word_bpos, ["NO_HEAD", "SEM_HEAD", "SYN_HEAD", "FUNC", "CONT"]],    #  [include_bpos [word, ["NO_HEAD", "SEM_HEAD", "SYN_HEAD", "FUNC", "CONT"]]],
+    [include_word_upos, ["AUX"]],    #  [include_upos [word, ["AUX"]]]
+  ]
+  res: aux
+
+
+# ?
+- rule: [
+    [regex_word_luwpos, "^動詞"],    #  [match_luwpos [word, 動詞-一般]]
+  ]
+  res: advcl
+
+
+# ?
+- rule: [
+    [regex_word_luwpos, "^名詞"],    #  [match_luwpos [word, 名詞-普通名詞-一般]]
+  ]
+  res: nmod
+
+
+# X dep x
+- rule: [
+    [include_word_bpos, [NO_HEAD]], [include_word_upos, [X]]
+  ]
+  res: dep
