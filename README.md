@@ -2,7 +2,7 @@
 
 ## 動作環境
 
-Python3.7（3.7.X）にて動作確認済み。
+Python3.9（3.9.X）にて動作確認済み。
 pipで必要なライブラリをインストールします
 
 ```zsh
@@ -200,15 +200,13 @@ elements:
 
 - `bpos`: 対象の単語が文節タイプ`bpos`を持っている
   - ex. `[include_word_bpos, ["SEM_HEAD", "CONT"]]`: 対象単語wordが文節タイプ`SEM_HEAD`か`CONT`であればマッチ
-- `depnum`: wordの掛かり先番号（親の単語の番号）が指定の番号である (差などを見ているわけではないのでROOTである0以外では現状使えないと思われる)
+- `depnum`: wordの掛かり先番号（親の単語の番号）が指定の番号である（差などを見ているわけではないのでROOTである0以外では現状使えないと思われる）
   - ex. `[match_word_depnum, 0]`: wordの掛かり先が0だ
 - `suffixstring`: 対象の単語の「文節の末尾表現」が「S」である
   - ex. `[regex_word_suffixstring, "^.*だと$"]` : 対象単語wordの文節末尾表現が「XXだと」という形であればマッチ
 - `case` : 対象の単語が「（係格副）助詞」の品詞である単語であればマッチ
-  - ex. `[include_child_case, ["と"]]` : 格助詞「と」が子(child)単語にあればマッチ
+  - ex. `[include_child_case, ["と"]]` : 格助詞「と」が子（child）単語にあればマッチ
   - ※ 品詞の確認だけなら `(xpos|luwpos)` 辺りを使えばいいので `include_child_case`（子の単語の中に該当する助詞があるか）での想定
-
-
 
 ## 長単位情報つき単語のフォーマットの仕様
 

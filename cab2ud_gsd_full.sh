@@ -15,7 +15,7 @@ EOS
 BASE_DIR=../cabocha_files/GSD/UD_Japanese-GSDPUD-CaboCha
 WORK_DIR=../cabocha_files/GSD/work
 SP_DIR=../cabocha_files/GSD/sp_data
-PATTERN_DIR=../UDJapaneseGSD
+PATTERN_DIR=./convert_paren
 
 while getopts "p:b:s:w:h" optKey; do
   case "$optKey" in
@@ -59,20 +59,24 @@ ls $WORK_DIR/*.cabocha | \
     parallel 'python merge_number/merge_number.py < {} > {}.n'
 # cabocha -> UD 作業
 ls $WORK_DIR/*.cabocha | \
-    parallel 'python cab2ud.py {}.n -c conf/default_gsd_args.yaml -w {}.conllu'
+    parallel 'python cabocha2ud {}.n -c conf/default_gsd_args.yaml -w {}.conllu'
 
 # PUD作業
 # 括弧の対応を直す
-python $PATTERN_DIR/convertParen2.6.py $WORK_DIR/ud_pud.cabocha.conllu $WORK_DIR/ud_pud.cabocha.conllu.p
+python $PATTERN_DIR/convertParen.py $WORK_DIR/ud_pud.cabocha.conllu $WORK_DIR/ud_pud.cabocha.conllu.p
 
 for ttt in dev test train
 do
   python merge_gsd/merge_sp_to_conll.py $WORK_DIR/ud_gsd_$ttt.cabocha.conllu $SP_DIR/SpaceAfter_$ttt.txt -w $WORK_DIR/ud_gsd_$ttt.cabocha.conllu.p
-  cp $WORK_DIR/ud_gsd_$ttt.cabocha.conllu.p $WORK_DIR/ud_gsd_$ttt.cabocha.conllu
+  python fixed_newdoc/fixed_newdoc.py $WORK_DIR/ud_gsd_$ttt.cabocha.conllu.p -w $WORK_DIR/ud_gsd_$ttt.cabocha.conllu.spf
+  python patch_fix/patch_fix.py $WORK_DIR/ud_gsd_$ttt.cabocha.conllu.spf conf/auto_hand_fix.yaml -w $WORK_DIR/ud_gsd_$ttt.cabocha.conllu.spff
+  cp $WORK_DIR/ud_gsd_$ttt.cabocha.conllu.spff $WORK_DIR/ud_gsd_$ttt.cabocha.conllu
 done
 
 python merge_gsd/merge_sp_to_conll.py $WORK_DIR/ud_pud.cabocha.conllu.p $SP_DIR/SpaceAfter_pud.txt -w $WORK_DIR/ud_pud.cabocha.conllu.sp
-cp $WORK_DIR/ud_pud.cabocha.conllu.sp $WORK_DIR/ud_pud.cabocha.conllu
+python fixed_newdoc/fixed_newdoc.py $WORK_DIR/ud_pud.cabocha.conllu.sp -w $WORK_DIR/ud_pud.cabocha.conllu.spf
+python patch_fix/patch_fix.py $WORK_DIR/ud_pud.cabocha.conllu.spf conf/auto_hand_fix.yaml -w $WORK_DIR/ud_pud.cabocha.conllu.spff
+cp $WORK_DIR/ud_pud.cabocha.conllu.spff $WORK_DIR/ud_pud.cabocha.conllu
 
 rm -f $WORK_DIR/*.cabocha
 

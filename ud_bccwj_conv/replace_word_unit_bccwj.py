@@ -93,14 +93,14 @@ def merge_conll_and_bccwj(bccwj_flat, conll_flat, debug=False):
                 yield (citem, bctm)
             else:
                 if debug:
-                    print(citem[1].split("\t")[FORM], "".join([b["原文文字列"] for b in bctm[1]]))
+                    print("c", citem[1].split("\t")[FORM], "".join([b["原文文字列"] for b in bctm[1]]))
                 assert citem[1].split("\t")[FORM] in "".join([b["原文文字列"] for b in bctm[1]])
                 yield (citem, bctm)
                 cnt = len([b["原文文字列"] for b in bctm[1]]) - len(citem[1].split("\t")[FORM])
                 while cnt > 0:
                     citem = next(conll_iter)
                     if debug:
-                        print(citem[1].split("\t")[FORM], "".join([b["原文文字列"] for b in bctm[1]]), cnt)
+                        print("d", citem[1].split("\t")[FORM], "".join([b["原文文字列"] for b in bctm[1]]), cnt)
                     yield (citem, bctm)
                     cnt -= len(citem[1].split("\t")[FORM])
         except StopIteration:
@@ -116,6 +116,8 @@ def replace_blank_files(conll_file, base_data, misc_data, writer, debug=False):
     for tid, cnl in separate_document(conll_file):
         assert cnl[0].startswith("# sent_id =")
         assert tid in base_data, tid
+        if debug:
+            print(cnl[0], tid)
         bcc_conll_map[tid] = {}
         # merge mapping conll and bccwj
         map_lst = merge_conll_and_bccwj(base_data[tid], cnl, debug=debug)

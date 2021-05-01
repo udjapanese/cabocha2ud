@@ -43,13 +43,13 @@ ls $BASE_DIR/*/*.cabocha | \
 
 # CabochaからUDへの変換
 ls $BASE_DIR/*/*.cabocha | \
-    parallel 'python cab2ud.py {}.n -c conf/default_bccwj_args.yaml -w {}.conllu.mr'
+    parallel 'python cabocha2ud {}.n -c conf/default_bccwj_args.yaml -w {}.conllu.mr'
 
 # シングルルートに変換
 ls $BASE_DIR/*/*.conllu.mr | \
-    parallel python misc/replace_multi_root.py {} convert -w {}.csr --debug
+    parallel 'python misc/replace_multi_root.py {} convert --debug | python patch_fix/patch_fix.py - conf/auto_hand_fix.yaml -w {}.csr'
 ls $BASE_DIR/*/*.conllu.mr | \
-    parallel python misc/replace_multi_root.py {} remove -w {}.rsr --debug
+    parallel 'python misc/replace_multi_root.py {} remove --debug | python patch_fix/patch_fix.py - conf/auto_hand_fix.yaml -w {}.rsr'
 
 # マルチルートが残ったまま  *.conllu.mr
 cat $BASE_DIR/dev/*.mr > $OUTPUT_DIR/ja_bccwj-ud-dev.mr.conllu

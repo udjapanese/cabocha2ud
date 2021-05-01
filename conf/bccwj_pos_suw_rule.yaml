@@ -83,9 +83,6 @@ rule:
 - - pos: "^連体詞"
   - - ADJ
 
-- - pos: "^副詞"
-  - - ADV
-
 - - pos: "^感動詞"
   - - INTJ
 
@@ -99,6 +96,9 @@ rule:
 - - pos: "^助詞-接続助詞"
     base_lexeme: "^て$"
   - - SCONJ
+
+- - pos: "^副詞"
+  - - ADV
 
 - - pos: "助詞-格助詞"
     base_lexeme: "^と$"
@@ -133,6 +133,8 @@ rule:
     base_lexeme: "^き$"
   - - PART
 
+# ここに例外AUX
+
 - - pos: "^助動詞"
   - - AUX
 
@@ -165,64 +167,22 @@ rule:
     base_lexeme: "する"
   - - AUX
 
-# ルールとして入れておく
-- - pos: "^動詞-非自立可能"
-    bpos: FUNC
-    base_lexeme: "為る"
-  - - AUX
-
 - - pos: "^動詞-非自立可能"
     bpos: SYN_HEAD
     base_lexeme: "する"
   - - AUX
 
-# ルールとして入れておく
+- - pos: "^動詞-非自立可能"
+    bpos: FUNC
+    base_lexeme: "為る"
+  - - AUX
+
 - - pos: "^動詞-非自立可能"
     bpos: SYN_HEAD
     base_lexeme: "為る"
   - - AUX
 
 - - pos: "^動詞-非自立可能"
-    base_lexeme: "すぎる"
-    bpos: SYN_HEAD
-  - - AUX
-
-- - pos: "^動詞-非自立可能"
-    base_lexeme: "すぎる"
-    bpos: FUNC
-  - - AUX
-
-- - pos: "^動詞-非自立可能"
-    base_lexeme: "ある"
-    bpos: SYN_HEAD
-  - - AUX
-
-- - pos: "^動詞-非自立可能"
-    base_lexeme: "ある"
-    bpos: FUNC
-  - - AUX
-
-- - pos: "^動詞-非自立可能"
-    base_lexeme: "いる"
-    bpos: SYN_HEAD
-  - - AUX
-
-- - pos: "^動詞-非自立可能"
-    base_lexeme: "いる"
-    bpos: FUNC
-  - - AUX
-
-- - pos: "^動詞-非自立可能"
-    base_lexeme: "行く"
-    bpos: SYN_HEAD
-  - - AUX
-
-- - pos: "^動詞-非自立可能"
-    base_lexeme: "行く"
-    bpos: FUNC
-  - - AUX
-
-- - pos: "^動詞-非自立可能"
     bpos: SYN_HEAD
     base_lexeme: できる
   - - AUX
@@ -233,25 +193,43 @@ rule:
   - - AUX
 
 - - pos: "^動詞-非自立可能"
-    bpos: CONT
-  - - AUX
-
-- - pos: "^動詞-非自立可能"
     bpos: SYN_HEAD
+    base_lexeme: くださる
   - - AUX
 
 - - pos: "^動詞-非自立可能"
     bpos: FUNC
+    base_lexeme: くださる
   - - AUX
 
-- - pos: "^動詞-一般"
-    base_lexeme: "しれる"
-    luw: "助動詞"
+- - pos: "^動詞-非自立可能"
+    bpos: SYN_HEAD
+    base_lexeme: いただく
   - - AUX
 
-- - pos: "^動詞-一般"
-    base_lexeme: "知れる"
-    luw: "助動詞"
+- - pos: "^動詞-非自立可能"
+    bpos: FUNC
+    base_lexeme: いただく
+  - - AUX
+
+- - pos: "^動詞-非自立可能"
+    bpos: SYN_HEAD
+    base_lexeme: いたす
+  - - AUX
+
+- - pos: "^動詞-非自立可能"
+    bpos: FUNC
+    base_lexeme: いたす
+  - - AUX
+
+- - pos: "^動詞-非自立可能"
+    bpos: SYN_HEAD
+    base_lexeme: なさる
+  - - AUX
+
+- - pos: "^動詞-非自立可能"
+    bpos: FUNC
+    base_lexeme: なさる
   - - AUX
 
 - - pos: "^名詞-助動詞語幹"

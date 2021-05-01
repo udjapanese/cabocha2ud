@@ -34,7 +34,7 @@ def main():
     for sent in _iterate_sentence(args.conll_file):
         sent_id = sent[0].split(" ")[-1]
         if sent_id in filtered_ids:
-            args.error_sent_file.write("\n".join(sent) + "\n\n")
+            sys.stderr.write("\n".join(sent) + "\n\n")
         else:
             args.writer.write("\n".join(sent) + "\n\n")
 

@@ -1,0 +1,344 @@
+
+#  ############  #
+#  GSD
+#  ############  #
+
+- sent_id: w01040101
+  rules:
+    - ids: [8, 17]
+      target: HEAD
+      value: 13
+# sent id: w01040100
+# pos: 対象 8, 17 （）部分
+# rule: dep: 15 -> 13に
+# memo: かっこがおかしい、convertParn
+
+- sent_id: train-s2872
+  rules:
+    - ids: [3, 4, 5]
+      target: HEAD
+      value: 1
+# sent id: train-s2872
+# pos: 3,4,5
+# rule: dep:2 -> 1 に
+# memo: 「とはいっても」てきなのむずかしい
+
+- sent_id: train-s4422
+  rules:
+    - ids: [24]
+      target: HEAD
+      value: 23
+    - ids: [23]
+      target: HEAD
+      value: 35
+- sent_id: train-s5869
+  rules:
+    - ids: [5]
+      target: HEAD
+      value: 8
+# memo: train-s4422, train-s5869 本当は括弧＞接続詞で優先順位を見る必要がある
+
+
+- sent_id: B035p_PB53_00013-37
+  rules:
+    - ids: [2, 3, 4]
+      target: HEAD
+      value: 1
+    - ids: [2]
+      target: DEPREL
+      value: fixed
+    - ids: [1]
+      target: DEPREL
+      value: cc
+    - ids: [1]
+      target: HEAD
+      value: 25
+# sent_id = B035p_PB53_00013
+# なおすべきだがちょっと空白のやつがいま直せるきがしない
+#1       そう    そう    ADV     副詞    _       2       fixed   _       BunsetuBILabel=B|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=接続詞|SpaceAfter=No
+#2       し      する    CCONJ   動詞-非自立可能 _       25      cc      _       BunsetuBILabel=I|BunsetuPositionType=SEM_HEAD|LUWBILabel=I|LUWPOS=接続詞|SpaceAfter=No
+#3       て      て      SCONJ   助詞-接続助詞   _       2       fixed   _       BunsetuBILabel=I|BunsetuPositionType=SYN_HEAD|LUWBILabel=I|LUWPOS=接続詞|SpaceAfter=No
+#4       、      、      PUNCT   補助記号-読点   _       2       punct   _       BunsetuBILabel=I|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=補助記号-読点|SpaceAfter=No
+
+
+- sent_id: E316n_PN5f_00020-7
+  rules:
+    - ids: [21]
+      target: DEPREL
+      value: advcl
+    - ids: [21]
+      target: HEAD
+      value: 27
+    - ids: [22, 24]
+      target: HEAD
+      value: 21
+    - ids: [23]
+      target: HEAD
+      value: 22
+# memo: 直すべきではある
+# 21      する    する    AUX     動詞-非自立可能 _       24      aux     _       BunsetuBILabel=B|BunsetuPositionType=FUNC|LUWBILabel=B|LUWPOS=動詞-一般-サ行変格|SpaceAfter=No
+# 22      、      、      PUNCT   補助記号-読点   _       24      punct   _       BunsetuBILabel=I|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=補助記号-読点|SpaceAfter=No
+# 23      …       …       SYM     補助記号-一般   _       24      fixed   _       BunsetuBILabel=I|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=補助記号-一般|SpaceAfter=No
+# 24      と      と      CCONJ   接続詞  _       27      cc      _       BunsetuBILabel=I|BunsetuPositionType=SEM_HEAD|LUWBILabel=B|LUWPOS=接続
+
+- sent_id: B333n_OY15_07462-1
+  rules:
+    - ids: [28]
+      target: UPOS
+      value: NOUN
+    - ids: [28]
+      target: DEPREL
+      value: nmod
+    - ids: [28]
+      target: HEAD
+      value: 26
+    - ids: [26]
+      target: HEAD
+      value: 31
+    - ids: [26]
+      target: DEPREL
+      value: obl
+# 「（！）」→「頭」になおす
+
+- sent_id: B333n_OY15_07462-4
+  rules:
+    - ids: [34, 45]  # 34: 味噌 -> 30: 豆腐, 45: 薄め -> 30: 豆腐
+      target: HEAD
+      value: 30
+    - ids: [34, 45]  # 34: 味噌 -> 30: 豆腐, 45: 薄め -> 30: 豆腐 appos
+      target: DEPREL
+      value: appos
+    - ids: [30]  # 30: 豆腐 -> 49: 混ぜ
+      target: HEAD
+      value: 49
+    - ids: [30]  # 30: 豆腐 -> 49: 混ぜ
+      target: DEPREL
+      value: obj
+    - ids: [37, 44, 40, 46, 47]   # 37:な（ので） -> 45: 薄め, 44: 塩気 -> 45: 薄め  40: 色（の割に）→ 45:薄め 。） ->
+      target: HEAD
+      value: 45
+    - ids: [42]   # 割（に） -> 色（の）
+      target: HEAD
+      value: 40
+    - ids: [41]   # の -> 色
+      target: HEAD
+      value: 40
+    - ids: [41]   # の -> 色
+      target: DEPREL
+      value: case
+    - ids: [48]  # 48: を -> 30: 味噌
+      target: HEAD
+      value: 30
+    - ids: [48]  # 48: を -> 30: 味噌
+      target: DEPREL
+      value: case
+# memo: すごい（）が多くてめんどくさい
+
+
+- sent_id: B025p_OW6X_00036-37
+  rules:
+    - ids: [29]  # よる
+      target: HEAD
+      value: 65
+    - ids: [31]  # よる
+      target: HEAD
+      value: 65
+# memo: ちゃんと括弧の処理を
+
+- sent_id: B041p_PB48_00016-35
+  rules:
+    - ids: [11]  # を
+      target: HEAD
+      value: 10
+    - ids: [10]  # オ
+      target: HEAD
+      value: 12
+    - ids: [10]  # オ
+      target: DEPREL
+      value: obj
+- sent_id: B041p_PB48_00016-38
+  rules:
+    - ids: [12]  # を
+      target: HEAD
+      value: 11
+    - ids: [11]  # オ
+      target: HEAD
+      value: 13
+    - ids: [11]  # オ
+      target: DEPREL
+      value: obj
+# memo:
+# [Line 1305 Sent B041p_PB48_00016-35 Node 11]: [L3 Syntax leaf-mark-case] 'case' not expected to have children (11:を:case --> 10:オ:compound)
+# [Line 1517 Sent B041p_PB48_00016-38 Node 12]: [L3 Syntax leaf-mark-case] 'case' not expected to have children (12:が:case --> 11:オ:compound)
+# ほんとは接尾辞「オ」が主辞になるようにという処理をすべき
+
+
+- sent_id: B024n_PM25_00027-131
+  rules:
+    - ids: [20]
+      target: HEAD
+      value: 24
+    - ids: [24]
+      target: HEAD
+      value: 27
+    - ids: [20]
+      target: UPOS
+      value: NOUN
+    - ids: [24]
+      target: UPOS
+      value: NOUN
+    - ids: [20]
+      target: DEPREL
+      value: nmod
+    - ids: [24]
+      target: DEPREL
+      value: obl
+    - ids: [19, 21]
+      target: HEAD
+      value: 20
+    - ids: [23, 25]
+      target: HEAD
+      value: 24
+    - ids: [22]
+      target: HEAD
+      value: 20
+# memo:
+# ほんとうは（上記B333n_OY15_07462-1, B041p_PB48_00016-35など参照）
+# 19      “       “       PUNCT   補助記号-括弧開 _       22      punct   _       BunsetuBILabel=B|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=補助記号-括弧開|SpaceAfter=No
+# 20      ［      ［      PUNCT   補助記号-括弧開 _       22      punct   _       BunsetuBILabel=I|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=補助記号-括弧開|SpaceAfter=No
+# 21      ”       ”       PUNCT   補助記号-括弧閉 _       22      punct   _       BunsetuBILabel=I|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=補助記号-括弧閉|SpaceAfter=No
+# 22      と      と      ADP     助詞-格助詞     _       26      case    _       BunsetuBILabel=I|BunsetuPositionType=SEM_HEAD|LUWBILabel=B|LUWPOS=助詞-格助詞|SpaceAfter=No
+# 23      “       “       PUNCT   補助記号-括弧開 _       26      punct   _       BunsetuBILabel=B|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=補助記号-括弧開|SpaceAfter=No
+# 24      ］      ］      PUNCT   補助記号-括弧閉 _       26      punct   _       BunsetuBILabel=I|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=補助記号-括弧閉|SpaceAfter=No
+# 25      ”       ”       PUNCT   補助記号-括弧閉 _       26      punct   _       BunsetuBILabel=I|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=補助記号-括弧閉|SpaceAfter=No
+# 26      で      で      ADP     助詞-格助詞     _       27      case    _       BunsetuBILabel=I|BunsetuPositionType=SEM_HEAD|LUWBILabel=B|LUWPOS=助詞-格助詞|SpaceAfter=No
+# 27      囲ん    囲む    VERB    動詞-一般       _       30      acl     _       BunsetuBILabel=B|BunsetuPositionType=SEM_HEAD|LUWBILabel=B|LUWPOS=動詞-一般-五段-マ行|SpaceAfter=No
+# 28      だ      た      AUX     助動詞  _       27      aux     _       BunsetuBILabel=I|BunsetuPositionType=SYN_HEAD|LUWBILabel=B|LUWPOS=助動
+
+
+- sent_id: D050p_OW6X_00073-147
+  rules:
+    - ids: [8, 10, 12]
+      target: HEAD
+      value: 11
+    - ids: [11]
+      target: HEAD
+      value: 33
+    - ids: [11]
+      target: UPOS
+      value: NOUN
+    - ids: [11]
+      target: DEPREL
+      value: nsubj
+# memo: text = ２：検挙件数及び検挙人員欄の（）は の（）
+
+- sent_id: OC12_01184-5
+  rules:
+    - ids: [6]
+      target: UPOS
+      value: NOUN
+    - ids: [6]
+      target: DEPREL
+      value: dislocated
+# memo: 「臭い」が接尾辞になってしまうのでNOUN/dislocatedに
+
+- sent_id: B300n_OY15_05298-8
+  rules:
+    - ids: [1]
+      target: UPOS
+      value: VERB
+    - ids: [1]
+      target: DEPREL
+      value: advcl
+- sent_id: B300n_OY15_05298-18
+  rules:
+    - ids: [1]
+      target: UPOS
+      value: VERB
+    - ids: [1]
+      target: DEPREL
+      value: advcl
+- sent_id: OC02_00003-6
+  rules:
+    - ids: [17]
+      target: UPOS
+      value: VERB
+    - ids: [17]
+      target: DEPREL
+      value: advcl
+# memo: 「、、、と」「、、、ってか」「？？？？」が冒頭にある advclかどうかは不明
+
+- sent_id: E316n_PN5f_00020-7
+  rules:
+    - ids: [23]
+      target: DEPREL
+      value: fixed
+# memo: E316n_PN5f_00020-7 「、 <- ...」
+
+- sent_id: A013n_PM12_00014-63
+  rules:
+    - ids: [1]
+      target: UPOS
+      value: VERB
+    - ids: [1]
+      target: DEPREL
+      value: advcl
+- sent_id: PB45_00051-12
+  rules:
+    - ids: [1]
+      target: UPOS
+      value: VERB
+    - ids: [1]
+      target: DEPREL
+      value: advcl
+# memo: 「1:だ/と/すれば」
+
+- sent_id: A242n_OY04_03120-12
+  rules:
+    - ids: [5]
+      target: DEPREL
+      value: fixed
+- sent_id: A216n_OY14_02642-10
+  rules:
+    - ids: [84]
+      target: DEPREL
+      value: fixed
+# memo: 「です/。/と」「。であるならば」
+
+- sent_id: C042n_PM21_00086-23
+  rules:
+    - ids: [21]
+      target: DEPREL
+      value: obl
+    - ids: [21]
+      target: UPOS
+      value: NOUN
+# memo: 「"で"」で
+# 20      「      「      PUNCT   補助記号-括弧開 _       21      punct   _       BunsetuBILabel=B|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=補助記号-括弧開|SpaceAfter=No
+# 21      で      だ      AUX     助動詞  _       24      aux     _       BunsetuBILabel=I|BunsetuPositionType=SEM_HEAD|LUWBILabel=B|LUWPOS=助動詞-助動詞-ダ|SpaceAfter=No
+# 22      」      」      PUNCT   補助記号-括弧閉 _       21      punct   _       BunsetuBILabel=I|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=補助記号-括弧閉|SpaceAfter=No
+# 23      で      で      ADP     助詞-格助詞     _       21      case    _       BunsetuBILabel=I|BunsetuPositionType=FUNC|LUWBILabel=B|LUWPOS=
+
+- sent_id: D071n_PM31_00275-3
+  rules:
+    - ids: [8]
+      target: HEAD
+      value: 11
+    - ids: [9]
+      target: HEAD
+      value: 8
+    - ids: [9]
+      target: DEPREL
+      value: case
+- sent_id: D071n_PM31_00275-108
+  rules:
+    - ids: [12]
+      target: HEAD
+      value: 15
+    - ids: [13]
+      target: HEAD
+      value: 12
+    - ids: [13]
+      target: DEPREL
+      value: case
+# memo: 「あなたも」 -> 「生き抜いて」

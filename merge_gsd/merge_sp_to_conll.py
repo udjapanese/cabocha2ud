@@ -6,28 +6,29 @@ merge to sp information to GSD conll file
 
 import argparse
 import codecs
+from typing import TextIO
 
 from difflib import SequenceMatcher
 
 
-def load_db_file(db_file):
+def load_db_file(db_file: TextIO) -> list[list[dict[str, str]]]:
     """
         load dainagon data
     """
-    full_data = []
+    full_data: list[dict[str, str]] = []
     header = next(db_file).rstrip("\r\n").split("\t")
     for line in db_file:
-        line = line.rstrip("\r\n").split("\t")
-        item = dict(list(zip(header, line)))
+        item: dict[str, str] = dict(list(zip(header, line.rstrip("\r\n").split("\t"))))
         if item["orthToken(S)"] == '","':
             item["orthToken(S)"] = ','
         full_data.append(item)
     return _split_db_file(full_data, "boundary(S)")
 
 
-def _split_db_file(full_data, target_column):
-    nfull, stack = [], []
-    flag = False
+def _split_db_file(full_data: list[dict[str, str]], target_column: str) -> list[list[dict[str, str]]]:
+    nfull: list[list[dict[str, str]]] = []
+    stack: list[dict[str, str]] = []
+    flag: bool = False
     for item in full_data:
         if flag and item[target_column] == "B":
             nfull.append(stack)
@@ -39,16 +40,18 @@ def _split_db_file(full_data, target_column):
         nfull.append(stack)
     return nfull
 
-def load_conll_file(conll_file):
+
+def load_conll_file(conll_file: TextIO) -> list[list[list[str]]]:
     """
         load conll data
     """
-    full_data, sent = [], []
+    full_data: list[list[list[str]]] = []
+    sent: list[list[str]] = []
     for line in conll_file:
         line = line.rstrip("\r\n")
         if line == "":
             full_data.append(sent)
-            sent =[]
+            sent = []
         else:
             if line.startswith("# "):
                 sent.append(line.split(" "))
@@ -57,13 +60,13 @@ def load_conll_file(conll_file):
     return full_data
 
 
-def similarity(alst, blst):
+def similarity(alst, blst) -> float:
     if len(alst) < len(blst):
         alst, blst = blst, alst
     return SequenceMatcher(None, alst, blst).ratio()
 
 
-def get_conll_header_pos(conll):
+def get_conll_header_pos(conll: list[list[str]]) -> int:
     """
         detect conll header size
     """
@@ -76,7 +79,17 @@ def get_conll_header_pos(conll):
 
 
 def get_merged_poslist(conll_data, sp_data):
+    """ SPデータと統合する
+     conllデータとSPデータをマッチングする
+    Args:
+        conll_data ([type]): [description]
+        sp_data ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
     assert len(conll_data) <= len(sp_data)
+    print(len(conll_data), len(sp_data))
     if len(conll_data) == len(sp_data):
         return [(p, p) for p in range(len(conll_data))]
     sp_it = iter(enumerate(sp_data))
@@ -122,18 +135,20 @@ def matching_from_seqmath(conll, spd):
     return pos_lst
 
 
-def adapt_spafter_to_conll(conll, spd):
-    """
-    TODO:
-    mergeした数字対応対策をする
-    textも書き換えること
+def adapt_spafter_to_conll(conll: list[list[str]], spd: list[dict[str, str]]):
+    """ adapt spafter to CoNLL line
+
+    Args:
+        conll (list[list[str]]): SpaceAfter=を書き換えるCoNLL文
+        spd (list[dict[str, str]]): SpaceAfterデータ
+
+    Returns:
+        [type]: [description]
     """
     hpos = get_conll_header_pos(conll)
-    if not any([s["SpaceAfter"] == "YES" for s in spd]):
+    if all([s["SpaceAfter"] != "YES" for s in spd]):
         return hpos, conll
     nconll = conll[0:hpos]
-    # テキスト書き換え用
-    word_lst = []
     assert len(conll[hpos:]) <= len(spd)
     result_pos = matching_from_seqmath(conll[hpos:], spd)
     assert [p for p, _ in result_pos] == list(range(len(conll[hpos:])))
@@ -155,9 +170,10 @@ def adapt_spafter_to_conll(conll, spd):
     return hpos, nconll
 
 
-def output_header_including_sp(header, content, writer):
+def write_header_including_sp(header: list[str], content: list[str], writer: TextIO) -> None:
     """
         refrected sp information to text line
+        SpaceAfter=を元に書き換え
     """
     for hhh in header:
         assert hhh[0] == "#"
@@ -175,7 +191,7 @@ def output_header_including_sp(header, content, writer):
             writer.write(" ".join(hhh) + "\n")
 
 
-def main():
+def main() -> None:
     """
         main function
     """
@@ -184,7 +200,8 @@ def main():
     parser.add_argument("sp_file")
     parser.add_argument("-w", "--writer", default="output.conllu")
     args = parser.parse_args()
-    conll_data, sp_data = None, None
+    conll_data: list[list[list[str]]] = []
+    sp_data: list[list[dict[str, str]]] = []
     with codecs.open(args.conll_file, encoding="utf-8") as conll_file:
         conll_data = load_conll_file(conll_file)
     with codecs.open(args.sp_file, encoding="utf-8") as sp_file:
@@ -193,7 +210,7 @@ def main():
     with codecs.open(args.writer, "w", encoding="utf-8") as writer:
         for cpos, spos in pos_list:
             hpos, result = adapt_spafter_to_conll(conll_data[cpos], sp_data[spos])
-            output_header_including_sp(result[:hpos], result[hpos:], writer)
+            write_header_including_sp(result[:hpos], result[hpos:], writer)
             for line in result[hpos:]:
                 writer.write("\t".join(line) + "\n")
             writer.write("\n")

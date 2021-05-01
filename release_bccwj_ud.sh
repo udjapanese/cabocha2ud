@@ -1,8 +1,7 @@
 #!/bin/sh -x
 
-"""
-    BCCWJ convert shell script
-"""
+#    BCCWJ convert shell script
+
 
 BASE_DIR=.
 UD_TOOL_DIR=../../UD-TOOLS
@@ -42,22 +41,19 @@ while getopts "b:u:s:c:h" optKey; do
   esac
 done
 
-set -e
-
 BASE_BCCWJ_DIR=$CONLLU_FILE_DIR/BCCWJ
 MISC_DATA=$BASE_DIR/misc_mapping.pkl
-ERROR_RESULT=$BASE_DIR/error_res.txt
+ERROR_RESULT=$BASE_DIR/error_bccwj_res.txt
 ERROR_SENT_LIST=$BASE_DIR/error_sentid_lst.txt
+ERROR_SENT_COL=$BASE_DIR/err_sent_blank.txt
 
 # create filtered sentence
-cat $BASE_BCCWJ_DIR/*/*.csr | python $UD_TOOL_DIR/validate.py --lang ja --max-err 0 - 1>| $ERROR_RESULT 2>&1
+ls $BASE_BCCWJ_DIR/*/*.csr | parallel "python $UD_TOOL_DIR/validate.py --lang ja --max-err 0" >| $ERROR_RESULT 2>&1
 grep Sent $ERROR_RESULT | cut -d " " -f 4  | grep -v with | sort | uniq >| $ERROR_SENT_LIST
 
 # create blank data
 cat $BASE_BCCWJ_DIR/*/*.csr | python ud_bccwj_conv/extract_misc_information.py - -w $MISC_DATA
 python ud_bccwj_conv/convert_core_suw_pkl.py $CORE_BCCWJ_FILE
-
-TARGET=dev test train
 
 for ttt in train test dev; do
   cat $BASE_BCCWJ_DIR/$ttt/*.csr | \
@@ -66,7 +62,7 @@ done
 
 # filter error sentences
 for ttt in train test dev; do
-  python ud_bccwj_conv/filter_sentence_by_id.py ${ttt}.conllu $ERROR_SENT_LIST >| ja_bccwj-ud-${ttt}.conllu
+  python ud_bccwj_conv/filter_sentence_by_id.py ${ttt}.conllu $ERROR_SENT_LIST $ERROR_SENT_COL >| ja_bccwj-ud-${ttt}.conllu
 done
 
 
