@@ -5,6 +5,7 @@ import bisect
 
 from .util import Field
 
+
 class Content:
 
     def __init__(self, id_: int, content: Optional[str]):
@@ -23,6 +24,7 @@ class Content:
 
     def __str__(self) -> str:
         return str(self.content)
+
 
 class Misc(Content):
 
@@ -58,7 +60,6 @@ class Misc(Content):
         return str(self.content)
 
 
-
 class Word(list[Content]):
     """
 
@@ -77,7 +78,7 @@ class Word(list[Content]):
     def __init__(self, content: Optional[list[str]]=None):
         super(Word, self).__init__()
         if content is not None:
-            self.__load(content)
+            self.set_by_list(content)
         else:
             for id_ in range(len(Field)):
                 self.append(Content(id_, "_"))
@@ -85,12 +86,11 @@ class Word(list[Content]):
     def __str__(self):
         return "\t".join([str(c) for c in self])
 
-    def __load(self, content: list[str]):
-        for id_, cont in enumerate(content):
-            if id_ == Field.MISC:
-                self.append(Misc(id_, cont))
-            else:
-                self.append(Content(id_, cont))
+    def set_by_list(self, content: list[str]):
+        self.extend(
+            Misc(id_, cont) if id_ == Field.MISC else Content(id_, cont)
+            for id_, cont in enumerate(content)
+        )
         if len(self) != len(Field):
             raise ValueError("must set filed size " + str(len(Field)))
 
@@ -98,3 +98,13 @@ class Word(list[Content]):
         if isinstance(position, str):
             return self[Field[position]]
         return self[position]
+
+    def set(self, position: Union[Field, str], content: Optional[Union[str, int]]):
+        pos = Field[position].value if isinstance(position, str) else position.value
+        if position == Field.MISC:
+            self[pos] = Misc(pos, str(content))
+        else:
+            self[pos] = Content(pos, str(content))
+
+    def get_value_str_list(self) -> list[str]:
+        return [str(content) for content in self]

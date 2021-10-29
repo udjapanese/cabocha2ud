@@ -1,0 +1,5 @@
+bunsetu-func: type2
+skip-space: True
+space-marker: hankaku
+pipeline: merge_sp_to_cabocha,build_luw,convert_paren,fixed_newdoc,patch_fix
+patch-file: conf/auto_hand_fix_luw.yaml

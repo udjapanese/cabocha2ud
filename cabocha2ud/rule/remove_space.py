@@ -76,10 +76,10 @@ def skip_jsp_token_from_sentence(doc):
 
 def update_sentence_token_pos(sent):
     """
-        トークンのいちを修正する
+        トークンの位置を修正する
     """
     tok_map, sss = {}, set()
-    for tok_pos, word in enumerate(sent.flatten(is_update=True)):
+    for tok_pos, word in enumerate(sent.flatten()):
         tok_map[word.token_pos] = tok_pos + 1
         sss.add(word.token_pos)
     if len(sent) == 0:
@@ -88,7 +88,7 @@ def update_sentence_token_pos(sent):
     for bbb in list(range(1, max(sss))):
         if bbb not in sss:
             ex_sp_lst.add(bbb)
-    for tok_pos, word in enumerate(sent.flatten(is_update=True)):
+    for tok_pos, word in enumerate(sent.flatten()):
         word.token_pos = tok_map[word.token_pos]
         if word.dep_num != 0:
             if word.dep_num not in tok_map:
@@ -108,7 +108,6 @@ def remove_sentence_zero_token(doc):
     doc_size = len(doc.sentences())
     for sent_pos in range(0, doc_size):
         sent = doc[sent_pos]
-        # print sent.sent_pos, len(sent.flatten(is_update=False)), len(sent.flatten(is_update=True))
         if len(sent.flatten()) == 0:
             skip_lst.append(sent.sent_pos)
         tmp_lst.append((sent_pos, sent))

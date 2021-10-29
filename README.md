@@ -98,7 +98,6 @@ conf/bccwj_dep_suw_rule.yaml: UD labelの変換
 ```yaml
 - pos           # （短単位の）品詞 (正規表現)
 - base_lexeme   # （短単位の）原型 (文字列)
-- usage         # 長単位の用法 (文字列)
 - luw           # 長単位の品詞 (正規表現)
 - bpos          # BunsetuPositionType (文字列)
 - parent_upos   # かかり先の（短単位の）品詞 (正規表現)

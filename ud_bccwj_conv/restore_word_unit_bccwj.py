@@ -11,9 +11,8 @@ import pickle as pkl
 import functools
 
 from lib import (
-    separate_document, load_bccwj_core_file, conv_doc_id,
-    sepacete_sentence_for_bccwj, separate_conll_sentence,
-    is_spaceafter_yes, iterate_conll_and_bccwj, FORM, ID, MISC, LEMMA, XPOS
+    separate_document, load_bccwj_core_file,
+    is_spaceafter_yes, FORM, ID, MISC, LEMMA, XPOS
 )
 
 RE_PROP_MATH = re.compile(".*固有名詞.*")
@@ -21,8 +20,8 @@ RE_ASCII_MATH = re.compile('^[' + string.printable + ']+$')
 
 UNIDIC_ORIGIN_CONV = {
     "ず": "ぬ",
-    '為る': 'する',
-    '居る': 'いる',
+    "為る": "する",
+    "居る": "いる",
     "出来る": "できる",
     "有る": "ある",
     "無い": "ない",
@@ -49,7 +48,6 @@ UNIDIC_ORIGIN_CONV = {
     "貰える": "もらえる",
     "致す": "いたす",
     "為さる": "なさる"
-    # -------
 }
 
 def get_origin(bccwj):
@@ -145,10 +143,14 @@ def fill_blank_files(conll_file, base_data, bccwj_conll_mapping, misc_mapping, e
                         bccwj_info[p]["原文文字列"] for p in num_pos
                     ]), "".join([
                         get_origin(bccwj_info[p]) for p in num_pos
-                    ]), '名詞-数詞'
+                    ]), "名詞-数詞"
                 else:
                     assert len(bccwj_info) == 1
-                    cll[FORM], cll[LEMMA], cll[XPOS] = bccwj_info[0]["原文文字列"], get_origin(bccwj_info[0]), bccwj_info[0]["品詞"]
+                    cll[FORM], cll[LEMMA], cll[XPOS] = (
+                        bccwj_info[0]["原文文字列"],
+                        get_origin(bccwj_info[0]),
+                        (bccwj_info[0]["品詞"] + "-" + bccwj_info[0]["活用型"] if bccwj_info[0]["活用型"] != "" else bccwj_info[0]["品詞"])
+                    )
                     if cll[FORM] == "目　　　　　　　　次":
                         cll[FORM] = "目　次"
                 cll[FORM] = cll[FORM].strip("　")
@@ -169,7 +171,6 @@ def _separete_conll_to_sent(conll):
 
 def load_error_file(error_file):
     sent_list = _separete_conll_to_sent(error_file)
-    print("a", sent_list)
     errors = {}
     for snt in sent_list:
         sent_id = tuple(snt[0].split(" ")[-1].split("-"))
@@ -210,10 +211,9 @@ def merge_remove_sentence(conll_file, error_sent, order_data):
 def _main():
     parser = argparse.ArgumentParser()
     parser.add_argument("conll_file", type=argparse.FileType("r"))
-    parser.add_argument("bccwj_file_name", help="BCCWJ core file (core_SUW.txt)")
+    parser.add_argument("bccwj_file_name", help="BCCWJ core file (core_*.txt)")
     parser.add_argument("bccwj_conll_mapping", type=argparse.FileType("rb"))
-    parser.add_argument("error_file", type=argparse.FileType("r"))
-    parser.add_argument("bccwj_order_file", type=argparse.FileType("r"))
+
     parser.add_argument("-w", "--writer", type=argparse.FileType("w"), default="-")
     parser.add_argument(
         "-m", "--misc-file", type=argparse.FileType("rb"), default="./merged/misc_mapping.pkl"
@@ -221,9 +221,7 @@ def _main():
     args = parser.parse_args()
     base_data = load_bccwj_core_file(args.bccwj_file_name, load_pkl=True)
     misc_mapping = pkl.load(args.misc_file)
-    bccwj_conll_mapping = pkl.load(args.bccwj_conll_mapping)
-    error_files = load_error_file(args.error_file)
-    order_data = dict([(l.rstrip("\n"), p) for p, l in enumerate(args.bccwj_order_file)])
+    bccwj_conll_mapping, error_files, order_data = pkl.load(args.bccwj_conll_mapping)
     conll_file = merge_remove_sentence(args.conll_file, error_files, order_data)
     fill_blank_files(
         conll_file, base_data, bccwj_conll_mapping, misc_mapping, error_files, args.writer

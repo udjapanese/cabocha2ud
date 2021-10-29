@@ -1,0 +1,5 @@
+bunsetu-func: type2
+skip-space: True
+space-marker: hankaku
+pipeline: merge_number,convert_paren,merge_sp_to_conll,fixed_newdoc,patch_fix
+patch-file: conf/auto_hand_fix.yaml

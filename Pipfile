@@ -9,12 +9,15 @@ pylint = "*"
 tqdm = "*"
 pytest = "*"
 mypy = "*"
+flake8 = "*"
+line-profiler = "*"
 
 [packages]
 configargparse = "*"
 pyyaml = "*"
 logzero = "*"
-ruamel-yaml = "*"
+ruamel-yaml = "==0.17.4"
+typing-extensions = "*"
 
 [requires]
 python_version = "3.9"

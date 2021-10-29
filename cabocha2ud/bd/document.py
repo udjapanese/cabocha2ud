@@ -8,8 +8,9 @@ import os
 import re
 import xml.etree.ElementTree as ET
 
-from typing import Iterator, List, Tuple, Optional, Union, cast, TYPE_CHECKING
+from typing import Optional, cast, TYPE_CHECKING
 
+from ..lib.logger import Logger
 from ..lib.iterate_function import (
     iterate_seg_and_link, iterate_sentence
 )
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
     from .word import Word
 
 
-from ..rule.dep import detect_ud_label
+from ..rule.dep import detect_ud_label, SubRule
 from ..rule.bunsetu_rule import detect_dep_inbunsetu
 from ..rule.remove_space import skip_jsp_token_from_sentence
 from ..rule.swap_dep import (
@@ -27,7 +28,7 @@ from ..rule.remove_multi_subj import adapt_nsubj_to_dislocated_rule
 
 from .sentence import Sentence
 from .annotation import (
-    get_annotation_object, AnnotationList
+    get_annotation_object, AnnotationList, generate_docannotation, DocAnnotation
 )
 
 
@@ -44,7 +45,7 @@ def __replace_pos_and_label(sent: "Sentence"):
             word.dep_label = "aux"
         if word.en_pos[0] == "AUX" and word.dep_label == "cc":
             word.en_pos[0] = "CCONJ"
-        if word.en_pos[0] == "NOUN" and word.luw_pos == "助動詞":
+        if word.en_pos[0] == "NOUN" and word.get_luw_pos() == "助動詞":
             word.en_pos[0] = "AUX"
         parent = word.get_parent_word()
         if parent is None:
@@ -77,26 +78,27 @@ class Document(list["Sentence"]):
 
 
     def __init__(
-            self, data_type: str, text: Optional[List[str]]=None, prefix: Optional[List[str]]=None,
-            suffix: Optional[List[str]]=None,
-            base_file_name: Optional[str]="doc",
-            word_unit: str="suw", space_marker: Optional[str]="　", debug: bool=False
+            self, text: Optional[list[str]]=None, prefix: Optional[list[str]]=None,
+            suffix: Optional[list[str]]=None,
+            base_file_name: Optional[str]="doc", word_unit_mode: str="suw",
+            space_marker: str="　", debug: bool=False, logger: Optional[Logger]=None
     ):
         self.base_file_name: Optional[str] = base_file_name
-        self.data_type: str = data_type
-        self.word_unit: str = word_unit
         self.debug: bool = debug
+        self.logger: Logger = logger or Logger()
+        # モードオプション   suw or luw
+        self.word_unit_mode = word_unit_mode
         # 先頭の情報
-        self.doc_attributes: List[str] = []
+        self.doc_attributes: DocAnnotation
         self.doc_attrib_xml: ET.Element = ET.fromstring("<root></root>")
         # 末尾の注釈
         self.doc_annotation: AnnotationList = AnnotationList([])
         # 文書上での絶対位置
-        self.abs_pos_list: List[List[Tuple[int, int]]] = []
-        self.space_marker: Optional[str] = space_marker
-        self.text: Optional[List[str]] = text
-        self.prefix: Optional[List[str]] = prefix
-        self.suffix: Optional[List[str]] = suffix
+        self.abs_pos_list: list[list[tuple[int, int]]] = []
+        self.space_marker: str = space_marker
+        self.text: Optional[list[str]] = text
+        self.prefix: Optional[list[str]] = prefix
+        self.suffix: Optional[list[str]] = suffix
 
     def parse(self) -> None:
         if self.text is not None and self.prefix is not None and self.suffix is not None:
@@ -104,26 +106,25 @@ class Document(list["Sentence"]):
         else:
             raise NotImplementedError
         # パース後に取得
-        if self.data_type == "gsd":
-            doc_attrs = self.doc_attributes[1].split("\t")[1]
-            self.doc_attrib_xml = ET.fromstring('<root>' + doc_attrs.replace('&', '&amp;') + '</root>')
+        if self.doc_attributes.attrib is not None:
+            doc_attrs = self.doc_attributes.attrib
+            if doc_attrs is not None:
+                self.doc_attrib_xml = ET.fromstring('<root>' + doc_attrs.replace('&', '&amp;') + '</root>')
         self.doc_id = get_doc_id(self)
+        for sent in self:
+            sent.sent_id = self.doc_id + "-" + str(sent.sent_pos + 1)
 
-    def convert_ud(self, is_skip_space: bool=True, sep: str="\n") -> List[str]:
+    def convert_ud(self, pos_rule: list, dep_rule: list[tuple[list[SubRule], str]], is_skip_space: bool=True, sep: str="\n") -> list[str]:
         """
             convert to UD format
         """
+        self.detect_ud_dependencies()
         # UD掛かり先ラベルを付与
         for sent in self.sentences():
-            for word in sent.flatten():
-                if self.debug:
-                    print(word.token_pos, str(word))
-                detect_ud_label(word, debug=self.debug)
+            _loop_convud(self, sent, pos_rule, dep_rule)
         # スペースの除去をする
         if is_skip_space:
             skip_jsp_token_from_sentence(self)
-        for sent in self:
-            sent.sent_id = self.doc_id + "-" + str(sent.sent_pos + 1)
         # UD確定の後処理
         post_proceeing_function(self)
         return [
@@ -134,26 +135,27 @@ class Document(list["Sentence"]):
         org = "\n".join([
             str(sent) for sent in self.sentences()
         ])
-        org = "\n".join(self.doc_attributes) + "\n" + org
+        org = str(self.doc_attributes) + org
         if len(self.doc_annotation) > 0:
             org = org + "\n" + str(self.doc_annotation)
         return org
 
-    def get_pos_from_word(self, word: "Word") -> Tuple[int, int]:
+    def get_pos_from_word(self, word: "Word") -> tuple[int, int]:
         """
             word の位置を返す
         """
-        return self.abs_pos_list[word.sent_pos][word.token_pos-1]
+        from .word import Word
+        assert isinstance(word, Word)
+        return cast(tuple[int, int], self.abs_pos_list[word.sent_pos][word.token_pos-1])
 
-    def sentences(self) -> List["Sentence"]:
+    def sentences(self) -> list["Sentence"]:
         """
             get sentences
         """
         return list(self)
 
-    def __parse(self, text: List[str], prefix: list[str], suffix: list[str]) -> None:
-        from ..rule.bunsetu_rule import detect_bunsetu_jp_type
-        self.doc_attributes = prefix
+    def __parse(self, text: list[str], prefix: list[str], suffix: list[str]) -> None:
+        self.doc_attributes = generate_docannotation(prefix)
         doc_annotation = suffix
         self.doc_annotation = AnnotationList([
             get_annotation_object(seg)
@@ -163,11 +165,11 @@ class Document(list["Sentence"]):
             sent_b, s_suffix = sent
             self.append(
                 Sentence(
-                    self.data_type, pos, sent_b, s_suffix, self,
+                    pos, sent_b, s_suffix, self,
                     base_file_name=self.base_file_name,
-                    word_unit=self.word_unit,
                     space_marker=self.space_marker,
-                    debug=self.debug
+                    word_unit_mode=self.word_unit_mode,
+                    debug=self.debug, logger=self.logger
                 )
             )
             self[-1].set_document(self)
@@ -179,25 +181,41 @@ class Document(list["Sentence"]):
                     (pos[0] + last_pos, pos[1] + last_pos)
                     for pos in self[-1].abs_pos_list
                 ])
+
+    def detect_ud_dependencies(self):
+        from ..rule.bunsetu_rule import detect_bunsetu_jp_type
         for sent_b in self:
+            for bun in sent_b:
+                bun.update_bunsetu_pos()
             detect_dep_inbunsetu(sent_b)
             for bun in sent_b.bunsetues():
                 # このタイミングで決められる
                 bun.bunsetu_type = detect_bunsetu_jp_type(bun)
 
 
+def _loop_convud(doc: Document, sent: Sentence, pos_rule: list, dep_rule: list[tuple[list[SubRule], str]]):
+    for word in sent.iterate_word_tree():
+        """
+        親から順に実行
+        """
+        from ..rule.pos import detect_ud_pos
+        detect_ud_pos(word, pos_rule)
+    for word in sent.flatten():
+        detect_ud_label(word, dep_rule)
+    return sent
+
+
 def get_doc_id(doc: Document) -> str:
     """
         get doc id
     """
-    if doc.data_type == "chj":
+    if doc.doc_attributes.bibinfo is not None:
+        return cast(str, doc.doc_attributes.bibinfo)
+    elif doc.doc_attributes.attrib is not None:
+        return cast(str, cast(ET.Element, doc.doc_attrib_xml.find('sent_id')).text).replace('# sent_id = ', '')
+    else:
         assert doc.base_file_name is not None
         return os.path.splitext(os.path.basename(doc.base_file_name))[0].split(".")[0]
-    elif doc.data_type == "bccwj":
-        return doc.doc_attributes[1].split("\t")[2]
-    elif doc.data_type == "gsd":
-        return cast(str, cast(ET.Element, doc.doc_attrib_xml.find('sent_id')).text).replace('# sent_id = ', '')
-    raise NotImplementedError
 
 
 def post_proceeing_function(doc: Document) -> None:

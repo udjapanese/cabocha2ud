@@ -2,7 +2,7 @@
 
 usage () {
     echo "Usage: $0 -c CORE_FILE"
-    echo "-c: set the file of BCCWJ core file (core_SUW.txt, requirement)"
+    echo "-c: set the file of BCCWJ core file (core_LUW.txt, requirement)"
     exit 1
 }
 
@@ -25,7 +25,7 @@ do
     esac
 done
 shift `expr $OPTIND - 1`
-TARGET_FILES="ja_bccwj-ud-train.conllu ja_bccwj-ud-dev.conllu ja_bccwj-ud-test.conllu"
+TARGET_FILES="ja_bccwjluw-ud-train.conllu ja_bccwjluw-ud-dev.conllu ja_bccwjluw-ud-test.conllu"
 
 if [ "$CORE_FILE" = "" ]; then
     echo "No argments: $CORE_FILE"
@@ -37,11 +37,11 @@ if [ ! -f $CORE_FILE ]; then
 fi
 
 # create core_*.txt.pkl
-echo $PYTHON $SUB_PROG $CORE_FILE suw
-$PYTHON $SUB_PROG $CORE_FILE suw
+echo $PYTHON $SUB_PROG $CORE_FILE luw
+$PYTHON $SUB_PROG $CORE_FILE luw
 
 for FILE in $TARGET_FILES; do
-    ttt=`echo $FILE | sed -e 's/ja_bccwj-ud-\(.*\).conllu/\1/g'`
+    ttt=`echo $FILE | sed -e 's/ja_bccwjluw-ud-\(.*\).conllu/\1/g'`
     echo $PYTHON $BASE_PROG ./$FILE $CORE_FILE ./merge/${ttt}_pos.pkl -w ./$FILE.word -m ./merge/misc_mapping.pkl
     $PYTHON $BASE_PROG ./$FILE $CORE_FILE ./merge/${ttt}_pos.pkl -w ./$FILE.word -m ./merge/misc_mapping.pkl
 done

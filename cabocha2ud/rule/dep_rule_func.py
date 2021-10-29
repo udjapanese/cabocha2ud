@@ -6,9 +6,9 @@ BCCWJ DepParaPAS rule function
 
 import re
 from collections.abc import Callable
-from typing import Optional, List, Any, cast
-from ..bd.word import Word
-from ..bd.annotation import Segment
+from typing import Literal, Optional, List, Any, Tuple, Union, cast
+from cabocha2ud.bd.word import Word
+from cabocha2ud.bd.annotation import Annotation, Segment
 
 BPOS_LIST = set([
     "SEM_HEAD", "SYN_HEAD", "CONT", "ROOT", "FUNC", "NO_HEAD"
@@ -45,7 +45,7 @@ def match_segment(self: Word, word: Optional[List[Word]], segment: str) -> bool:
         s_seg = wrd.get_sent_segment()
         if s_seg == -1:
             return False
-        if cast(Segment, s_seg).name == segment:
+        if isinstance(s_seg, Segment) and s_seg.name == segment:
             return True
     return False
 
@@ -60,7 +60,9 @@ def is_appos(self: Word, word: Word, parent_word: Word) -> bool:
     sent = word.get_sentence()
     word1_pos = sent.get_pos_from_word(word)
     word2_pos = sent.get_pos_from_word(parent_word)
-    res: int = sent.annotation_list.get_appos(word1_pos, word2_pos)
+    if sent.annotation_list is None:
+        return False
+    res = sent.annotation_list.get_appos(word1_pos, word2_pos)
     return res != -1
 
 
@@ -74,7 +76,9 @@ def is_conj(self: Word, word: Word, parent_word: Word) -> bool:
     sent = word.get_sentence()
     word1_pos = sent.get_pos_from_word(word)
     word2_pos = sent.get_pos_from_word(parent_word)
-    res: int = sent.annotation_list.get_conj(word1_pos, word2_pos)
+    if sent.annotation_list is None:
+        return False
+    res = sent.annotation_list.get_conj(word1_pos, word2_pos)
     return res != -1
 
 
@@ -127,7 +131,7 @@ def regex_xpos(self: Word, word: Optional[List[Word]], xpos: str) -> bool:
 
 
 @register_function
-def match_luwpos(self: Word, word: Optional[List[Word]], luwpos: str) -> bool:
+def match_luwpos(self: Word, word: Optional[list[Word]], luwpos: str) -> bool:
     """
         その単語は長単位品詞を持っている   regex_word_luwpos(target_xpos)
     """
@@ -137,7 +141,7 @@ def match_luwpos(self: Word, word: Optional[List[Word]], luwpos: str) -> bool:
     for wrd in word:
         if wrd is None:
             return False
-        if wrd.luw_pos == luwpos:
+        if wrd.get_luw_pos() == luwpos:
             return True
     return False
 
@@ -153,7 +157,7 @@ def regex_luwpos(self: Word, word: Optional[List[Word]], luwpos: str) -> bool:
     for wrd in word:
         if wrd is None:
             return False
-        if re.match(luwpos, wrd.luw_pos):
+        if re.match(luwpos, wrd.get_luw_pos()):
             return True
     return False
 
@@ -191,7 +195,7 @@ def include_bpos(self: Word, word: Optional[List[Word]], bpos: List[str]) -> boo
 
 
 @register_function
-def include_upos(self, word, upos) -> bool:
+def include_upos(self: Word, word: Optional[list[Word]], upos: list[str]) -> bool:
     """
        その単語はUPOSを持っている   include_word_upos(target_upos)
     """
@@ -207,7 +211,7 @@ def include_upos(self, word, upos) -> bool:
 
 
 @register_function
-def regex_suffixstring(self, word, suffixstring) -> bool:
+def regex_suffixstring(self, word: Optional[list[Word]], suffixstring: str) -> bool:
     """
        その単語からの末尾がre_str表現である
     """
@@ -294,8 +298,8 @@ def include_case(self: Word, word: Optional[list[Word]], case: list[str]) -> boo
     if word is None:
         return False
     check_case = [c.split(":") for c in case]
-    assert all([1 <= len(c) <=2 for c in check_case]) and all([RE_CASE_MATCH.match(c[1]) for c in check_case if len(c)==2])
-    cword = [wrd for wrd in word if wrd.bunsetu_pos == self.bunsetu_pos and self.word_pos < wrd.word_pos]
+    assert all(1 <= len(c) <=2 for c in check_case) and all(RE_CASE_MATCH.match(c[1]) for c in check_case if len(c)==2)
+    cword = (wrd for wrd in word if wrd.bunsetu_pos == self.bunsetu_pos and self.word_pos < wrd.word_pos)
     for wrd in cword:
         if wrd is None:
             return False
@@ -342,7 +346,7 @@ FORMULA_LIST: dict[str, Callable[[int, int, int], bool]] = {
     ">=": lambda x, y, n: x-y>=n,
     "<=": lambda x, y, n: x-y<=n,
 }
-NUM_VRE = re.compile(".*?(\-?[0-9]+)$")
+NUM_VRE = re.compile(".*?(-?[0-9]+)$")
 @register_function
 def match_disformula(self: Word, word: Optional[list[Word]], disformula: str) -> bool:
     """
@@ -366,6 +370,36 @@ def match_disformula(self: Word, word: Optional[list[Word]], disformula: str) ->
     wrd, y_pos = word[0], self.token_pos
     x_pos = wrd.token_pos
     return FORMULA_LIST[formula](x_pos, y_pos, target_num)
+
+
+@register_function
+def match_paslink(self: Word, word: Optional[list[Word]], paslink: str) -> bool:
+    """
+    case: ga, o, niのいずれか
+    word: 比較する語のリスト 基本parentのみ match_parent_paslink
+    """
+    assert paslink in ["ga", "o", "ni"]
+    if word is None:
+        return False
+    assert len(word) == 1, "only use _parent_paslink"
+    pwlst: list[Word] = word[0].get_luw_units()
+    parent_word: Optional[Word] = None
+    for p, www in enumerate(pwlst):
+        if www == word[0] and p < len(pwlst) - 1:
+            if pwlst[p+1].get_origin() == "する":
+                parent_word = pwlst[p+1]
+            break
+    if parent_word is None:
+        parent_word = word[0]
+    assert parent_word is not None
+    res_lst: list[bool] = []
+    for wrd in self.get_luw_units():
+        _link_label: Union[Tuple[Annotation, Segment, Segment], Literal[-1]] = parent_word.get_link(wrd)
+        if _link_label != -1:
+            # 格情報を抽出 (ga, o, ni)]
+            gcase = cast(Tuple[Annotation, Segment, Segment], _link_label)[0].name.split(":")[-1]
+            res_lst.append(paslink == gcase)
+    return any(res_lst)
 
 
 def _main() -> None:

@@ -32,7 +32,8 @@ def main():
         misc = line.rstrip("\n").split("\t")[MISC]
         item = dict([l.split("=") for l in misc.rstrip("\n").split("|")])
         misc_cnt["BunsetuPositionType"][item["BunsetuPositionType"]] += 1
-        misc_cnt["LUWPOS"][item["LUWPOS"]] += 1
+        if "LUWPOS" in item:
+            misc_cnt["LUWPOS"][item["LUWPOS"]] += 1
     for label in ["BunsetuPositionType", "LUWPOS"]:
         misc_map_data["cont_org_to_bl"][label] = {
             value[0]: pos for pos, value

@@ -3,7 +3,7 @@
 set -e
 
 BASE_DIR=../cabocha_files/BCCWJ
-OUTPUT_DIR=../cabocha_files/BCCWJ/output
+OUTPUT_DIR=../cabocha_files/BCCWJ/output_pas
 
 usage () {
   cat <<EOS
@@ -37,29 +37,33 @@ if [ ! -d $OUTPUT_DIR ]; then
   mkdir $OUTPUT_DIR
 fi
 
+cp -r $BASE_DIR/train/ $OUTPUT_DIR/
+cp -r $BASE_DIR/test/ $OUTPUT_DIR/
+cp -r $BASE_DIR/dev/ $OUTPUT_DIR/
+
 # CabochaからUDへの変換
-ls $BASE_DIR/*/*.cabocha | \
-    parallel 'python cabocha2ud {} -c conf/default_bccwj_args.yaml -w {}.conllu.mr'
+ls $OUTPUT_DIR/*/*.cabocha | \
+    parallel 'python cabocha2ud {} -c conf/default_bccwj_args.yaml --dep-rule-file conf/bccwj_dep_suw_rule_use_pas.yaml -w {}.conllu.mr'
 
 # シングルルートに変換
-ls $BASE_DIR/*/*.conllu.mr | \
+ls $OUTPUT_DIR/*/*.conllu.mr | \
     parallel 'python cabocha2ud/pipeline/replace_multi_root.py {} convert | python cabocha2ud/pipeline/patch_fix.py - conf/auto_hand_fix.yaml -w {}.csr'
-ls $BASE_DIR/*/*.conllu.mr | \
+ls $OUTPUT_DIR/*/*.conllu.mr | \
     parallel 'python cabocha2ud/pipeline/replace_multi_root.py {} remove | python cabocha2ud/pipeline/patch_fix.py - conf/auto_hand_fix.yaml -w {}.rsr'
 
 # マルチルートが残ったまま  *.conllu.mr
-cat $BASE_DIR/dev/*.mr > $OUTPUT_DIR/ja_bccwj-ud-dev.mr.conllu
-cat $BASE_DIR/train/*.mr > $OUTPUT_DIR/ja_bccwj-ud-train.mr.conllu
-cat $BASE_DIR/test/*.mr > $OUTPUT_DIR/ja_bccwj-ud-test.mr.conllu
+cat $OUTPUT_DIR/dev/*.mr > $OUTPUT_DIR/ja_bccwj-ud-dev.mr.conllu
+cat $OUTPUT_DIR/train/*.mr > $OUTPUT_DIR/ja_bccwj-ud-train.mr.conllu
+cat $OUTPUT_DIR/test/*.mr > $OUTPUT_DIR/ja_bccwj-ud-test.mr.conllu
 
 # シングルルートに変換したもの  *.conllu.mr.csr
-cat $BASE_DIR/dev/*.csr > $OUTPUT_DIR/ja_bccwj-ud-dev.csr.conllu
-cat $BASE_DIR/train/*.csr > $OUTPUT_DIR/ja_bccwj-ud-train.csr.conllu
-cat $BASE_DIR/test/*.csr > $OUTPUT_DIR/ja_bccwj-ud-test.csr.conllu
+cat $OUTPUT_DIR/dev/*.csr > $OUTPUT_DIR/ja_bccwj-ud-dev.csr.conllu
+cat $OUTPUT_DIR/train/*.csr > $OUTPUT_DIR/ja_bccwj-ud-train.csr.conllu
+cat $OUTPUT_DIR/test/*.csr > $OUTPUT_DIR/ja_bccwj-ud-test.csr.conllu
 
 # マルチルートのものを削除したもの *.conllu.mr.rsr
-cat $BASE_DIR/dev/*.rsr > $OUTPUT_DIR/ja_bccwj-ud-dev.rsr.conllu
-cat $BASE_DIR/train/*.rsr > $OUTPUT_DIR/ja_bccwj-ud-train.rsr.conllu
-cat $BASE_DIR/test/*.rsr > $OUTPUT_DIR/ja_bccwj-ud-test.rsr.conllu
+cat $OUTPUT_DIR/dev/*.rsr > $OUTPUT_DIR/ja_bccwj-ud-dev.rsr.conllu
+cat $OUTPUT_DIR/train/*.rsr > $OUTPUT_DIR/ja_bccwj-ud-train.rsr.conllu
+cat $OUTPUT_DIR/test/*.rsr > $OUTPUT_DIR/ja_bccwj-ud-test.rsr.conllu
 
-rm -rf $BASE_DIR/*/*.n
+# rm -rf $BASE_DIR/*/*.n

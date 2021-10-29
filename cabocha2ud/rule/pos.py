@@ -7,6 +7,11 @@ RULE POS
 
 import re
 import ruamel.yaml
+from typing import TYPE_CHECKING, Generator, TypedDict, NamedTuple
+
+if TYPE_CHECKING:
+    from ..bd.word import Word
+
 
 REGEX_TYPE = type(re.compile(''))
 NUM_RE = re.compile(r"\* (\d+) (-?\d+)([A-Z][A-Z]?) (\d+)/(\d+) .*$")
@@ -20,31 +25,34 @@ BUNSETU_NOHEAD_MATCH_RE = re.compile(
     r"(?!空白|補助記号|記号|URL)"
 )
 
-POS_RULE_FILE = {
-    # word unit mapping
-    "bccwj_suw": "conf/bccwj_pos_suw_rule.yaml",
-    "bccwj_luw": "conf/bccwj_pos_suw_rule.yaml",
-    "gsd_suw": "conf/bccwj_pos_suw_rule.yaml",
-    "chj_suw": "conf/chj_pos_suw_rule.yaml"
-}
-POS_RULE_FUNC = {
+POS_RULE_FILE = "conf/bccwj_pos_suw_rule.yaml"
+
+POS_RULE_FUNC: dict = {
     "pos": re.compile,
     "base_lexeme": re.compile,
     "parent_upos":  re.compile,
-    "usage": lambda x: x,
     "luw": re.compile,
     "bpos": lambda x: x  # BunsetuPositonType
 }
 TARGET_POS_RULE = None
 
+class POSRule(NamedTuple):
+    rule: dict[str, str]
+    res: str
 
-def load_pos_rule(data_type, word_unit):
+
+class POSRuleBase(TypedDict):
+    default: list[str]
+    rule: list[POSRule]
+
+
+def load_pos_rule(file_name: str=POS_RULE_FILE) -> list[tuple]:
     """
         load rule file
     """
     yaml = ruamel.yaml.YAML()
-    rule_set = yaml.load(open(POS_RULE_FILE[data_type + "_" + word_unit]).read().replace('\t', '    '))
-    full_rule_set = []
+    rule_set: POSRuleBase = yaml.load(open(file_name).read().replace('\t', '    '))
+    full_rule_set: list[tuple] = []
     for rule_pair in rule_set["rule"]:
         rule, result = rule_pair
         nrule = {}
@@ -59,7 +67,7 @@ NEG_EXP = ["非", "不", "無", "未", "反", "異"]
 RE_NEG_SETUBI_EXP = re.compile(r"接尾辞")
 RE_NEG_SETTOU_EXP = re.compile(r"接頭辞")
 RE_NOUN_NEG_EXP = re.compile(r"名詞")
-def is_neg(word):
+def is_neg(word: "Word") -> bool:
     """
         否定表現かどうか
     """
@@ -75,7 +83,7 @@ def is_neg(word):
     return False
 
 
-def add_ud_feature(word):
+def add_ud_feature(word: "Word") -> None:
     """
         UD 特徴をつける
     """
@@ -85,32 +93,22 @@ def add_ud_feature(word):
         word.ud_feat["Foreign"] = "Yes"
 
 
-def detect_ud_pos(word):
+def detect_ud_pos(word: "Word", target_pos_rule: list) -> None:
     """
         detect UD POS
     """
-    global TARGET_POS_RULE
-    if TARGET_POS_RULE is None:
-        TARGET_POS_RULE = list(load_pos_rule(word.data_type, word.word_unit))
     word.en_pos = []
     add_ud_feature(word)
-    if word.dep_num > 0:
-        parent_word = word.doc[word.sent_pos].get_word_from_tokpos(word.dep_num-1)
-    else:
-        # ROOTのときはないためNone
-        parent_word = None
-    inst = {
-        "pos": word.get_xpos(), "base_lexeme": word.get_origin(), "luw": word.luw_pos,
-        "usage": word.usage, "bpos": word.ud_misc["BunsetuPositionType"],
-        "parent_upos": parent_word.get_ud_pos() if parent_word is not None else "THIS_ROOT"
-    }
-    for rule, en_pos in list(TARGET_POS_RULE):
-        flag_lst = []
-        for name in rule:
-            if isinstance(rule[name], REGEX_TYPE):
-                flag_lst.append(rule[name].match(inst[name]) is not None)
-            else:
-                flag_lst.append(rule[name] == inst[name])
+    inst = word.get_instance_for_pos()
+    word.logger.debug(inst)
+    word.logger.debug(target_pos_rule)
+    for rule, en_pos in list(target_pos_rule):
+        flag_lst: Generator[bool, None, None] = (
+            rule[name].match(inst[name]) is not None
+            if isinstance(rule[name], REGEX_TYPE)
+            else rule[name] == inst[name]
+            for name in rule
+        )
         if all(flag_lst):
             word.en_pos.extend(en_pos)
             break

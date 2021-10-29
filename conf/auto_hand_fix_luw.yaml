@@ -1,0 +1,252 @@
+
+#### PUD
+
+- sent_id: n01081022
+  rules:
+    - ids: [7]
+      target: HEAD
+      value: 25
+    - ids: [7]
+      target: DEPREL
+      value: parataxis
+# n01081022: Node: 7 HEAD:0 -> HEAD:25, DEPREL:root -> DEPREL:parataxis
+
+
+#### GSD
+
+- sent_id: train-s4422
+  rules:
+    - ids: [16, 18]
+      target: HEAD
+      value: 17
+    - ids: [17]
+      target: HEAD
+      value: 29
+## [Line 97522 Sent train-s4422 Node 16]: [L3 Syntax leaf-punct] 'punct' not expected to have children (16:“:punct --> 17:じゃあ:cc)
+#16      “       “       PUNCT   補助記号-括弧開 _       29      punct   _       BunsetuBILabel=B|BunsetuPositionType=SEM_HEAD|LUWBILabel=B|LUWPOS=補助記号-括弧開|SpaceAfter=No
+#17      じゃあ  で      CCONJ   接続詞  _       16      cc      _       BunsetuBILabel=I|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=接続詞|SpaceAfter=No
+#18      ,       ,       PUNCT   補助記号-読点   _       16      punct   _       BunsetuBILabel=I|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=補助記号-読点|SpaceAfter=No
+
+- sent_id: train-s4753
+  rules:
+    - ids: [34,36]
+      target: HEAD
+      value: 35
+    - ids: [35]
+      target: HEAD
+      value: 41
+    - ids: [57]
+      target: HEAD
+      value: 58
+    - ids: [58]
+      target: HEAD
+      value: 63
+# [Line 105037 Sent train-s4753 Node 34]: [L3 Syntax leaf-punct] 'punct' not expected to have children (34:「:punct --> 35:だが:cc)
+# 34      「      「      PUNCT   補助記号-括弧開 _       41      punct   _       BunsetuBILabel=B|BunsetuPositionType=SEM_HEAD|LUWBILabel=B|LUWPOS=補助記号-括弧開|SpaceAfter=No
+# 35      だが    だが    CCONJ   接続詞  _       34      cc      _       BunsetuBILabel=I|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=接続詞|SpaceAfter=No
+# [Line 105060 Sent train-s4753 Node 57]: [L3 Syntax leaf-punct] 'punct' not expected to have children (57:「:punct --> 58:それでも:cc)
+# 57      「      「      PUNCT   補助記号-括弧開 _       63      punct   _       BunsetuBILabel=B|BunsetuPositionType=SEM_HEAD|LUWBILabel=B|LUWPOS=補助記号-括弧開|SpaceAfter=No
+# 58      それでも        其れでも        CCONJ   接続詞  _       57      cc      _       BunsetuBILabel=I|BunsetuPosi
+
+- sent_id: train-s5869
+  rules:
+    - ids: [2]
+      target: HEAD
+      value: 3
+    - ids: [3]
+      target: HEAD
+      value: 6
+# [Line 130185 Sent train-s5869 Node 2]: [L3 Syntax leaf-punct] 'punct' not expected to have children (2:「:punct --> 3:そして:cc)
+# 2       「      「      PUNCT   補助記号-括弧開 _       6       punct   _       BunsetuBILabel=B|BunsetuPositionType=SEM_HEAD|LUWBILabel=B|LUWPOS=補助記号-括弧開|SpaceAfter=No
+# 3       そして  そして  CCONJ   接続詞  _       2       cc      _       BunsetuBILabel=I|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=接続詞|SpaceAfter=No
+
+
+#### BCCWJ
+
+- sent_id: A025n_OY01_00148-4
+  rules:
+    - ids: [-1]
+      target: text
+      value: 目　次
+    - ids: [1]
+      target: FORM
+      value: 目　次
+### [Line 71 Sent A025n_OY01_00148-4]: [L1 Format repeated-whitespace] Two or more consecutive whitespace characters not allowed in column FORM.
+
+- sent_id: B041p_PB48_00016-35
+  rules:
+    - ids: [9]
+      target: HEAD
+      value: 11
+    - ids: [10]
+      target: DEPREL
+      value: obj
+    - ids: [10]
+      target: HEAD
+      value: 9
+## [Line 1100 Sent B041p_PB48_00016-35 Node 10]: [L3 Syntax leaf-mark-case] 'case' not expected to have children (10:を:case --> 9:オ:compound)
+## 9       オ      御      NOUN    接頭辞  _       10      compound        _       BunsetuBILabel=B|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=接頭辞|SpaceAfter=No
+## 10      を      を      ADP     助詞-格助詞     _       11      case    _       BunsetuBILabel=I|BunsetuPositionType=SEM_HEAD|LUWBILabel=B|LUWPOS=助詞-格助詞|SpaceAfter=No
+- sent_id: B041p_PB48_00016-38
+  rules:
+    - ids: [10]
+      target: HEAD
+      value: 12
+    - ids: [10]
+      target: DEPREL
+      value: obj
+    - ids: [11]
+      target: HEAD
+      value: 10
+## [Line 1286 Sent B041p_PB48_00016-38 Node 11]: [L3 Syntax leaf-mark-case] 'case' not expected to have children (11:が:case --> 10:オ:compound)
+## 10      オ      御      NOUN    接頭辞  _       11      compound        _       BunsetuBILabel=B|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=接頭辞|SpaceAfter=No
+## 11      が      が      ADP     助詞-格助詞     _       12      case    _       BunsetuBILabel=I|BunsetuPositionType=SEM_HEAD|LUWBILabel=B|LUWPOS=助詞-格助詞|SpaceAfter=No
+
+
+- sent_id: B289n_OY03_04461-33
+  rules:
+    - ids: [-1]
+      target: text
+      value: ｈｔｔｐ：／／ａｕｃｔｉｏｎｓ．ｙａｈｏｏ．ｃｏ．ｊｐ／ｊｐ／ｂｏｏｔｈ／ｋｉｓｉｍａ１３
+    - ids: [1]
+      target: FORM
+      value: ｈｔｔｐ：／／ａｕｃｔｉｏｎｓ．ｙａｈｏｏ．ｃｏ．ｊｐ／ｊｐ／ｂｏｏｔｈ／ｋｉｓｉｍａ１３
+# [Line 561 Sent B289n_OY03_04461-33]: [L1 Format trailing-whitespace] Trailing whitespace not allowed in column FORM.
+# [Line 562 Sent B289n_OY03_04461-33]: [L2 Metadata text-extra-chars] Extra characters at the end of the text attribute, not accounted for in the FORM fields: 'ｈｔｔｐ：／／ａｕｃｔｉｏｎｓ．ｙａｈｏｏ．ｃｏ．ｊｐ／ｊｐ／ｂｏｏｔｈ／ｋｉｓｉｍａ１３'
+# [Tree number 33 on line 561 Sent B289n_OY03_04461-33]: [L2 Metadata text-form-mismatch] Mismatch between the text attribute and the FORM field. Form[1] is 'ｈｔｔｐ：／／ａｕｃｔｉｏｎｓ．ｙａｈｏｏ．ｃｏ．ｊｐ／ｊｐ／ｂｏｏｔｈ／ｋｉｓｉｍａ１３　' but text is 'ｈｔｔｐ：／／ａｕｃｔｉｏｎｓ．ｙａｈｏｏ．ｃｏ．ｊｐ／ｊｐ／ｂｏｏｔｈ／ｋｉｓｉｍａ１３...'
+
+- sent_id: B289n_OY03_04461-35
+  rules:
+    - ids: [-1]
+      target: text
+      value: ｈｔｔｐ：／／ｍｉｘｉ．ｊｐ／ｌｉｓｔ＿ｄｉａｒｙ．ｐｌ
+    - ids: [1]
+      target: FORM
+      value: ｈｔｔｐ：／／ｍｉｘｉ．ｊｐ／ｌｉｓｔ＿ｄｉａｒｙ．ｐｌ
+# [Line 569 Sent B289n_OY03_04461-35]: [L1 Format trailing-whitespace] Trailing whitespace not allowed in column FORM.
+# [Line 570 Sent B289n_OY03_04461-35]: [L2 Metadata text-extra-chars] Extra characters at the end of the text attribute, not accounted for in the FORM fields: 'ｈｔｔｐ：／／ｍｉｘｉ．ｊｐ／ｌｉｓｔ＿ｄｉａｒｙ．ｐｌ'
+# [Tree number 35 on line 569 Sent B289n_OY03_04461-35]: [L2 Metadata text-form-mismatch] Mismatch between the text attribute and the FORM field. Form[1] is 'ｈｔｔｐ：／／ｍｉｘｉ．ｊｐ／ｌｉｓｔ＿ｄｉａｒｙ．ｐｌ　' but text is 'ｈｔｐ：／／ｍｉｘｉ．ｊｐ／ｌｉｓｔ＿ｄｉａｒｙ．ｐｌ...'
+  
+- sent_id: B382n_OY14_11567-11
+  rules:
+    - ids: [1]
+      target: FORM
+      value: ｈｔｔｐ：／／ｂｌｏｇｓ．ｙａｈｏｏ．ｃｏ．ｊｐ／ｍｏｍｏ３９ｍ／４２１３６８２７．ｈｔｍｌ
+# [Line 120 Sent B382n_OY14_11567-11]: [L1 Format leading-whitespace] Leading whitespace not allowed in column FORM.
+# [Line 120 Sent B382n_OY14_11567-11]: [L1 Format repeated-whitespace] Two or more consecutive whitespace characters not allowed in column FORM.
+# [Line 120 Sent B382n_OY14_11567-11]: [L1 Format trailing-whitespace] Trailing whitespace not allowed in column FORM.
+# [Line 121 Sent B382n_OY14_11567-11]: [L2 Metadata text-extra-chars] Extra characters at the end of the text attribute, not accounted for in the FORM fields: 'ｈｔｔｐ：／／ｂｌｏｇｓ．ｙａｈｏｏ．ｃｏ．ｊｐ／ｍｏｍｏ３９ｍ／４２１３６８２７．ｈｔｍｌ'
+# [Tree number 11 on line 120 Sent B382n_OY14_11567-11]: [L2 Metadata text-form-mismatch] Mismatch between the text attribute and the FORM field. Form[1] is '　ｈｔｔｐ：／／ｂｌｏｇｓ．ｙａｈｏｏ．ｃｏ．ｊｐ／ｍｏｍｏ３９ｍ／４２１３６８２７．ｈｔｍｌ　　' but text is 'ｈｔｔｐ：／／ｂｌｏｇｓ．ｙａｈｏｏ．ｃｏ．ｊｐ／ｍｏｍｏ３９ｍ／４２１３６８２７．ｈｔｍｌ...'
+
+- sent_id: C042n_PM21_00086-23
+  rules:
+    - ids: [19]
+      target: UPOS
+      value: NOUN
+    - ids: [19]
+      target: DEPREL
+      value: obl
+# [Line 528 Sent C042n_PM21_00086-23 Node 19]: [L3 Syntax leaf-aux-cop] 'aux' not expected to have children (19:で:aux --> 21:で:case)
+# 18      「      「      PUNCT   補助記号-括弧開 _       19      punct   _       BunsetuBILabel=B|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=補助記号-括弧開|SpaceAfter=No
+# 19      で      だ      AUX     助動詞-助動詞-ダ        _       22      aux     _       BunsetuBILabel=I|BunsetuPositionType=SEM_HEAD|LUWBILabel=B|LUWPOS=助動詞-助動詞-ダ|SpaceAfter=No
+# 20      」      」      PUNCT   補助記号-括弧閉 _       19      punct   _       BunsetuBILabel=I|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=補助記号-括弧閉|SpaceAfter=No
+# 21      で      で      ADP     助詞-格助詞     _       19      case    _       BunsetuBILabel=I|BunsetuPositionType
+
+- sent_id: E303n_PN1c_00020-3
+  rules:
+    - ids: [-1]
+      target: text
+      value: ＴＥＬ０３‐３２１７‐１９５８　ＦＡＸ０３‐３２１７‐１９６０　ｅ‐ｍａｉｌはｉｒｙｏｕ＠ｙｏｍｉｎｅｔ．ｎｅ．ｊｐ　医療相談は受け付けていません。
+    - ids: [2]
+      target: FORM
+      value: ０３‐３２１７‐１９５８
+    - ids: [2]
+      target: LEMMA
+      value: 零三‐三二一七‐一九五八
+    - ids: [4]
+      target: FORM
+      value: ０３‐３２１７‐１９６０
+    - ids: [4]
+      target: LEMMA
+      value: 零三‐三二一七‐一九六零
+# # text = ＴＥＬ０３‐３２１７‐１９５８　　ＦＡＸ０３‐３２１７‐１９６０　　ｅ‐ｍａｉｌはｉｒｙｏｕ＠ｙｏｍｉｎｅｔ．ｎｅ．ｊｐ　医療相談は受け付けていません。
+# [Line 20 Sent E303n_PN1c_00020-3]: [L1 Format trailing-whitespace] Trailing whitespace not allowed in column FORM.
+# [Line 20 Sent E303n_PN1c_00020-3]: [L1 Format trailing-whitespace] Trailing whitespace not allowed in column LEMMA.
+# [Line 22 Sent E303n_PN1c_00020-3]: [L1 Format trailing-whitespace] Trailing whitespace not allowed in column FORM.
+# [Line 22 Sent E303n_PN1c_00020-3]: [L1 Format trailing-whitespace] Trailing whitespace not allowed in column LEMMA.
+
+- sent_id: OC02_00003-6
+  rules:
+    - ids: [15]
+      target: UPOS
+      value: NOUN
+    - ids: [15]
+      target: DEPREL
+      value: obl
+# [Line 127 Sent OC02_00003-6 Node 15]: [L3 Syntax leaf-punct] 'punct' not expected to have children (15:？:punct --> 20:と:case)
+# 15      ？      ？      PUNCT   補助記号-句点   _       21      punct   _       BunsetuBILabel=I|BunsetuPositionType=SEM_HEAD|LUWBILabel=B|LUWPOS=補助記号-句点|SpaceAfter=No
+
+- sent_id: OC12_01184-5
+  rules:
+    - ids: [5]
+      target: UPOS
+      value: NOUN
+    - ids: [5]
+      target: DEPREL
+      value: dislocated
+# [Line 79 Sent OC12_01184-5 Node 5]: [L3 Syntax leaf-aux-cop] 'aux' not expected to have children (5:臭い:aux --> 2:  尾語:nmod)
+# [Line 84 Sent OC12_01184-5 Node 5]: [L3 Syntax leaf-aux-cop] 'aux' not expected to have children (5:臭い:aux --> 7::case)
+# 4       「      「      PUNCT   補助記号-括弧開 _       2       punct   _       BunsetuBILabel=I|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=補助記号-括弧開|SpaceAfter=No
+# 5       臭い    臭い    AUX     接尾辞-形容詞的-形容詞  _       30      aux     _       BunsetuBILabel=B|BunsetuPositionType=SEM_HEAD|LUWBILabel=B|LUWPOS=接尾辞-形容詞的-形容詞|SpaceAfter=No
+# 6       」      」      PUNCT   補助記号-括弧閉 _       5       punct   _       BunsetuBILabel=I|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=補助記号-括弧閉|SpaceAfter=No
+# 7       は      は      ADP     助詞-係助詞     _       5       case    _       BunsetuBILabel=I|BunsetuPositionType=FUNC|LUWBILabel=B|LUWPOS=助詞-係助詞|SpaceAfter=No
+# 8       、      、      PUNCT   補助記号-読点   _       5       punct   _       BunsetuBILabel=I|BunsetuPositionType
+
+
+- sent_id: B300n_OY15_05298-18
+  rules:
+    - ids: [1]
+      target: UPOS
+      value: NOUN
+    - ids: [1]
+      target: DEPREL
+      value: advcl
+## [Line 445 Sent B300n_OY15_05298-18 Node 1]: [L3 Syntax leaf-punct] 'punct' not expected to have children (1:、:punct --> 4:って:aux)
+## [Line 446 Sent B300n_OY15_05298-18 Node 1]: [L3 Syntax leaf-punct] 'punct' not expected to have children (1:、:punct --> 5:か:mark)
+
+- sent_id: B300n_OY15_05298-8
+  rules:
+    - ids: [1]
+      target: UPOS
+      value: NOUN
+    - ids: [1]
+      target: DEPREL
+      value: advcl
+# [Line 126 Sent B300n_OY15_05298-8 Node 1]: [L3 Syntax leaf-punct] 'punct' not expected to have children (1:、:punct --> 4:と:case)
+
+- sent_id: B300n_OY15_05298-8
+  rules:
+    - ids: [1]
+      target: UPOS
+      value: NOUN
+    - ids: [1]
+      target: DEPREL
+      value: advcl
+# [Line 126 Sent B300n_OY15_05298-8 Node 1]: [L3 Syntax leaf-punct] 'punct' not expected to have children (1:、:punct --> 4:と:case)
+
+- sent_id: A233n_OY14_02975-40
+  rules:
+    - ids: [2]
+      target: DEPREL
+      value: fixed
+## [Line 619 Sent A233n_OY14_02975-40 Node 1]: [L3 Syntax leaf-cc] 'cc' not expected to have children (1:では:cc --> 2:では:cc)
+
+- sent_id: B027n_PM21_00037-46
+  rules:
+    - ids: [3]
+      target: HEAD
+      value: 7
+## [Line 1027 Sent B027n_PM21_00037-46 Node 1]: [L3 Syntax leaf-cc] 'cc' not expected to have children (1:しかし:cc --> 3:では:cc)
+# 1       しかし  然し    CCONJ   接続詞  _       7       cc      _       BunsetuBILabel=B|BunsetuPositionType=SEM_HEAD|LUWBILabel=B|LUWPOS=接続詞|SpaceAfter=No
+# 2       、      、      PUNCT   補助記号-読点   _       1       punct   _       BunsetuBILabel=I|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=補助記号-読点|SpaceAfter=No
+# 3       では    では    CCONJ   接続詞  _       1       cc      _       BunsetuBILabel=I|BunsetuPositionType=CONT|LUWBILabel=B|LUWPOS=接続詞|SpaceAfter=No

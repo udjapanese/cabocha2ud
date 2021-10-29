@@ -35,6 +35,7 @@ def main():
         sent_id = sent[0].split(" ")[-1]
         if sent_id in filtered_ids:
             sys.stderr.write("\n".join(sent) + "\n\n")
+            args.error_sent_file.write("\n".join(sent) + "\n\n")
         else:
             args.writer.write("\n".join(sent) + "\n\n")
 

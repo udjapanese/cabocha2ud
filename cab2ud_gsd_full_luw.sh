@@ -13,7 +13,7 @@ EOS
 }
 
 BASE_DIR=../cabocha_files/GSD/UD_Japanese-GSDPUD-CaboCha
-WORK_DIR=../cabocha_files/GSD/work
+WORK_DIR=../cabocha_files/GSD/work_luw
 SP_DIR=../cabocha_files/GSD/sp_data
 
 while getopts "p:b:s:w:h" optKey; do
@@ -54,7 +54,7 @@ python validators/duplicate_checker.py $BASE_DIR/*.cabocha
 cp $BASE_DIR/*.cabocha $WORK_DIR/
 
 # cabocha -> UD 作業
-WORK_DIR=$WORK_DIR SP_DIR=$SP_DIR parallel 'python cabocha2ud $WORK_DIR/ud_{}.cabocha -c conf/default_{= s:_(dev|test|train):: =}_args.yaml --sp-file $SP_DIR/SpaceAfter_{= s:gsd_:: =}.txt -w $WORK_DIR/ud_{}.cabocha.conllu' ::: gsd_dev gsd_test gsd_train pud
+WORK_DIR=$WORK_DIR SP_DIR=$SP_DIR parallel 'python cabocha2ud $WORK_DIR/ud_{}.cabocha -c conf/luw_{= s:_(dev|test|train):: =}_args.yaml --sp-file $SP_DIR/SpaceAfter_{= s:gsd_:: =}.txt -w $WORK_DIR/ud_{}.cabocha.conllu' ::: gsd_dev gsd_test gsd_train pud
 
 rm -f $WORK_DIR/*.cabocha
 

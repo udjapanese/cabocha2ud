@@ -1,4 +1,4 @@
 bunsetu-func: type2
 skip-space: True
 space-marker: zenkaku
-pipeline: merge_number
+pipeline: build_luw
