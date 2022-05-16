@@ -59,6 +59,23 @@ UNIDIC_ORIGIN_CONV = {
 }
 
 
+def conv_v29_lemma(origin: str, features: list[str], pos1_pos: int, lemma_pos: int, orthbase_pos: int) -> str:
+    lemma_dic = {
+        "ぽい": "ぽい", "臭い": "臭い", "辛い": "辛い"
+    }
+    if features[lemma_pos] in lemma_dic:
+        return lemma_dic[features[lemma_pos]]
+    if features[pos1_pos] == "助動詞":
+        if features[orthbase_pos] in ["です", "デス", "ダ", "ノ", "の"]:
+            return "だ"
+        if features[lemma_pos] in UNIDIC_ORIGIN_CONV:
+            return UNIDIC_ORIGIN_CONV[features[lemma_pos]]
+        return features[lemma_pos]
+    if origin in UNIDIC_ORIGIN_CONV:
+        return UNIDIC_ORIGIN_CONV[origin]
+    return origin
+
+
 class Property:
 
     def __init__(self, **kwargs):
@@ -192,7 +209,8 @@ class SUW(Property):
         self.surface = token[0]
         self.features = token[1].split(",")
         self.jp_pos = self.features[Field.pos1]
-        self.origin = self.features[Field.orthBase]
+        # self.origin = self.features[Field.orthBase]
+        self.origin = self.features[Field.lemma]
         if self.origin == "":
             self.origin = self.features[Field.lemma]
         if self.features[Field.pos2] == "数詞":
@@ -231,7 +249,7 @@ class SUW(Property):
         """
         return self.origin
 
-    def get_origin(self) -> str:
+    def get_origin(self, do_conv29=False) -> str:
         """
             get origin
         """
@@ -242,26 +260,38 @@ class SUW(Property):
             return self.get_surface()
         if self.origin == "":
             return "_"
-        if self.origin in ["です", "デス"] or self.features[Field.lemma] == "です":
-            return "だ"
-        lemma_dic = {
-            "ぽい": "ぽい", "臭い": "臭い", "辛い": "辛い", "無い": "ない"
-        }
-        if self.features[Field.lemma] in lemma_dic:
-            return lemma_dic[self.features[Field.lemma]]
-        if self.jp_pos == "助動詞":
-            if self.features[Field.orthBase] in ["です", "デス", "ダ", "ノ", "の"]:
-                return "だ"
-            if self.features[Field.orthBase] in UNIDIC_ORIGIN_CONV:
-                return UNIDIC_ORIGIN_CONV[self.features[Field.orthBase]]
-            if self.features[Field.lemma] in UNIDIC_ORIGIN_CONV:
-                return UNIDIC_ORIGIN_CONV[self.features[Field.lemma]]
-            return self.features[Field.lemma]
-        if self.origin in UNIDIC_ORIGIN_CONV:
-            return UNIDIC_ORIGIN_CONV[self.origin]
         if self.origin == "　":
             return "[SP]"
-        return self.origin
+        if do_conv29:
+            return conv_v29_lemma(self.origin, self.features, Field.pos1, Field.lemma, Field.orthBase)
+        else:
+            return self.origin
+
+    def get_unidic_info(self, delimiter: str=",") -> str:
+        """ UniDic 情報を返す
+
+        Returns:
+            str: UniDic情報
+        """
+        """ UniDic 情報を返す
+
+        Returns:
+            str: UniDic情報、
+            「lForm 語彙素読み」「lemma 語彙素」「orth 書字形出現形」「pron 発音形出現形」
+            「orthBase 書字形基本形」「pronBase 発音形基本形」「form 語形出現形」「formBase  語形基本形」
+        """
+        from .util import SUWFeaField as Field
+        unidic_info: list[str] = [
+            SUW.get_features(self)[Field.lForm],
+            SUW.get_features(self)[Field.lemma],
+            SUW.get_features(self)[Field.orth],
+            SUW.get_features(self)[Field.orthBase],
+            SUW.get_features(self)[Field.pron],
+            SUW.get_features(self)[Field.pronBase],
+            SUW.get_features(self)[Field.form],
+            SUW.get_features(self)[Field.formBase]
+        ]
+        return delimiter.join(unidic_info)
 
 
 class LUW(Property):
@@ -292,28 +322,34 @@ class LUW(Property):
     def get_surface(self) -> str:
         return self.luw_form
 
-    def get_origin(self) -> str:
+    def get_origin(self, do_conv29=False) -> str:
+        from .util import LUWFeaField as Field
         if RE_PROP_MATH.match(self.get_xpos()) or RE_ASCII_MATH.match(self.get_surface()):
             # 「固有名詞」か「英数字文字列」は表層を返す
             return self.get_surface()
         if self.luw_origin == "":
             return "_"
-        if self.luw_origin in ["です", "デス"] or self.luw_features[LUWFeaField.l_lemma] == "です":
-            return "だ"
-        lemma_dic = {
-            "ぽい": "ぽい", "臭い": "臭い", "辛い": "辛い", "無い": "ない"
-        }
-        if self.luw_features[LUWFeaField.l_lemma] in lemma_dic:
-            return lemma_dic[self.luw_features[LUWFeaField.l_lemma]]
-        if self.luw_features[LUWFeaField.l_pos1] == "助動詞":
-            if self.luw_features[LUWFeaField.l_lemma] in UNIDIC_ORIGIN_CONV:
-                return UNIDIC_ORIGIN_CONV[self.luw_features[LUWFeaField.l_lemma]]
-            return self.luw_features[LUWFeaField.l_lemma]
-        if self.luw_origin in UNIDIC_ORIGIN_CONV:
-            return UNIDIC_ORIGIN_CONV[self.luw_origin]
         if self.luw_origin == "　":
             return "[SP]"
-        return self.luw_origin
+        if do_conv29:
+            return conv_v29_lemma(
+                self.luw_origin, self.luw_features, Field.l_pos1, Field.l_lemma, Field.l_lemma
+            )
+        else:
+            return self.luw_origin
+
+    def get_unidic_info(self, delimiter: str=",") -> str:
+        """ UniDic 情報を返す
+
+        Returns:
+            str: UniDic情報、語彙素（l_lemma） 読み（l_reading）
+        """
+        from .util import LUWFeaField as Field
+        unidic_info: list[str] = [
+            LUW.get_features(self)[Field.l_reading],
+            LUW.get_features(self)[Field.l_lemma]
+        ]
+        return delimiter.join(unidic_info)
 
     def get_katuyo(self) -> str:
         """
@@ -323,11 +359,6 @@ class LUW(Property):
 
     def get_xpos(self) -> str:
         return self.luw_pos
-        #pos = 0
-        #for pos, fff in enumerate(self.luw_features):
-        #    if fff == "*" or pos >= 4:
-        #        break
-        #return "-".join(self.luw_features[:pos])
 
     def get_features(self) -> list[str]:
         return self.luw_features
@@ -595,7 +626,7 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
             return value is not None
         return False
 
-    def get_udmisc(self) -> str:
+    def get_udmisc(self, add_unidic_info=True) -> str:
         """
             return ud misc text
         """
@@ -606,10 +637,22 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
         if self.has_space_after():
             self.ud_misc["SpaceAfter"] = "Yes"
             # comment: BCCWJなどのYesを上書きする可能性があるのでNoにはしないこと
+        if add_unidic_info:
+            if self.get_origin() != self.get_origin(do_conv29=True):
+                self.ud_misc["PrevUDLemma"] = self.get_origin(do_conv29=True)
+            #  lexemes, forms, and orth forms
+            self.ud_misc["UnidicInfo"] = self.get_unidic_info()
         return "|".join([
             "{}={}".format(k, v) for k, v in sorted(self.ud_misc.items())
             if self.word_unit_mode == "suw" or (self.word_unit_mode == "luw" and k not in ["LUWPOS", "LUWBILabel"])
         ])
+
+    def get_unidic_info(self, delimiter: str=",") -> str:
+        return re.sub(r"　　+", "　", "{}{}{}".format(
+            SUW.get_unidic_info(self, delimiter=delimiter),
+            delimiter,
+            LUW.get_unidic_info(self, delimiter=delimiter)
+        )).rstrip()
 
     def convert(self, sep: str="\t") -> str:
         """
@@ -628,10 +671,17 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
             deps="_", misc=self.get_udmisc()
         )
 
-    def build_luw_unit(self):
+    def build_luw_unit(self, luw_unit: list[Word]=None, suw_delimter: str=";"):
         assert self.word_unit_mode == "luw", "differ mode: " + self.word_unit_mode
         self._token[0] = self.get_surface()
-        self._token[1] = ",".join(self.get_features())
+        if luw_unit is None:
+            self._token[1] = ",".join(self.get_features())
+        else:
+            self._token[1] = ",".join([
+                suw_delimter.join([f.replace(suw_delimter, "\\"+suw_delimter) for f in fes])
+                for fes in zip(*[SUW.get_features(suw) for suw in luw_unit])
+            ])
+            self.features = self._token[1].split(",")
 
     def get_surface(self) -> str:
         if self.word_unit_mode == "luw":
@@ -640,11 +690,11 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
             return SUW.get_surface(self)
         raise NotImplementedError
 
-    def get_origin(self):
+    def get_origin(self, do_conv29=False):
         if self.word_unit_mode == "luw":
-            return LUW.get_origin(self)
+            return LUW.get_origin(self, do_conv29=do_conv29)
         if self.word_unit_mode == "suw":
-            return SUW.get_origin(self)
+            return SUW.get_origin(self, do_conv29=do_conv29)
         raise NotImplementedError
 
     def get_xpos(self):

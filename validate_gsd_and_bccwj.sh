@@ -34,7 +34,7 @@ while getopts "c:o:u:h" optKey; do
   esac
 done
 
-ls $CONLLU_FILE_DIR/BCCWJ/*/*.csr $CONLLU_FILE_DIR/GSD/work/ud_*.conllu | \
+ls $CONLLU_FILE_DIR/BCCWJ/*/*.csr $CONLLU_FILE_DIR/GSD/work/ud_*.conllu $CONLLU_FILE_DIR/BCCWJ/output_luw/*/*.csr $CONLLU_FILE_DIR/GSD/work_luw/ud_*.conllu |\
   parallel "python $UD_TOOL_DIR/validate.py --lang ja --max-err 0" >| $OUTPUT_FILE.tmp 2>&1
 
 grep Sent $OUTPUT_FILE.tmp | sort >| $OUTPUT_FILE

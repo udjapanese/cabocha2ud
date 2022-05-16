@@ -26,12 +26,12 @@ class BunsetsuDependencies(collections.UserList[Document]):
         file_obj (:obj:`TextObject`): file object class.
     """
 
-    def __init__(self, file_name: Optional[str]=None, options: YamlDict=YamlDict()):
+    def __init__(self, file_name: Optional[str]=None, logger: Logger=Logger(), options: YamlDict=YamlDict()):
         super(BunsetsuDependencies, self).__init__()
         self.file_name: Optional[str] = file_name
         self.file_obj: TextObject = TextObject()
         self.options: YamlDict = options
-        self.logger: Logger = self.options.get("logger", None) or Logger()
+        self.logger: Logger = logger
         self.word_unit_mode = "suw"
         if self.file_name is not None:
             self.file_obj = TextObject(file_name=self.file_name)

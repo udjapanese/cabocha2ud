@@ -8,47 +8,55 @@ from cabocha2ud.lib.yaml_dict import YamlDict
 from cabocha2ud.lib.logger import Logger
 from cabocha2ud.bd import BunsetsuDependencies
 from cabocha2ud.bd.sentence import Sentence
-from cabocha2ud.bd.word import Word
-from cabocha2ud.bd.annotation import AnnotationList, Segment
 
 
-def reconstract_space_after(luw_unit: list[Word], sent: Sentence):
+def reconstract_space_after(sent: Sentence, remove_luw_space: bool=False):
     """ change space after for luw unit
 
     Args:
         luw_unit (list[Word]): luw_unit
         sent (Sentence): sentence object of `luw_unit`
     """
-    assert len(luw_unit) > 0
-    first_wrd, last_wrd = luw_unit[0], luw_unit[-1]
-    space_after_flag = False
-    if last_wrd.has_space_after():
-        space_after_flag = True
-    for _, wrd in enumerate(luw_unit):
-        if wrd.has_space_after():
-            wrd_pos = sent.get_pos_from_word(wrd)
-            assert isinstance(sent.annotation_list, AnnotationList)
-            res = sent.annotation_list.get_segment(wrd_pos)
-            assert isinstance(res, Segment)
-            sent.annotation_list.remove_segment(res)
-    first_pos, last_pos = -1, -1
-    if space_after_flag:
-        first_pos, _ = sent.get_pos_from_word(first_wrd)
-        _, last_pos = sent.get_pos_from_word(last_wrd)
-    if space_after_flag:
-        luw_surface = "".join([w.get_surface() for w in luw_unit])
-        assert len(range(first_pos, last_pos)) == len(luw_surface)
-        assert isinstance(sent.annotation_list, AnnotationList)
+    assert sent.annotation_list is not None
+    if len([seg for seg in sent.annotation_list.get_segments() if seg.get_name() == "space-after:seg"]) == 0:
+        return
+    assert len(sent.flatten()) == len(sent.abs_pos_list)
+    seg_lst = [seg for seg in sent.annotation_list.get_segments() if seg.get_name() == "space-after:seg"]
+    sp_after_word_pos = []
+    for (luw_start_pos, luw_end_pos), (wpos, wrd) in zip(sent.abs_pos_list, enumerate(sent.flatten())):
+        insert_sp_pos_list: list = []
+        for seg in seg_lst:
+            if luw_start_pos <= seg.start_pos and seg.end_pos <= luw_end_pos:
+                if luw_start_pos <= seg.start_pos and seg.end_pos < luw_end_pos:
+                    # 中にある場合
+                    insert_sp_pos_list.append(seg.end_pos - luw_start_pos)
+                elif seg.end_pos == luw_end_pos:
+                    # 末尾にある場合, SpaceAfterセグメント追加
+                    sp_after_word_pos.append(wpos)
+                else:
+                    raise ValueError
+        wrd.luw_form = "".join([w + " " if p + 1 in insert_sp_pos_list else w for p, w in enumerate(wrd.luw_form)])
+        wrd._token[0] = wrd.luw_form
+        wrd._token[2] = wrd.luw_form
+    for seg in seg_lst:
+        sent.annotation_list.remove_segment(seg)
+    sent.update_word_pos()
+    for wpos in sp_after_word_pos:
+        # SpaceAfterのがあれば追加する
+        wrd = sent.flatten()[wpos]
+        luw_surface = wrd.get_surface()
+        start_pos, end_pos = sent.get_pos_from_word(wrd)
         sent.annotation_list.append_segment([
-            '#! SEGMENT_S space-after:seg {} {} "{}"'.format(first_pos, last_pos, luw_surface).split(" "),
+            '#! SEGMENT_S space-after:seg {} {} "{}"'.format(start_pos, end_pos, luw_surface).split(" "),
             '#! ATTR space-after:value "YES"'.split(" ")
         ])
+    return
 
 
 def update_luw_unit_to_bunsetu(sent: Sentence):
     """
         文節をまたぐ長単位を移動させる
-            e.g 「事もあり」
+            e.g 「〜事も|あり/ますが」
     """
     remove_top_lst: list[tuple[int, int]] = []
     for bun_pos, bun in enumerate(sent):
@@ -112,22 +120,14 @@ def check_luw_unit(sent: Sentence) -> tuple[bool, int, int]:
                 break
             assert pos == 0
             if CHECK_LUW_POS.match(luw_unit[0].luw_pos) and check_dep(sent, bun_pos):
-                #print("luw----", luw_unit[0].luw_pos)
-                #print("\n".join([str(lll) for lll in luw_unit]))
-                #print("luw----")
                 return False, bun_pos, len(luw_unit)
     return True, -1, -1
 
 
 def move_luw_unit(sent: Sentence):
     result, bun_pos, luw_unit_size = check_luw_unit(sent)
-    #print(sent.sent_id, result, bun_pos, luw_unit_size)
     while not result:
-        #print("while --->", sent.sent_id, result, bun_pos, luw_unit_size)
         bunsetu = sent[bun_pos]
-        #print("---- bun")
-        #print(str(bunsetu))
-        #print("------")
         assert bun_pos > 0
         prev_bun = sent[bun_pos-1]
         luw_unit = bunsetu.get_luw_list()[0]
@@ -171,19 +171,19 @@ def move_luw_unit(sent: Sentence):
             bun.dep_pos = -1
 
 
-def build_luw_unit(sent: Sentence):
+def build_luw_unit(sent: Sentence, remove_luw_space: bool=False):
     assert sent.word_unit_mode == "luw", "differ mode: " + sent.word_unit_mode
-    for bun in sent:
-        for luw_unit in bun.get_luw_list():
-            reconstract_space_after(luw_unit, sent)
-    update_luw_unit_to_bunsetu(sent)
-    move_luw_unit(sent)
+    for _ in range(3):
+        # TODO: 改善したいがとりあえず
+        update_luw_unit_to_bunsetu(sent)
+        move_luw_unit(sent)
     for _, bunsetu in enumerate(sent):
         assert len(bunsetu) > 0
         bunsetu.word_unit_mode = "luw"
         bunsetu.build_luw_unit()
     sent.bunsetu_dep = [bun.dep_pos for bun in sent.bunsetues()]
     sent.update_word_pos()
+    reconstract_space_after(sent, remove_luw_space=remove_luw_space)
 
 
 def do(bobj: BunsetsuDependencies, logger: Optional[Logger]=None) -> None:
@@ -195,18 +195,20 @@ def do(bobj: BunsetsuDependencies, logger: Optional[Logger]=None) -> None:
         doc.word_unit_mode = "luw"
         for _, sent in enumerate(doc):
             sent.word_unit_mode = "luw"
-            build_luw_unit(sent)
+            build_luw_unit(sent, bobj.options.get("remove_luw_space", False))
 
 
 
 def _main() -> None:
     parser = argparse.ArgumentParser(description="BUILD LUW format")
     parser.add_argument("cabocha_file")
+    parser.add_argument("--remove-luw-space", default=False, action="store_true")
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("-w", "--writer", default="-", type=str)
     args = parser.parse_args()
     logger = Logger(debug=args.debug)
-    bobj = BunsetsuDependencies(file_name=args.cabocha_file, options=YamlDict())
+    options = YamlDict(init={"remove_luw_space": args.remove_luw_space})
+    bobj = BunsetsuDependencies(file_name=args.cabocha_file, logger=logger, options=options)
     do(bobj, logger=logger)
     bobj.write_cabocha_file(args.writer)
 

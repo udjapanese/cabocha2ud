@@ -8,29 +8,37 @@ Convert CONLL file to blank data.
 
 import argparse
 import pickle as pkl
+from typing import Iterable, TextIO, TypedDict, Optional
 from lib import (
     separate_document, load_bccwj_core_file, is_spaceafter_yes,
     ID, FORM, LEMMA, XPOS, MISC
 )
 
 
-def _convert_misc(conll, misc_data):
+class Misc_map_data(TypedDict):
+    cont_bl_to_org: dict[str, dict]
+    cont_org_to_bl: dict[str, dict]
+    label_bl_to_org: dict[str, str]
+    label_org_to_bl: dict[str, str]
+
+
+def _convert_misc(conll: list[str], misc_data: Misc_map_data) -> list[str]:
     """
         convert MISC Filed
     """
-    nfes = []
+    nfes: list[str] = []
     for item in conll[MISC].split("|"):
         key, value = item.split("=")
-        if key in ["BunsetuPositionType", "LUWPOS"]:
+        if key in ["BunsetuPositionType", "LUWPOS", "UnidicInfo"]:
             value = misc_data["cont_org_to_bl"][key][value]
-        if key in ["BunsetuPositionType", "LUWPOS", "BunsetuBILabel", "LUWBILabel"]:
+        if key in ["BunsetuPositionType", "LUWPOS", "BunsetuBILabel", "LUWBILabel", "UnidicInfo", "PrevUDLemma"]:
             key = misc_data["label_org_to_bl"][key]
         nfes.append(key + "=" + str(value))
     return nfes
 
 
-def _extract_num_info(bpos, bcc, cll):
-    bccwj_info = [bpos, False, [0]]
+def _extract_num_info(bpos: int, bcc: list[dict[str, str]], cll: list[str]):
+    bccwj_info: list = [bpos, False, [0]]
     if [b["品詞"] for b in bcc][0] == "名詞-数詞" and len(bcc) > 1:
         bccwj_info[1] = True
         bccwj_info[2] = []
@@ -43,7 +51,7 @@ def _extract_num_info(bpos, bcc, cll):
     return bccwj_info
 
 
-def merge_conll_and_bccwj(bccwj_flat, conll_flat, debug=False):
+def merge_conll_and_bccwj(bccwj_flat: list[list[dict[str, str]]], conll_flat: list[str], debug=False) -> Iterable[tuple[ tuple[int, str], Optional[tuple[int, list[dict[str, str]]]] ]]:
     """
         merge bccwj and conll
     """
@@ -52,6 +60,8 @@ def merge_conll_and_bccwj(bccwj_flat, conll_flat, debug=False):
     while True:
         try:
             bctm, citem = next(bccwj_iter), next(conll_iter)
+            if debug:
+                print("ccccc", bctm, citem)
             while citem[1] == "" or citem[1].startswith("# "):
                 # skip merge sent_id and text
                 yield (citem, None)
@@ -80,8 +90,8 @@ def merge_conll_and_bccwj(bccwj_flat, conll_flat, debug=False):
             break
 
 
-def _write_sentence(sent, misc_data, tid, bcc_conll_map, errors, filtered_ids, writer, debug=False):
-    output_sent_lines = []
+def _write_sentence(sent: list[tuple[ tuple[int, str], Optional[tuple[int, list[dict[str, str]]]] ]], misc_data: Misc_map_data, tid: str, bcc_conll_map: dict[str, dict], errors: dict[tuple[str, ...], list[str]], filtered_ids: set[str], writer: TextIO, debug=False):
+    output_sent_lines: list[str] = []
     sent_id = sent[0][0][1].replace("# sent_id =", "")
     output_sent_lines.append(sent[0][0][1])
     output_sent_lines.append(
@@ -91,9 +101,9 @@ def _write_sentence(sent, misc_data, tid, bcc_conll_map, errors, filtered_ids, w
     )
     for citem, bctm in sent[2:]:
         assert bctm is not None
-        cpos, cll = citem
+        cpos, ccll = citem
         bpos, bcc = bctm
-        cll = cll.split("\t")
+        cll = ccll.split("\t")
         if debug:
             print("CL:{} BCC:{}".format(cll[FORM], "".join([b["原文文字列"] for b in bcc])))
         assert cll[FORM] in "".join([b["原文文字列"] for b in bcc]) or cll[FORM] == "目　次"
@@ -107,30 +117,31 @@ def _write_sentence(sent, misc_data, tid, bcc_conll_map, errors, filtered_ids, w
         writer.write("\n".join(output_sent_lines) + "\n")
         writer.write("\n")
     else:
-        sid = tuple(output_sent_lines[0].split(" ")[-1].split("-"))
+        sid: tuple[str, ...] = tuple(output_sent_lines[0].split(" ")[-1].split("-"))
         errors[sid] = output_sent_lines
 
 
-def replace_blank_files(conll_file, base_data, misc_data, filtered_ids, writer, debug=False):
+def replace_blank_files(conll_file: TextIO, base_data: dict[str, list[list[dict[str, str]]]], misc_data: Misc_map_data, filtered_ids: set[str], writer: TextIO, debug: bool=False):
     """
         replace blank file
     """
-    bcc_conll_map = {}
-    errors = {}
-    orders = {}
-    order_count = 0
+    bcc_conll_map: dict[str, dict] = {}
+    errors: dict[tuple[str, ...], list[str]] = {}
+    orders: dict[str, int] = {}
+    order_count: int = 0
     # dict([(l.rstrip("\n"), p) for p, l in enumerate(args.bccwj_order_file)])
     for tid, cnl in separate_document(conll_file):
         assert cnl[0].startswith("# sent_id =")
-        assert tid in base_data, tid
+        assert tid is not None and tid in base_data, tid
         if debug:
-            print(cnl[0], tid)
+            print("aaa ->", cnl[0], tid)
         orders[tid] = order_count
         order_count += 1
         bcc_conll_map[tid] = {}
         # merge mapping conll and bccwj
         map_lst = merge_conll_and_bccwj(base_data[tid], cnl, debug=debug)
-        sent_lists, sent = [], []
+        sent_lists: list[list[tuple[tuple[int, str], Optional[tuple[int, list[dict[str, str]]]]]]] = []
+        sent: list[tuple[ tuple[int, str], Optional[tuple[int, list[dict[str, str]]]] ]] = []
         # divide each sentence
         for citem, bctm in map_lst:
             if citem[1] == "":
@@ -159,8 +170,8 @@ def main():
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("-w", "--writer", type=argparse.FileType("w"), default="-")
     args = parser.parse_args()
-    filtered_ids = set([l.rstrip("\n") for l in args.filtered_file])
-    misc_data = pkl.load(args.misc_file)
+    filtered_ids: set[str] = set([l.rstrip("\n") for l in args.filtered_file])
+    misc_data: Misc_map_data = pkl.load(args.misc_file)
     bccwj_data = load_bccwj_core_file(args.bccwj_file_name, load_pkl=True)
     bcc_conll_map, errors, orders = replace_blank_files(
         args.conll_file, bccwj_data, misc_data, filtered_ids, args.writer, debug=args.debug

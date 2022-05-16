@@ -298,6 +298,13 @@
     - ids: [5]
       target: DEPREL
       value: fixed
+    - ids: [1]
+      target: HEAD
+      value: 11
+    - ids: [3]
+      target: HEAD
+      value: 1
+
 - sent_id: A216n_OY14_02642-10
   rules:
     - ids: [84]
@@ -342,3 +349,23 @@
       target: DEPREL
       value: case
 # memo: 「あなたも」 -> 「生き抜いて」
+
+- sent_id: OC09_03068-12
+  rules:
+    - ids: [20]
+      target: HEAD
+      value: 28
+    - ids: [22]
+      target: HEAD
+      value: 20
+# memo: つぶつぶ -> でしょうか を でしょうか -> つぶつぶ に入れ替え
+
+- sent_id: C042n_PM21_00086-37
+  rules:
+    - ids: [83]
+      target: UPOS
+      value: NOUN
+    - ids: [83]
+      target: DEPREL
+      value: nmod
+# 83      です    です    AUX     助動詞-助動詞-デス      _       86      aux     _       BunsetuBILabel=I|BunsetuPositionType=SEM_HEAD|LUWBILabel=B|LUWPOS=助動詞-助動詞-デス|PrevUDLemma=だ|SpaceAfter=No|UnidicInfo=です,デス,デス,です,デス,です

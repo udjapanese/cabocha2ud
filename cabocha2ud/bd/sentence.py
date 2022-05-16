@@ -190,10 +190,10 @@ class Sentence(list["Bunsetu"]):
             word.sent_pos = self.sent_pos
             word.token_pos = pos + 1
             if len(self.abs_pos_list) == 0:
-                self.abs_pos_list.append((0, len(word.surface)))
+                self.abs_pos_list.append((0, len(word.get_surface())))
             else:
                 last = self.abs_pos_list[-1]
-                self.abs_pos_list.append((last[1], last[1] + len(word.surface)))
+                self.abs_pos_list.append((last[1], last[1] + len(word.get_surface())))
         self.abs_pos_dict = {s: p for p, s in enumerate(self.abs_pos_list)}
 
     def get_ud_header(self) -> str:

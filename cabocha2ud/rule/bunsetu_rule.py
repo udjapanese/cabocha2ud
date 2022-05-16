@@ -141,7 +141,8 @@ def check_other_subj(bun_fes: list[str], tmp_s_pos: list[int], tmp_f_pos: list[i
     tmp_subj_pos = [
         t for t in tmp_s_pos
         if bun[t].get_luw_pos().split("-")[0] not in ["助詞", "接続助詞", "助動詞", "補助記号", "接尾辞"]
-        and bun[t].get_origin() not in ["する", "できる", "くださる", "いただく", "いたす", "なさる"]
+        # and bun[t].get_origin() not in ["する", "できる", "くださる", "いただく", "なさる"]
+        and bun[t].get_origin() not in ["為る", "出来る", "下さる", "頂く", "為さる"]
         and not bun.is_inner_brank_word(t)  # かっこ内部ではない
     ]
     if bun.debug:

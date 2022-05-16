@@ -76,7 +76,7 @@ def get_merged_poslist(bd: BunsetsuDependencies, sp_data: list[list[dict[str, st
     return pos_list
 
 
-def matching_from_seqmath(sentence: Sentence, spd: list[dict[str, str]]) -> list[ tuple[Union[int, tuple[int, int]], tuple[int,...]] ]:
+def matching_from_seqmath(sentence: Sentence, spd: list[dict[str, str]]) -> list[tuple[Union[int, tuple[int, int]], tuple[int,...]]]:
     """
         diff using by SequenceMatcher
          return [(conll_wrd_pos, spd_wrd_pos_tuple), ....]

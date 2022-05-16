@@ -18,30 +18,30 @@ rule:
 #########################################################
 
 ## 長単位用ルール
-- - pos: "^助動詞-助動詞-ナイ"
-  - - SCONJ
-- - pos: "^助動詞-助動詞-ズ"
-  - - SCONJ
-- - pos: "^助動詞-助動詞-ヌ"
-  - - SCONJ
-- - pos: "^助動詞-文語形容詞-ク"
-  - - SCONJ
-- - pos: "^助動詞-形容詞"
-  - - SCONJ
+#- - pos: "^助動詞-助動詞-ナイ"
+#  - - SCONJ
+#- - pos: "^助動詞-助動詞-ズ"
+#  - - SCONJ
+#- - pos: "^助動詞-助動詞-ヌ"
+#  - - SCONJ
+#- - pos: "^助動詞-文語形容詞-ク"
+#  - - SCONJ
+#- - pos: "^助動詞-形容詞"
+#  - - SCONJ
 
-- - base_lexeme: "^(つつある|つつ有る)$"
-  - - SCONJ
-- - base_lexeme: "^て.+$"
-    pos: "^助動詞-"
-  - - SCONJ
-- - base_lexeme: "^(ことができる|事が出来る|ことになる|事に成る|ことがある|事が有る|こともある|事も有る|ことにする|事にする|こととなる|事と成る)$"
-  - - VERB
-- - base_lexeme: "^の?でも?(有る|ある|す)$"
-    pos: "^助動詞-"
-  - - SCONJ
-- - base_lexeme: "^のだ$"
-    pos: "^助動詞-"
-  - - SCONJ
+#- - base_lexeme: "^(つつある|つつ有る)$"
+#  - - SCONJ
+#- - base_lexeme: "^て.+$"
+#    pos: "^助動詞-"
+#  - - SCONJ
+#- - base_lexeme: "^(ことが出来る|事が出来る|ことになる|事に成る|ことがある|事が有る|こともある|事も有る|ことにする|事にする|こととなる|事と成る)$"
+#  - - VERB
+#- - base_lexeme: "^の?でも?(有る|ある|す)$"
+#    pos: "^助動詞-"
+#  - - SCONJ
+#- - base_lexeme: "^のだ$"
+#    pos: "^助動詞-"
+#  - - SCONJ
 
 ## 共通ルール
 
@@ -191,12 +191,12 @@ rule:
 
 - - pos: "^動詞-非自立可能"
     bpos: FUNC
-    base_lexeme: "する"
+    base_lexeme: "為る"
   - - AUX
 
 - - pos: "^動詞-非自立可能"
     bpos: SYN_HEAD
-    base_lexeme: "する"
+    base_lexeme: "為る"
   - - AUX
 
 - - pos: "^動詞-非自立可能"
@@ -211,52 +211,52 @@ rule:
 
 - - pos: "^動詞-非自立可能"
     bpos: SYN_HEAD
-    base_lexeme: できる
+    base_lexeme: 出来る
   - - AUX
 
 - - pos: "^動詞-非自立可能"
     bpos: FUNC
-    base_lexeme: できる
+    base_lexeme: 出来る
   - - AUX
 
 - - pos: "^動詞-非自立可能"
     bpos: SYN_HEAD
-    base_lexeme: くださる
+    base_lexeme: 下さる
   - - AUX
 
 - - pos: "^動詞-非自立可能"
     bpos: FUNC
-    base_lexeme: くださる
+    base_lexeme: 下さる
   - - AUX
 
 - - pos: "^動詞-非自立可能"
     bpos: SYN_HEAD
-    base_lexeme: いただく
+    base_lexeme: 頂く
   - - AUX
 
 - - pos: "^動詞-非自立可能"
     bpos: FUNC
-    base_lexeme: いただく
+    base_lexeme: 頂く
   - - AUX
 
 - - pos: "^動詞-非自立可能"
     bpos: SYN_HEAD
-    base_lexeme: いたす
+    base_lexeme: 致す
   - - AUX
 
 - - pos: "^動詞-非自立可能"
     bpos: FUNC
-    base_lexeme: いたす
+    base_lexeme: 致す
   - - AUX
 
 - - pos: "^動詞-非自立可能"
     bpos: SYN_HEAD
-    base_lexeme: なさる
+    base_lexeme: 為さる
   - - AUX
 
 - - pos: "^動詞-非自立可能"
     bpos: FUNC
-    base_lexeme: なさる
+    base_lexeme: 為さる
   - - AUX
 
 - - pos: "^名詞-助動詞語幹"

@@ -272,6 +272,7 @@ class AnnotationList(object):
             s.position: p for p, s in enumerate(self._segments)
         }
 
+
 def get_annotation_object(seg: list[list[str]]) -> Annotation:
     """
         get annotation object

@@ -35,8 +35,13 @@ class Misc(Content):
         if content is not None:
             self._load(content.split("|"))
 
+    @staticmethod
+    def split_data(content: str):
+        data = content.split("=")
+        return data[0], "=".join(data[1:])
+
     def _load(self, content: list[str]) -> None:
-        _content = sorted([c.split("=") for c in content])
+        _content = sorted([Misc.split_data(c) for c in content])
         self.keys = [k for k, _ in _content]
         self.dcont = dict([(k, v) for k, v in _content])
 

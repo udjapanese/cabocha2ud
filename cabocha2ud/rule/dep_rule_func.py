@@ -386,7 +386,8 @@ def match_paslink(self: Word, word: Optional[list[Word]], paslink: str) -> bool:
     parent_word: Optional[Word] = None
     for p, www in enumerate(pwlst):
         if www == word[0] and p < len(pwlst) - 1:
-            if pwlst[p+1].get_origin() == "する":
+            #if pwlst[p+1].get_origin() == "する":
+            if pwlst[p+1].get_origin() == "為る":
                 parent_word = pwlst[p+1]
             break
     if parent_word is None:

@@ -32,6 +32,7 @@ def _get_argparser() -> configargparse.ArgumentParser:
     parser.add_argument("-p", "--pipeline", default=[], type=parse_pipe)
     parser.add_argument("-b", "--bunsetu-func", default="none", choices=["none", "type1", "type2"])
     parser.add_argument("-s", "--skip-space", default=False, action="store_true")
+    parser.add_argument("--remove-luw-space", default=False, action="store_true")
     parser.add_argument("-m", "--space-marker",
                         choices=["zenkaku", "hankaku"], default="zenkaku", help="スペースに何を使うか")
     parser.add_argument("--rep-multi-root-mode", default="convert", choices=["remove", "convert"], help="for replace_multi_root")
@@ -57,7 +58,8 @@ def main() -> None:
         "debug": args.debug, "is_skip_space": args.skip_space,
         "logger": logger, "rep_multi_root_mode": args.rep_multi_root_mode,
         "patch_file": args.patch_file, "sp_file": args.sp_file,
-        "pos_rule_file": args.pos_rule_file, "dep_rule_file": args.dep_rule_file
+        "pos_rule_file": args.pos_rule_file, "dep_rule_file": args.dep_rule_file,
+        "remove_luw_space": args.remove_luw_space
     })
     bobj = BunsetsuDependencies(file_name=args.base_file, options=options)
     uobj = UniversalDependencies(options=options)

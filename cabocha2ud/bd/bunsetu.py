@@ -146,16 +146,15 @@ class Bunsetu(list["Word"]):
                 )
 
     def build_luw_unit(self):
+        """ 最初の文節の単語だけを抜いて長単位とする
+        """
         assert self.word_unit_mode == "luw", "differ mode: " + self.word_unit_mode
         new_lst: list[Word] = []
         for _, luw_unit in enumerate(self.get_luw_list()):
             assert len(luw_unit) > 0
             first_wrd, _ = luw_unit[0], luw_unit[-1]
             first_wrd.word_unit_mode = "luw"
-            first_wrd.build_luw_unit()
-            assert len(first_wrd.get_features()) == 8, "{}\t{}".format(
-                str(first_wrd), first_wrd.get_features()
-            )
+            first_wrd.build_luw_unit(luw_unit=luw_unit)
             new_lst.append(first_wrd)
         self.update_word_list(new_lst)
 
