@@ -1,6 +1,6 @@
 # encoding: utf8
-import sys
 
+import sys
 
 USAGE = '''
 Sentence duplication checker for "*.cabocha.dumped" files.

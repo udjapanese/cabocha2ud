@@ -6,9 +6,10 @@ BCCWJ DepParaPAS rule function
 
 import re
 from collections.abc import Callable
-from typing import Literal, Optional, List, Any, Tuple, Union, cast
-from cabocha2ud.bd.word import Word
+from typing import Any, List, Literal, Optional, Tuple, Union, cast
+
 from cabocha2ud.bd.annotation import Annotation, Segment
+from cabocha2ud.bd.word import Word
 
 BPOS_LIST = set([
     "SEM_HEAD", "SYN_HEAD", "CONT", "ROOT", "FUNC", "NO_HEAD"

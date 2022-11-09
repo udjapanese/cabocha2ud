@@ -6,16 +6,15 @@ Universal Dependency class
 """
 
 import copy
-
-from typing import Optional, Union, Iterator, cast
 import xml.etree.ElementTree as ET
+from typing import Iterator, Optional, Union, cast
 
+from ..bd import BunsetsuDependencies
 from ..lib.logger import Logger
 from ..lib.text_object import TextObject
 from ..lib.yaml_dict import YamlDict
-from ..bd import BunsetsuDependencies
-from .sentence import Sentence, Header
 from ..rule import dep
+from .sentence import Header, Sentence
 
 
 def iterate_ud_sentence(lines: Union[list[str], Iterator[str]]) -> Iterator[list[str]]:
@@ -42,7 +41,7 @@ class UniversalDependencies:
         self.options: YamlDict = options
         self.content: list[Sentence] = []
         self.sentence_ids: list[str] = []
-        self.logger: Logger = self.options.get("logger", None) or Logger()
+        self.logger: Logger = self.options.get("logger") or Logger()
         if self.file_name is not None:
             self.file_obj = TextObject(file_name=self.file_name)
             self.read_ud_file()

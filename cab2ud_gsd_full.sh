@@ -12,7 +12,7 @@ EOS
   exit 2
 }
 
-BASE_DIR=../cabocha_files/GSD/UD_Japanese-GSDPUD-CaboCha
+BASE_DIR=../cabocha_files/GSD/UD-Japanese-GSDPUD-Cabocha
 WORK_DIR=../cabocha_files/GSD/work
 SP_DIR=../cabocha_files/GSD/sp_data
 
@@ -40,7 +40,7 @@ set -e
 
 if [ ! -d $BASE_DIR ]; then
   # clone from github
-  git clone git@github.com:masayu-a/UD_Japanese-GSDPUD-CaboCha $BASE_DIR
+  git clone git@github.com:udjapanese/UD-Japanese-GSDPUD-Cabocha.git $BASE_DIR
 fi
 if [ ! -d $WORK_DIR ]; then
   # mkdir OUTPUT directory

@@ -7,46 +7,46 @@ Bunsetu Dependencies document class
 import os
 import re
 import xml.etree.ElementTree as ET
+from typing import TYPE_CHECKING, Optional, cast
 
-from typing import Optional, cast, TYPE_CHECKING
-
+from ..lib.iterate_function import iterate_seg_and_link, iterate_sentence
 from ..lib.logger import Logger
-from ..lib.iterate_function import (
-    iterate_seg_and_link, iterate_sentence
-)
+
 if TYPE_CHECKING:
     from .word import Word
 
-
-from ..rule.dep import detect_ud_label, SubRule
-from ..rule.bunsetu_rule import detect_dep_inbunsetu
-from ..rule.remove_space import skip_jsp_token_from_sentence
-from ..rule.swap_dep import (
-    swap_dep_without_child_from_sent, swap_dep_unsubj_from_sent
-)
+from ..rule.bunsetu_rule import detect_dep_bunsetu
+from ..rule.dep import SubRule, detect_ud_label
 from ..rule.remove_multi_subj import adapt_nsubj_to_dislocated_rule
-
+from ..rule.remove_space import skip_jsp_token_from_sentence
+from .annotation import (AnnotationList, DocAnnotation, generate_docannotation,
+                         get_annotation_object)
 from .sentence import Sentence
-from .annotation import (
-    get_annotation_object, AnnotationList, generate_docannotation, DocAnnotation
-)
-
-
-
 
 RE_SAHEN_MATCH = re.compile("^名詞.*サ変.*")
+
+
 def __replace_pos_and_label(sent: "Sentence"):
-    for word in sent.flatten():
+    """
+    後処理のPOSとDEPRELの置換
+
+    Args:
+        sent (Sentence): 対象の文
+    """
+    # dep_labels = [(wpos, wrd.dep_label) for wpos, wrd in enumerate(sent.flatten()) if wrd.dep_label in ["nsubj", "csubj"]]
+    for wpos, word in enumerate(sent.flatten()):
+        # UPOSについての置換
         if word.dep_label == "punct":
             word.en_pos = ["PUNCT"]
-        if len(word.en_pos) == 0:
-            continue
-        if word.en_pos[0] == "AUX" and word.dep_label == "compound":
-            word.dep_label = "aux"
-        if word.en_pos[0] == "AUX" and word.dep_label == "cc":
-            word.en_pos[0] = "CCONJ"
-        if word.en_pos[0] == "NOUN" and word.get_luw_pos() == "助動詞":
-            word.en_pos[0] = "AUX"
+        if len(word.en_pos) > 0:
+            if word.en_pos[0] == "AUX" and word.dep_label == "compound":
+                word.dep_label = "aux"
+            if word.en_pos[0] == "AUX" and word.dep_label == "cc":
+                word.en_pos[0] = "CCONJ"
+            if word.en_pos[0] == "NOUN" and word.get_luw_pos() == "助動詞":
+                word.en_pos[0] = "AUX"
+        #if word.dep_label in ["csubj", "nsubj"] and len(dep_labels) >= 2 and dep_labels[-1][0] != wpos:
+        #    word.dep_label = word.dep_label + ":outer"
         parent = word.get_parent_word()
         if parent is None:
             continue
@@ -57,25 +57,25 @@ def __replace_pos_and_label(sent: "Sentence"):
         if parent.dep_label == 'cc' and word.dep_label in ["aux", "mark"]:
             word.dep_label = "fixed"
             continue
+        if parent.dep_label == 'aux' and word.dep_label in ["case"]:
+            word.dep_label = "fixed"
+            continue
         if parent.word_pos == 0 and parent.dep_label == 'case' and word.dep_label in ["aux", "mark"]:
             word.dep_label = "fixed"
             continue
-        if (word.en_pos[0] == "ADP" and word.dep_label == 'fixed'
-                and word.token_pos < parent.token_pos):
+        if (word.en_pos[0] == "ADP" and word.dep_label == 'fixed' and word.token_pos < parent.token_pos):
             if parent.dep_label != "case":
-                word.dep_label = 'case'
+                word.dep_label = "case"
                 continue
             if word.token_pos == 1:
                 continue
-            # わりと特殊  B024n_PM25_00027-131
-            word.dep_label = 'case'
+            word.dep_label = 'case' # わりと特殊  B024n_PM25_00027-131
 
 
 class Document(list["Sentence"]):
     """
-     document object
+     Document object
     """
-
 
     def __init__(
             self, text: Optional[list[str]]=None, prefix: Optional[list[str]]=None,
@@ -91,6 +91,7 @@ class Document(list["Sentence"]):
         # 先頭の情報
         self.doc_attributes: DocAnnotation
         self.doc_attrib_xml: ET.Element = ET.fromstring("<root></root>")
+        self.doc_id: Optional[str]
         # 末尾の注釈
         self.doc_annotation: AnnotationList = AnnotationList([])
         # 文書上での絶対位置
@@ -105,14 +106,8 @@ class Document(list["Sentence"]):
             self.__parse(self.text, self.prefix, self.suffix)
         else:
             raise NotImplementedError
-        # パース後に取得
-        if self.doc_attributes.attrib is not None:
-            doc_attrs = self.doc_attributes.attrib
-            if doc_attrs is not None:
-                self.doc_attrib_xml = ET.fromstring('<root>' + doc_attrs.replace('&', '&amp;') + '</root>')
-        self.doc_id = get_doc_id(self)
         for sent in self:
-            sent.sent_id = self.doc_id + "-" + str(sent.sent_pos + 1)
+            sent.set_sent_id()
 
     def convert_ud(self, pos_rule: list, dep_rule: list[tuple[list[SubRule], str]], is_skip_space: bool=True, sep: str="\n") -> list[str]:
         """
@@ -156,6 +151,12 @@ class Document(list["Sentence"]):
 
     def __parse(self, text: list[str], prefix: list[str], suffix: list[str]) -> None:
         self.doc_attributes = generate_docannotation(prefix)
+        # パース後に取得
+        if self.doc_attributes.attrib is not None:
+            doc_attrs = self.doc_attributes.attrib
+            if doc_attrs is not None:
+                self.doc_attrib_xml = ET.fromstring('<root>' + doc_attrs.replace('&', '&amp;') + '</root>')
+        self.doc_id = get_doc_id(self)
         doc_annotation = suffix
         self.doc_annotation = AnnotationList([
             get_annotation_object(seg)
@@ -187,7 +188,7 @@ class Document(list["Sentence"]):
         for sent_b in self:
             for bun in sent_b:
                 bun.update_bunsetu_pos()
-            detect_dep_inbunsetu(sent_b)
+            detect_dep_bunsetu(sent_b)
             for bun in sent_b.bunsetues():
                 # このタイミングで決められる
                 bun.bunsetu_type = detect_bunsetu_jp_type(bun)

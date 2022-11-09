@@ -4,16 +4,13 @@
 BCCWJ DepParaPAS Annotation class
 """
 
-from typing import Literal, Optional, Union, NamedTuple
-
-from collections import defaultdict
 from itertools import permutations
+from typing import Literal, NamedTuple, Optional, Union
 
 
 class AnnoPosition(NamedTuple):
     pos1: int
     pos2: int
-
 
 
 class DocAnnotation(NamedTuple):

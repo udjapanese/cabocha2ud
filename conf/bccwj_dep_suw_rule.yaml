@@ -65,11 +65,27 @@ order_rule:
 #########################################################
 
 
+
 # ROOTはroot
 - rule: [
     [include_word_bpos, ["ROOT"]],    #  [include_bpos [word, ["ROOT"]]]
   ]
   res: root
+
+### FOR CEJC (※ほとんどはreplace_multi_rootで変換される)
+# 言いよどみはreparandum
+- rule: [
+    [regex_word_xpos, "^言いよどみ"],
+  ]
+  res: reparandum
+
+# フィラーはdiscourse (:filler)
+- rule: [
+    [regex_word_xpos, "^感動詞-フィラー"],    #  [is_disf [word, ]]
+  ]
+  res: discourse
+
+####
 
 
 # NO_HEADのためのルール

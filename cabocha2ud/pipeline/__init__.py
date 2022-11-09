@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 
-from typing import Callable, Optional, TypedDict, Union, Any
 from functools import partial
+from typing import Any, Callable, Optional, TypedDict, Union
+
 import typing_extensions as tx
 
-from ..lib.yaml_dict import YamlDict
-from ..lib.logger import Logger
 from ..bd import BunsetsuDependencies
-from ..ud import UniversalDependencies
+from ..lib.logger import Logger
+from ..lib.yaml_dict import YamlDict
 from ..rule import dep, pos
-
-
-from . import (
-    convert_paren, build_luw, fixed_newdoc, merge_number,
-    merge_sp_to_conll, patch_fix, replace_multi_root, merge_sp_to_cabocha
-)
+from ..ud import UniversalDependencies
+from . import (build_luw, convert_paren, fixed_newdoc, merge_number,
+               merge_sp_to_cabocha, merge_sp_to_conll, patch_fix,
+               replace_multi_root)
 
 
 class PrePost(tx.Protocol):

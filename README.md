@@ -41,6 +41,10 @@ python cab2ud.py [長単位つきcabochaファイル] -c conf/default_(bccwj|gsd
 ./cab2ud_gsd_full.sh
 # BCCWJの変換
 ./cab2ud_bccwj_full.sh
+# GSDLUW
+./cab2ud_gsd_luw_full.sh
+# BCCWJLUW
+./cab2ud_bwccj_full_luw.sh
 ```
 
 ## 出力ファイルについて
@@ -211,11 +215,22 @@ elements:
 
 下記に揃えていく、フォーマットは以下参照
 
-<https://github.com/masayu-a/UD_Japanese-GSDPUD-CaboCha>
+<https://github.com/udjapanese/UD-Japanese-GSDPUD-Cabocha>
 
-メモ
 
-```text
-3列目：長単位書字形出現形
-    空行でない場合長単位の先頭単語であり、空列だった場合、短単位中での長単位の先頭の語ではない
+## PUBLISH command
+
+```shell
+# validateの確認
+./validate_gsd_and_bccwj.sh
+
+# GSD
+./publish_gsd_ud.sh
+
+# BCCWJ
+./release_bccwj_ud.sh -w suw -s ../../core_SUW.txt
+./release_bccwj_ud.sh -w luw -s ../../core_LUW.txt
+./publish_bccwjud.sh
 ```
+
+

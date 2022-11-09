@@ -5,10 +5,10 @@ util logger object
 """
 
 import logging
-import logzero
-from typing import Optional, Union
 from enum import Enum
+from typing import Optional, Union
 
+import logzero
 from logzero import logger
 
 

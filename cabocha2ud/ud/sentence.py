@@ -4,10 +4,12 @@
 Universal Dependencies sentence class
 """
 from __future__ import annotations
+
 from typing import Optional
 
 from ..lib.logger import Logger
-from .word import Word
+from .util import Field
+from .word import Content, Word
 
 
 class Header:
@@ -71,12 +73,12 @@ class Sentence(list[Word]):
     def get_header(self, key: str) -> Optional[Header]:
         return self.header_map.get(key, None)
 
+    def get_headers(self) -> list[Header]:
+        return self.headers
+
     def set_header(self, position: int, header: Header) -> None:
         self.headers.insert(position, header)
         self.header_map[header.get_key()] = header
-
-    def get_headers(self) -> list[Header]:
-        return self.headers
 
     def get_str_list(self, mode: str="full") -> list[str]:
         if mode == "full":
@@ -86,6 +88,9 @@ class Sentence(list[Word]):
         elif mode == "body":
             return [str(ccc) for ccc in self]
         raise KeyError("`mode` must be full, header, body")
+
+    def get_colmuns(self, field: Field) -> list[Content]:
+        return [w.get(field) for w in self]
 
     def __str__(self) -> str:
         return "\n".join(self.get_str_list(mode="full")) + "\n"

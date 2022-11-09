@@ -3,32 +3,28 @@
 """ sentence.py
 """
 
-import copy
 import xml.etree.ElementTree as ET
+from typing import TYPE_CHECKING, Optional, cast
 
-from typing import Optional, TYPE_CHECKING, cast
 if TYPE_CHECKING:
     from .document import Document
-from ..lib.iterate_function import iterate_seg_and_link, iterate_bunsetu
+
+from ..lib.dependency import get_caused_nonprojectivities
+from ..lib.iterate_function import iterate_bunsetu, iterate_seg_and_link
 from ..lib.logger import Logger
-
-from .word import Word
+from .annotation import AnnotationList, get_annotation_object
 from .bunsetu import Bunsetu
-
-from .annotation import (
-    Segment, get_annotation_object, AnnotationList
-)
-
+from .word import Word
 
 
 class Sentence(list["Bunsetu"]):
 
-    """Sentence class: sentence class is Bunsetu List
-
+    """
+        Sentence class: sentence class is Bunsetu List
     """
 
     def __init__(
-            self, sent_pos: int, sentence_lines, suffix,
+            self, sent_pos: int, sentence_lines: list[str], suffix: Optional[list[str]],
             doc: "Document", base_file_name=None,
             word_unit_mode: str="suw",
             space_marker: str="　", debug: bool=False, logger: Optional[Logger]=None
@@ -43,13 +39,12 @@ class Sentence(list["Bunsetu"]):
         self.attributes_list: list = []
         self.annotation_list: Optional[AnnotationList] = None
         self._flatten: Optional[list[Word]] = None
-        self.bunsetu_dep: list[Optional[int]] = []
         self.word_dep_child: Optional[dict[int, set[int]]] = None
         # abs_pos_* represent abstract position (begin1, end1), (begin2, end2), ...
         self.abs_pos_list: list[tuple[int, int]] = []
         self.abs_pos_dict: dict[tuple[int, int], int] = {}
         self.space_marker: str = space_marker
-        self.__parse(sentence_lines, suffix)
+        self.__parse(sentence_lines, [] if suffix is None else suffix)
 
     def __str__(self) -> str:
         org = "\n".join([
@@ -68,18 +63,21 @@ class Sentence(list["Bunsetu"]):
             get UD child position
         """
         if self.word_dep_child is None or is_reconst:
-            word_dep_child: dict[int, set[int]] = {}
-            for tword in self.flatten():
-                assert isinstance(tword.dep_num, int)
-                if tword.dep_num not in word_dep_child:
-                    word_dep_child[tword.dep_num] = set([])
-                word_dep_child[tword.dep_num].add(tword.token_pos)
-            self.word_dep_child = word_dep_child.copy()
+            self._update_ud_children()
         assert self.word_dep_child is not None
         if word.token_pos in self.word_dep_child:
             return self.word_dep_child[word.token_pos]
         else:
             return set([])
+    
+    def _update_ud_children(self):
+        word_dep_child: dict[int, set[int]] = {}
+        for tword in self.flatten():
+            assert isinstance(tword.dep_num, int)
+            if tword.dep_num not in word_dep_child:
+                word_dep_child[tword.dep_num] = set([])
+            word_dep_child[tword.dep_num].add(tword.token_pos)
+        self.word_dep_child = word_dep_child.copy()
 
     def bunsetues(self) -> list[Bunsetu]:
         """
@@ -87,8 +85,8 @@ class Sentence(list["Bunsetu"]):
         """
         return list(self)
 
-    def update_bunsetu(self, position: int, bun:Bunsetu) -> None:
-        assert 0 < position < len(self)
+    def update_bunsetu(self, position: int, bun: Bunsetu) -> None:
+        assert 0 <= position < len(self)
         self[position] = bun
 
     def set_sent_pos(self, sent_pos: int) -> None:
@@ -123,11 +121,9 @@ class Sentence(list["Bunsetu"]):
 
     def iterate_word_tree(self) -> list[Word]:
         from collections import deque
-        # self.update_word_pos()
         _tree: dict[int, set[int]] = {}
         root_num: Optional[int] = None
-        _flat_lst = self.flatten()
-        for word in _flat_lst:
+        for word in self.flatten():
             assert word.dep_num is not None
             if word.dep_num not in _tree:
                 _tree[word.dep_num] = set()
@@ -147,7 +143,7 @@ class Sentence(list["Bunsetu"]):
             for near in stree:
                 qlst.append(near)
         assert len(self.flatten()) == len(norder)
-        return [_flat_lst[n] for n in norder]
+        return [self.flatten()[n] for n in norder]
 
     def flatten(self) -> list[Word]:
         """
@@ -158,17 +154,16 @@ class Sentence(list["Bunsetu"]):
             for word in bunsetu.words()
         ]
 
-    def words(self):
+    def words(self) -> list[Word]:
         return self.flatten()
 
-    def __parse(self, sentence_lines, annotation_list) ->  None:
+    def __parse(self, sentence_lines: list[str], annotation_list: list[str]) ->  None:
         self.annotation_list = AnnotationList([
             get_annotation_object(seg)
             for seg in iterate_seg_and_link(list(annotation_list))
         ])
-        bunsetu_list = [bunsetu for bunsetu in iterate_bunsetu(sentence_lines)]
         prev_bunsetu = None
-        for bunsetu in bunsetu_list:
+        for bunsetu in iterate_bunsetu(sentence_lines):
             self.append(
                 Bunsetu(
                     self.sent_pos, bunsetu,
@@ -180,8 +175,50 @@ class Sentence(list["Bunsetu"]):
             prev_bunsetu = self[-1]
             self[-1].set_sent(self)
         self.set_document(self.doc)
-        self.bunsetu_dep = [bun.dep_pos for bun in self.bunsetues()]
         self.update_word_pos()
+        if not self.validate_bunsetu_dependencies():
+            self.set_sent_id()
+            self.logger.debug("The sentence has invalid tree: {}, skip".format(self.sent_id))
+
+    def validate_bunsetu_dependencies(self, strict=False) -> bool:
+        """ 文節間の依存関係にエラーがないか
+
+        Returns:
+            bool: 問題なければTrue、問題があるならFalse
+        """
+        try:
+            # 文節木の構築
+            _bunsetu_dep: list[int] = [-1]
+            prev_pos: int = -1
+            for bunsetu in self.bunsetues():
+                assert isinstance(bunsetu.bunsetu_pos, int) and isinstance(bunsetu.dep_pos, int), "`bunsetu_pos` and `dep_pos` must be set integer number"
+                assert bunsetu.bunsetu_pos == prev_pos + 1, "`bunsetu_pos` must be sequential"
+                assert bunsetu.dep_pos in list(range(0, len(self.bunsetues()))) + [-1], "`bunsetu.dep_pos`: {} must be range: {}".format(bunsetu.dep_pos, list(range(0, len(self.bunsetues()))) + [-1])
+                _bunsetu_dep.append(bunsetu.dep_pos + 1)
+                prev_pos = bunsetu.bunsetu_pos
+            if not strict:
+                return True
+            # 文節間で交差があるか確認をする
+            nonprojectives = {}
+            for bunsetu in self.bunsetues():
+                assert isinstance(bunsetu.bunsetu_pos, int) and isinstance(bunsetu.dep_pos, int)
+                res = [r - 1 for r in get_caused_nonprojectivities(bunsetu.bunsetu_pos+1, _bunsetu_dep)]
+                if len(res) > 0:
+                    # 部分並列になるものはDXと表現されるため、そのものは除外
+                    if bunsetu.dep_type == "DX":
+                        continue
+                    if all([self.bunsetues()[r].dep_type == "DX" for r in res]):
+                        continue
+                    nonprojectives[bunsetu.bunsetu_pos] = res
+            if len(nonprojectives) > 0:
+                raise KeyError("has non-projective bunsetu: {}".format(
+                    nonprojectives
+                ))
+        except:
+            import traceback
+            self.logger.debug(traceback.format_exc())
+            return False
+        return True
 
     def update_word_pos(self) -> None:
         # 単語の位置を決める
@@ -196,14 +233,17 @@ class Sentence(list["Bunsetu"]):
                 self.abs_pos_list.append((last[1], last[1] + len(word.get_surface())))
         self.abs_pos_dict = {s: p for p, s in enumerate(self.abs_pos_list)}
 
-    def get_ud_header(self) -> str:
-        """
-            get header for sent
-        """
+    def set_sent_id(self):
         if len(self.doc) > 1:
             self.sent_id = self.doc.doc_id + "-" + str(self.sent_pos + 1)
         else:
             self.sent_id = self.doc.doc_id
+
+    def get_ud_header(self) -> str:
+        """
+            get header for sent
+        """
+        self.set_sent_id()
         header = [("sent_id", self.sent_id)]
         header.append(("text", "".join([
             w.get_surface() + self.space_marker if w.ud_misc["SpaceAfter"] == "Yes"

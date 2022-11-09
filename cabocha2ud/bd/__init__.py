@@ -8,13 +8,12 @@ Cabocha Bunsetu Dependency class
 """
 
 import collections
+from typing import List, Optional
 
-from typing import Optional, List
-from ..lib.logger import Logger
 from ..lib.iterate_function import iterate_document
+from ..lib.logger import Logger
 from ..lib.text_object import TextObject
 from ..lib.yaml_dict import YamlDict
-
 from .document import Document
 from .sentence import Sentence
 
@@ -26,12 +25,12 @@ class BunsetsuDependencies(collections.UserList[Document]):
         file_obj (:obj:`TextObject`): file object class.
     """
 
-    def __init__(self, file_name: Optional[str]=None, logger: Logger=Logger(), options: YamlDict=YamlDict()):
+    def __init__(self, file_name: Optional[str]=None, options: YamlDict=YamlDict()):
         super(BunsetsuDependencies, self).__init__()
         self.file_name: Optional[str] = file_name
         self.file_obj: TextObject = TextObject()
         self.options: YamlDict = options
-        self.logger: Logger = logger
+        self.logger: Logger = self.options.get("logger") or Logger()
         self.word_unit_mode = "suw"
         if self.file_name is not None:
             self.file_obj = TextObject(file_name=self.file_name)
@@ -58,7 +57,7 @@ class BunsetsuDependencies(collections.UserList[Document]):
             for text in iterate_document(doc_text, separate_info=True):
                 prefix, ddoc, suffix = text
                 doc: Document = Document(
-                    text=ddoc, prefix=prefix, suffix=suffix, base_file_name=None,
+                    text=ddoc, prefix=prefix, suffix=suffix, base_file_name=self.file_name,
                     space_marker=self.options.get("space_marker", "　"),
                     debug=self.options.get("debug", False),
                     word_unit_mode=self.options.get("word_unit", "suw"),

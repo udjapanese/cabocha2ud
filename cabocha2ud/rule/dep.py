@@ -6,12 +6,13 @@ BCCWJ DepParaPAS rule function
 
 import functools
 from collections.abc import Callable
-from typing import Generator, Optional, Union, cast, TypedDict, NamedTuple
+from typing import Generator, NamedTuple, Optional, TypedDict, Union, cast
 
 import ruamel.yaml
 
 from ..bd.word import Word
 from . import dep_rule_func
+
 
 class Rule(NamedTuple):
     func_name: str

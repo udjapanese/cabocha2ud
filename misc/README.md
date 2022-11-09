@@ -5,18 +5,22 @@
 ルールファイルを少し見やすい形に変換する
 
 ```shell
-> python misc/show_tab_rule_file.py -f pos conf/bccwj_pos_suw_rule.json
-> python misc/show_tab_rule_file.py -f dep conf/bccwj_dep_suw_rule.json
+> pipenv run python misc/show_tab_rule_file.py -f pos conf/bccwj_pos_suw_rule.yaml
+> pipenv run python misc/show_tab_rule_file.py -f dep conf/bccwj_dep_suw_rule.yaml
 ```
 
-## replace_multi_root.py
+## show_bd_position.py
 
-CoNLLUファイルにマルチルートが含まれているかを確認し、
-マルチルートの文を削除するか、シングルルートに変換をする
+単語位置などを表示する。
 
 ```shell
-# マルチルートの文を削除する
-> python misc/replace_multi_root.py [CoNLLファイル] remove -w [出力ファイル]
-# マルチルートの文をシングルルートに変換する
-> python misc/replace_multi_root.py [CoNLLファイル] convert -w [出力ファイル]
+> pipenv run python misc/show_bd_position.py Cabochaファイル
+```
+
+## fix_overbunsetu.py
+
+長単位で2つの文節にまたいでいるものを検出して修正する
+
+```shell
+> pipenv run python fixed_bunsetu_overluw.py Cabochaファイル -w [出力ファイル]
 ```

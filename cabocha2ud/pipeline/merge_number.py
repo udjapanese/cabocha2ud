@@ -53,12 +53,12 @@ def merge_word_unit(num_stack: list[Word], bunsetu: Bunsetu, pwrd: Word) -> Word
     if token_size <= 2 or num_stack[0]._token[LUW_FORM_FILD] != "":
         return Word(
             token=token_txt, doc=num_stack[0].doc, bunsetu=bunsetu,
-            word_unit_mode=num_stack[0].word_unit_mode
+            word_unit_mode=num_stack[0].word_unit_mode, logger=bunsetu.logger
         )
     else:
         return Word(
             token=token_txt, doc=num_stack[0].doc, bunsetu=bunsetu,
-            luw_info=pwrd, word_unit_mode=num_stack[0].word_unit_mode
+            luw_info=pwrd, word_unit_mode=num_stack[0].word_unit_mode, logger=bunsetu.logger
         )
 
 def do(bobj: BunsetsuDependencies, logger: Optional[Logger]=None) -> None:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from typing import Optional, Union
 import bisect
+from typing import Optional, Union
 
 from .util import Field
 

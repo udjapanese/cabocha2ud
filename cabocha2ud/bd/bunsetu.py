@@ -5,15 +5,17 @@ Bunsetu class
 """
 
 from __future__ import annotations
-from typing import Optional, TYPE_CHECKING, cast
+
 import bisect
 import copy
+from typing import TYPE_CHECKING, Optional, cast
 
 if TYPE_CHECKING:
     from .word import Word
     from .sentence import Sentence
-from .word import Word
+
 from ..lib.logger import Logger
+from .word import Word
 
 
 class Bunsetu(list["Word"]):
@@ -22,7 +24,7 @@ class Bunsetu(list["Word"]):
     """
 
     def __init__(
-            self, sent_pos: int, bunsetu,
+            self, sent_pos: int, bunsetu: list[str],
             base_file_name: Optional[str]=None, debug=False,
             prev_bunsetu=None, parent_sent=None, logger: Optional[Logger]=None,
             word_unit_mode: str="suw"

@@ -8,16 +8,15 @@ from __future__ import annotations
 
 import re
 import string
-from typing import Literal, Union, Optional, Tuple, cast, TYPE_CHECKING
-
-from .util import SUWFeaField, LUWFeaField
+from typing import TYPE_CHECKING, Literal, Optional, Tuple, Union, cast
 
 from ..lib.logger import Logger
+
 if TYPE_CHECKING:
+    from .annotation import Annotation, AnnotationList, Segment
     from .bunsetu import Bunsetu
     from .document import Document
     from .sentence import Sentence
-    from .annotation import Segment, Annotation, AnnotationList
 
 
 JP_SP_MARK = "[JSP]"
@@ -79,7 +78,7 @@ def conv_v29_lemma(origin: str, features: list[str], pos1_pos: int, lemma_pos: i
 class Property:
 
     def __init__(self, **kwargs):
-        pass
+        self.logger: Logger = kwargs.get("logger") or Logger()
 
 
 class Reference(Property):
@@ -398,7 +397,7 @@ class LUW(Property):
             self.luw_features = token[3].split(",")
             self.luw_form = token[2]
             if len(self.luw_features) < 8:
-                print("WARNING: {} size small".format(self.luw_features))
+                self.logger.debug("WARNING: {} size small".format(self.luw_features))
                 self.luw_features.insert(3, '*')
             self.luw_origin = self.luw_features[Field.l_lemma]
             self.luw_yomi = self.luw_features[Field.l_reading]
@@ -556,8 +555,6 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
             get surface case (表層格)
         """
         assert self.doc is not None
-        if self.case_set is not None:
-            return self.case_set
         self.case_set = {}
         for child_pos in self.doc[self.sent_pos].get_ud_children(self, is_reconst=True):
             cword = self.doc[self.sent_pos].get_word_from_tokpos(child_pos - 1)
@@ -575,7 +572,7 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
                 str: ga, o, ni のどれか
         Literal[-1]: リンクなかった
         """
-        from .annotation import Segment, Annotation
+        from .annotation import Annotation, Segment
         if self.ud_misc["BunsetuPositionType"] != "SEM_HEAD":
             return -1
         parent_word = self.get_parent_word()
@@ -589,7 +586,7 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
         return -1
 
     def get_link_label(self) -> Union[str, Literal[-1]]:
-        from .annotation import Segment, Annotation
+        from .annotation import Annotation, Segment
         """
         自分と親とのリンクを確認して返す
         Returns:
@@ -606,8 +603,6 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
 
     def get_child_words(self) -> list[Word]:
         assert self.doc is not None
-        if self.child_words is not None:
-            return self.child_words
         self.child_words = []
         for child_pos in self.doc[self.sent_pos].get_ud_children(self):
             cword = self.doc[self.sent_pos].get_word_from_tokpos(child_pos - 1)

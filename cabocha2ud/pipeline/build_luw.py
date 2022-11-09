@@ -4,10 +4,10 @@ import argparse
 import re
 from typing import Optional
 
-from cabocha2ud.lib.yaml_dict import YamlDict
-from cabocha2ud.lib.logger import Logger
 from cabocha2ud.bd import BunsetsuDependencies
 from cabocha2ud.bd.sentence import Sentence
+from cabocha2ud.lib.logger import Logger
+from cabocha2ud.lib.yaml_dict import YamlDict
 
 
 def reconstract_space_after(sent: Sentence, remove_luw_space: bool=False):
@@ -60,20 +60,16 @@ def update_luw_unit_to_bunsetu(sent: Sentence):
     """
     remove_top_lst: list[tuple[int, int]] = []
     for bun_pos, bun in enumerate(sent):
-        for pos, luw_unit in enumerate(bun.get_luw_list()):
-            # 文節またぐ長単位の情報を引きづぎ
-            if pos >= 1:
-                break
-            assert pos == 0
-            if luw_unit[0].luw_label == "I":
-                """
-                    対象のBをみつけ、情報を更新
-                """
-                assert bun.prev_bunsetu is not None
-                prev_bun = bun.prev_bunsetu  # .get_luw_list()[-1]
-                for lunit in luw_unit:
-                    prev_bun.append(lunit)
-                remove_top_lst.append((bun_pos, len(luw_unit)))
+        luw_unit = bun.get_luw_list()[0]
+        if luw_unit[0].luw_label == "I":
+            """
+                対象のBをみつけ、情報を更新
+            """
+            assert bun.prev_bunsetu is not None
+            prev_bun = bun.prev_bunsetu  # .get_luw_list()[-1]
+            for lunit in luw_unit:
+                prev_bun.append(lunit)
+            remove_top_lst.append((bun_pos, len(luw_unit)))
     rmed_cnt = 0
     for bun_pos, luw_unit_size in remove_top_lst:
         for _ in range(luw_unit_size):
@@ -102,7 +98,7 @@ def update_luw_unit_to_bunsetu(sent: Sentence):
     assert all([len(bun) > 0 for bun in sent])
 
 
-def check_dep(sent: Sentence, bun_pos: int):
+def check_dep(sent: Sentence, bun_pos: int) -> bool:
     for prev_bun in sent[:bun_pos]:
         if prev_bun.dep_pos == bun_pos:
             return True
@@ -173,15 +169,10 @@ def move_luw_unit(sent: Sentence):
 
 def build_luw_unit(sent: Sentence, remove_luw_space: bool=False):
     assert sent.word_unit_mode == "luw", "differ mode: " + sent.word_unit_mode
-    for _ in range(3):
-        # TODO: 改善したいがとりあえず
-        update_luw_unit_to_bunsetu(sent)
-        move_luw_unit(sent)
     for _, bunsetu in enumerate(sent):
         assert len(bunsetu) > 0
         bunsetu.word_unit_mode = "luw"
         bunsetu.build_luw_unit()
-    sent.bunsetu_dep = [bun.dep_pos for bun in sent.bunsetues()]
     sent.update_word_pos()
     reconstract_space_after(sent, remove_luw_space=remove_luw_space)
 
@@ -196,7 +187,6 @@ def do(bobj: BunsetsuDependencies, logger: Optional[Logger]=None) -> None:
         for _, sent in enumerate(doc):
             sent.word_unit_mode = "luw"
             build_luw_unit(sent, bobj.options.get("remove_luw_space", False))
-
 
 
 def _main() -> None:

@@ -3,7 +3,7 @@
 
 UD_TOOL_DIR=../../UD-TOOLS
 CONLLU_FILE_DIR=../cabocha_files
-OUTPUT_FILE=error_res.txt
+OUTPUT_FILE=error_res
 
 usage () {
   cat <<EOS
@@ -34,9 +34,19 @@ while getopts "c:o:u:h" optKey; do
   esac
 done
 
-ls $CONLLU_FILE_DIR/BCCWJ/*/*.csr $CONLLU_FILE_DIR/GSD/work/ud_*.conllu $CONLLU_FILE_DIR/BCCWJ/output_luw/*/*.csr $CONLLU_FILE_DIR/GSD/work_luw/ud_*.conllu |\
-  parallel "python $UD_TOOL_DIR/validate.py --lang ja --max-err 0" >| $OUTPUT_FILE.tmp 2>&1
+ls $CONLLU_FILE_DIR/BCCWJ/*/*.csr $CONLLU_FILE_DIR/GSD/work/ud_*.conllu |\
+  parallel "python $UD_TOOL_DIR/validate.py --lang ja --max-err 0" >| $OUTPUT_FILE.s.tmp 2>&1 &
 
-grep Sent $OUTPUT_FILE.tmp | sort >| $OUTPUT_FILE
-c=`grep 'with' $OUTPUT_FILE.tmp | awk -F" " 'BEGIB{a=0}{a+=$5}END{print a}'`
-echo "*** FAILED *** with $c errors" >> $OUTPUT_FILE
+ls $CONLLU_FILE_DIR/BCCWJ/output_luw/*/*.csr $CONLLU_FILE_DIR/GSD/work_luw/ud_*.conllu |\
+	  parallel "python $UD_TOOL_DIR/validate.py --lang ja --max-err 0" >| $OUTPUT_FILE.l.tmp 2>&1
+
+grep Sent $OUTPUT_FILE.s.tmp | sort >| $OUTPUT_FILE.suw.txt
+c=`grep 'with' $OUTPUT_FILE.s.tmp | awk -F" " 'BEGIB{a=0}{a+=$5}END{print a}'`
+echo "*** FAILED *** with $c errors" >> $OUTPUT_FILE.suw.txt
+
+grep Sent $OUTPUT_FILE.l.tmp | sort >| $OUTPUT_FILE.luw.txt
+c=`grep 'with' $OUTPUT_FILE.l.tmp | awk -F" " 'BEGIB{a=0}{a+=$5}END{print a}'`
+echo "*** FAILED *** with $c errors" >> $OUTPUT_FILE.luw.txt
+
+echo "output" $OUTPUT_FILE.suw.txt $OUTPUT_FILE.luw.txt
+

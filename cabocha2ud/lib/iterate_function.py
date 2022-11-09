@@ -5,8 +5,7 @@ iterator functions for cabocha format
 """
 
 import re
-from typing import Iterator, Tuple, Optional
-
+from typing import Iterator, Optional, Tuple
 
 RE_DOC_HEADER = re.compile(r'^#! DOC\s+[0-9]+$')
 ATTR_NAMES = [

@@ -4,14 +4,14 @@
 BCCWJ DepParaPAS to universal dependencies
 """
 
-import configargparse
-
 from typing import Optional
 
-from cabocha2ud.lib.yaml_dict import YamlDict
-from cabocha2ud.pipeline import Pipeline, PIPE_FUNCS
-from cabocha2ud.lib.logger import Logger
+import configargparse
+
 from cabocha2ud.bd import BunsetsuDependencies
+from cabocha2ud.lib.logger import Logger
+from cabocha2ud.lib.yaml_dict import YamlDict
+from cabocha2ud.pipeline import PIPE_FUNCS, Pipeline
 from cabocha2ud.ud import UniversalDependencies
 
 
@@ -27,8 +27,8 @@ def parse_pipe(pipe_str: Optional[str]) -> list[str]:
 
 def _get_argparser() -> configargparse.ArgumentParser:
     parser = configargparse.ArgumentParser(default_config_files=['./configargparse.yaml'])
-    parser.add_argument("-c", "--configarg-file", is_config_file=True, help="configargparse file")
     parser.add_argument("base_file", type=str)
+    parser.add_argument("-c", "--configarg-file", is_config_file=True, help="configargparse file")
     parser.add_argument("-p", "--pipeline", default=[], type=parse_pipe)
     parser.add_argument("-b", "--bunsetu-func", default="none", choices=["none", "type1", "type2"])
     parser.add_argument("-s", "--skip-space", default=False, action="store_true")
@@ -38,8 +38,8 @@ def _get_argparser() -> configargparse.ArgumentParser:
     parser.add_argument("--rep-multi-root-mode", default="convert", choices=["remove", "convert"], help="for replace_multi_root")
     parser.add_argument("--patch-file", default=None, help="for patch_fix")
     parser.add_argument("--sp-file", default=None, help="for merge_sp_to_conll")
-    parser.add_argument("--pos-rule-file", default="conf/bccwj_pos_suw_rule.yaml", help="for fit")
-    parser.add_argument("--dep-rule-file", default="conf/bccwj_dep_suw_rule.yaml", help="for fit")
+    parser.add_argument("--pos-rule-file", default="conf/bccwj_pos_suw_rule.yaml", help="file for fit rule")
+    parser.add_argument("--dep-rule-file", default="conf/bccwj_dep_suw_rule.yaml", help="file for fit rule")
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("-w", "--writer", type=str, default="-")
     return parser

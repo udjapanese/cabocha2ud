@@ -4,8 +4,9 @@
 fix based patch file
 """
 
-from typing import Union, cast, TypedDict, Optional
 import argparse
+from typing import Optional, TypedDict, Union, cast
+
 import ruamel
 
 from cabocha2ud.lib.logger import Logger
