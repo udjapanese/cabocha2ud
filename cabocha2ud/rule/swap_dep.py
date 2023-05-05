@@ -54,7 +54,7 @@ def swap_dep_without_child_from_sent(sent):
             （主に子をもっていけないもの対策）
     """
     # print(sent.sent_id)
-    for word in sent.flatten():
+    for word in sent.words():
         if word.dep_label in UDEP_LABEL_WITHOUT_CHILD:
             chrd = [
                 cwrd for cwrd in sent.get_ud_children(word, is_reconst=True)
@@ -80,14 +80,3 @@ def swap_dep_without_child_from_sent(sent):
                     sent.get_word_from_tokpos(cwrd_pos-1).dep_num = last_chrd.token_pos
                 word.dep_num = last_chrd.token_pos
                 last_chrd.dep_num = org_dep_num
-    return
-
-
-def swap_dep_unsubj_from_sent(sent):
-    """
-        ものの
-    """
-    for word in sent.flatten():
-        if word.dep_label in UDEP_LABEL_WITHOUT_CHILD:
-            pass
-    return

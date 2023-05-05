@@ -1,9 +1,17 @@
+
 # -*- coding: utf-8 -*-
 
+"""
+Util function or module for Bunsetu Depenedencies
+"""
+
+import csv
 from enum import IntEnum
+from io import StringIO
 
 
 class SUWFeaField(IntEnum):
+    # pylint: disable=invalid-name
     """
     (0): pos1
     (1): pos2
@@ -67,6 +75,7 @@ class SUWFeaField(IntEnum):
 
 
 class LUWFeaField(IntEnum):
+    # pylint: disable=invalid-name
     """
     (0): l_pos1
     (1): l_pos2
@@ -86,3 +95,18 @@ class LUWFeaField(IntEnum):
     l_reading = 6
     l_lemma = 7
 
+
+def csv_split(csv_str: str, delimiter: str=",") -> list[str]:
+    """ csv split """
+    if csv_str == '補助記号,読点,*,*,,,,，,,,,,,,記号,,,,,,,,,,,,,,,13752552530432,50':
+        # GSDの例外
+        csv_str = '補助記号,読点,*,*,,,,，,",",,",",,記号,,,,,,,,,,,,,,,13752552530432,50'
+    return list(csv.reader(StringIO(csv_str), delimiter=delimiter))[0]
+
+
+def csv_join(cols: list[str], delimiter: str=",") -> str:
+    """ csv join function """
+    gstr = StringIO()
+    joiner = csv.writer(gstr, delimiter=delimiter, lineterminator='\n')
+    joiner.writerow(cols)
+    return gstr.getvalue().rstrip("\n")

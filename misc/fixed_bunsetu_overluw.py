@@ -97,6 +97,7 @@ def _main() -> None:
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
     b_obj = BunsetsuDependencies(file_name=args.base_file)
+    doflag = True
     for sent in b_obj.sentences():
         """
             1. 結合する文節を算出する（create_new_dependencies_positon）
@@ -105,7 +106,10 @@ def _main() -> None:
         target_luw_pos, new_deppos_map, skip_poss = create_new_dependencies_positon(sent)
         if len(target_luw_pos) == 0:
             continue
+        doflag = False
         merge_overluw_for_sentence(sent, target_luw_pos, new_deppos_map, skip_poss)
+    if doflag:
+        print("NO OVERLUW")
     b_obj.write_cabocha_file(args.writer)
 
 

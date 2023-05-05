@@ -48,7 +48,6 @@ def _skip_jsp_token_from_sentence(bunsetu):
 def skip_jsp_token_from_sentence(doc):
     """
         スペースを除く
-        TODO: 実装
     """
     for sent in doc.sentences():
         skip_lst, tmp_lst, remove_flag, update_flag = [], [], False, False
@@ -79,7 +78,7 @@ def update_sentence_token_pos(sent):
         トークンの位置を修正する
     """
     tok_map, sss = {}, set()
-    for tok_pos, word in enumerate(sent.flatten()):
+    for tok_pos, word in enumerate(sent.words()):
         tok_map[word.token_pos] = tok_pos + 1
         sss.add(word.token_pos)
     if len(sent) == 0:
@@ -88,7 +87,7 @@ def update_sentence_token_pos(sent):
     for bbb in list(range(1, max(sss))):
         if bbb not in sss:
             ex_sp_lst.add(bbb)
-    for tok_pos, word in enumerate(sent.flatten()):
+    for tok_pos, word in enumerate(sent.words()):
         word.token_pos = tok_map[word.token_pos]
         if word.dep_num != 0:
             if word.dep_num not in tok_map:
@@ -102,13 +101,12 @@ def update_sentence_token_pos(sent):
 def remove_sentence_zero_token(doc):
     """
         トークンがゼロの文を飛ばす
-        TODO: 実装
     """
     skip_lst, tmp_lst = [], []
     doc_size = len(doc.sentences())
     for sent_pos in range(0, doc_size):
         sent = doc[sent_pos]
-        if len(sent.flatten()) == 0:
+        if len(sent.words()) == 0:
             skip_lst.append(sent.sent_pos)
         tmp_lst.append((sent_pos, sent))
     del doc[:]

@@ -10,17 +10,19 @@ from ..bd.word import Word
 
 
 def is_case(tok: Word, case_lst: list[str]) -> bool:
+    """ remove multi subject """
     if len(tok.get_surface_case()) != len(case_lst):
         return False
-    return all([case in tok.get_surface_case() for case in case_lst])
+    return all(case in tok.get_surface_case() for case in case_lst)
 
 
 def adapt_nsubj_to_dislocated_rule(sent: Sentence) -> None:
+    # pylint: disable=line-too-long
     """
         nsubj/csubjの中で指定のものをnsubj:outerに
     """
     parent_nsubj_pos: dict[int, list[int]] = {}
-    for word in sent.flatten():
+    for word in sent.words():
         # nsubj/csubjの数を調べる
         if word.dep_num is None:
             continue

@@ -48,7 +48,8 @@ elements:  ## 説明は/cabocha2ud/README.mdもご参照に
 - disformula
 # 述語項
 - paslink
-
+# 長単位品詞
+- luwpos
 
 order_rule:
 
@@ -600,7 +601,7 @@ order_rule:
 
 # 動詞or形容詞->動詞or形容詞(orPARTorAUX)
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["VERB", "ADJ"]],    #  [include_upos [word, ["VERB", "ADJ"]]],
     [include_parent_upos, ["VERB", "ADJ"]],    #  [include_upos [parent_word, ["VERB", "ADJ"]]]
   ]
@@ -609,7 +610,7 @@ order_rule:
 
 # 名詞+だ->動詞or形容詞(orPARTorAUX)
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["NOUN", "PRON", "PROPN", "NUM"]],    #  [include_upos [word, ["NOUN", "PRON", "PROPN", "NUM"]]],
     [include_parent_upos, ["VERB", "ADJ"]],    #  [include_upos [parent_word, ["VERB", "ADJ"]]],
     [regex_child_xpos, "助動詞"],    #  [include_child_xpos [word, 助動詞]]
@@ -619,7 +620,7 @@ order_rule:
 
 # 主辞がADVならadvmodだ
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["ADV"]],    #  [include_upos [word, ["ADV"]]]
   ]
   res: advmod
@@ -682,7 +683,7 @@ order_rule:
 
 # 用言にかかる名詞はobl
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["NOUN", "PRON", "PROPN"]],    #  [include_upos [word, ["NOUN", "PRON", "PROPN"]]],
     [include_parent_upos, ["VERB", "ADJ", "ADV"]],    #  [include_upos [parent_word, ["VERB", "ADJ", "ADV"]]]
   ]
@@ -704,7 +705,7 @@ order_rule:
 
 # 主辞が連体詞ならamodだ
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["ADJ"]],    #  [include_upos [word, ["ADJ"]]],
     [regex_word_xpos, "^連体詞"],    #  [match_xpos [word, ^連体詞]]
   ]
@@ -713,7 +714,7 @@ order_rule:
 
 # 動詞->名詞はacl
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["VERB", "ADJ"]],    #  [include_upos [word, ["VERB", "ADJ"]]],
     [include_parent_upos, ["NOUN", "PRON", "PROPN", "NUM"]],    #  [include_upos [parent_word, ["NOUN", "PRON", "PROPN", "NUM"]]]
   ]
@@ -731,7 +732,7 @@ order_rule:
 
 # 主辞がADJならaclだ
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["ADJ"]],    #  [include_upos [word, ["ADJ"]]]
   ]
   res: acl
@@ -739,7 +740,7 @@ order_rule:
 
 # 名詞+だ->名詞はacl
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["NOUN", "PRON", "PROPN", "NUM"]],    #  [include_upos [word, ["NOUN", "PRON", "PROPN", "NUM"]]],
     [include_parent_upos, ["NOUN", "PRON", "PROPN", "NUM"]],    #  [include_upos [parent_word, ["NOUN", "PRON", "PROPN", "NUM"]]],
     [regex_child_xpos, "助動詞"],    #  [include_child_xpos [word, 助動詞]]
@@ -749,7 +750,7 @@ order_rule:
 
 # よう,そうの場合
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [regex_word_xpos, "^形状詞-[助]+"],    #  [match_xpos [word, ^形状詞-[助]+]],
     [include_parent_upos, ["NOUN"]],    #  [include_upos [parent_word, ["NOUN"]]]
   ]
@@ -758,7 +759,7 @@ order_rule:
 
 # よう,そうの場合
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [regex_word_xpos, "^形状詞-[助]+"],    #  [match_xpos [word, ^形状詞-[助]+]],
     [include_parent_upos, ["VERB"]],    #  [include_upos [parent_word, ["VERB"]]]
   ]
@@ -825,7 +826,7 @@ order_rule:
 
 #  ?
 - rule: [
-    [include_word_bpos, ["SEM_HEAD", "CONT"]],    #  [include_bpos [word, ["SEM_HEAD", "CONT"]]],
+    [include_word_bpos, ["SEM_HEAD", "CONT", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD", "CONT"]]],
     [include_word_upos, ["PART"]],    #  [include_upos [word, ["PART"]]],
     [regex_word_xpos, ".+形[状容]詞的"],    #  [match_xpos [word, .+形[状容]詞的]],
     [include_parent_upos, ["NOUN", "PRON", "PROPN", "PART"]],    #  [include_upos [parent_word, ["NOUN", "PRON", "PROPN", "PART"]]]
@@ -835,7 +836,7 @@ order_rule:
 
 #  ?
 - rule: [
-    [include_word_bpos, ["SEM_HEAD", "CONT"]],    #  [include_bpos [word, ["SEM_HEAD", "CONT"]]],
+    [include_word_bpos, ["SEM_HEAD", "CONT", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD", "CONT"]]],
     [include_word_upos, ["PART"]],    #  [include_upos [word, ["PART"]]],
     [regex_word_xpos, ".+名詞的"],    #  [match_xpos [word, .+名詞的]]
   ]
@@ -928,7 +929,7 @@ order_rule:
 
 # ?
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["ADP"]],    #  [include_upos [word, ["ADP"]]],
     [include_parent_upos, ["NOUN"]],    #  [include_upos [parent_word, ["NOUN"]]]
   ]
@@ -971,7 +972,7 @@ order_rule:
 
 # NOUN系にかかる主辞のSYMはnmod
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],
     [include_word_upos, ["SYM", "X"]],
     [include_parent_upos, ["NOUN", "PRON", "PROPN", "NUM", "SYM"]],
   ]

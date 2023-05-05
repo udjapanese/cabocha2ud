@@ -6,16 +6,15 @@
 """
 
 import argparse
-from typing import Optional, Tuple
+from typing import cast
 
 from cabocha2ud.lib.dependency import get_caused_nonprojectivities
 from cabocha2ud.lib.logger import Logger
-from cabocha2ud.ud import UniversalDependencies
+from cabocha2ud.ud import UniversalDependencies as UD
 from cabocha2ud.ud.sentence import Sentence
-from cabocha2ud.ud.util import (DEPREL, DEPS, FEATS, FORM, HEAD, ID, LEMMA,
-                                MISC, UPOS, XPOS, Field)
-
-COLCOUNT = len([ID, FORM, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC])
+from cabocha2ud.ud.util import DEPREL, HEAD, ID, UPOS, XPOS, Field
+from cabocha2ud.lib.yaml_dict import YamlDict
+from cabocha2ud.pipeline.component import UDPipeLine
 
 
 def fix_projectivity_rule_to_punct(data: list[list[str]]) -> list[list[str]]:
@@ -32,7 +31,7 @@ def fix_projectivity_rule_to_punct(data: list[list[str]]) -> list[list[str]]:
             if len(nonprojnodes) > 0:
                 nonproj_list[num] = nonprojnodes
     if len(nonproj_list) > 0:
-        for fix_target in nonproj_list:
+        for fix_target, _ in nonproj_list.items():
             kakko_pos = data[fix_target-1][XPOS]
             if kakko_pos == "補助記号-括弧開":
                 # 外にあるのが問題なので括弧開直後の単語にかける
@@ -54,6 +53,7 @@ def fix_projectivity_rule_to_punct(data: list[list[str]]) -> list[list[str]]:
 
 
 def fix_leafpunct_rule_to_punct(data: list[list[str]]) -> list[list[str]]:
+    """ fix left punct """
     errors = []
     for line in data:
         num, parent_num = int(line[ID]), int(line[HEAD])
@@ -61,7 +61,7 @@ def fix_leafpunct_rule_to_punct(data: list[list[str]]) -> list[list[str]]:
             errors.append([num, parent_num])
     if len(errors) == 0:
         return data
-    if len(set([parent_num for _, parent_num in errors])) != 1:
+    if len(set(parent_num for _, parent_num in errors)) != 1:
         # おなじ親がふさわしい
         return data
     parent_num = [parent_num for _, parent_num in errors][0]
@@ -97,7 +97,7 @@ def __restore_rel(line: list[str]) -> None:
         line[DEPREL] = "discourse"
 
 
-def __detect_true_root(data: list[list[str]], numlst: list[int]) -> Tuple[list[int], int]:
+def __detect_true_root(data: list[list[str]], numlst: list[int]) -> tuple[list[int], int]:
     target_pos = 1
     true_root = numlst[len(numlst)-1]
     num_line = {int(line[0]): line for line in data}
@@ -115,7 +115,7 @@ def __detect_true_root(data: list[list[str]], numlst: list[int]) -> Tuple[list[i
 
 def __convert_to_single_root(data: list[list[str]]) -> list[list[str]]:
     """
-        複数あるルートを決定する
+        複数あるルートの中で基本のルートを決める
     """
     nsent_st: list[list[str]] = []
     tree: dict[int, set[int]] = {}
@@ -138,34 +138,60 @@ def __convert_to_single_root(data: list[list[str]]) -> list[list[str]]:
     return nsent_st
 
 
-def do(ud: UniversalDependencies, mode: str, logger: Optional[Logger]=None) -> None:
-    if logger is None:
-        logger = Logger()
-    logger.debug("do replace multi root")
-    rm_sent_lst: list[int] = []
-    for pos, ud_sent in enumerate(ud.sentences()):
-        heads_size = sum([c.get_content() == "0" for c in ud_sent.get_colmuns(Field.HEAD)])
-        assert heads_size > 0, "`root` must be rather one in sentence, but Zero root"
-        if heads_size == 1:
-            continue
-        elif mode == "remove":
-            rm_sent_lst.append(pos)
-        elif mode == "convert":
-            header = ud_sent.get_str_list(mode="header")
-            data = [line.rstrip("\n").split("\t") for line in ud_sent.get_str_list(mode="full")[len(header):]]
-            data = __convert_to_single_root(data)
-            # ここに非交差修正ルール
-            data = fix_projectivity_rule_to_punct(data)
-            # ここにpunct修正ルール
-            data = fix_leafpunct_rule_to_punct(data)
-            sent = header + ["\t".join(ll) for ll in data]
-            nsent = Sentence.load_from_list(sent)
-            ud.update_sentence_of_index(pos, nsent)
+class ReplaceMultiRootComponent(UDPipeLine):
+    """ replace_multi_root
+
+    Args:
+        PipeLineComponent (_type_): _description_
+    """
+    name = "replace_multi_root"
+    need_opt = ["rep_multi_root_mode"]
+
+    def __init__(self, target: UD, opts: YamlDict) -> None:
+        self.rep_multi_root_mode: str = ""
+        super().__init__(target, opts)
+
+    def prepare(self) -> None:
+        if self.opts.get("rep_multi_root_mode") is not None:
+            self.rep_multi_root_mode = cast(str, self.opts.get("rep_multi_root_mode"))
+        assert self.rep_multi_root_mode in ["convert", "remove"]
+
+    def __call__(self) -> None:
+        assert isinstance(self.target, UD)
+        self.logger.debug(f"do {self.name}")
+        if self.rep_multi_root_mode == "convert":
+            for pos, ud_sent in enumerate(self.target.sentences()):
+                heads_size = sum(c.get_content() == "0" for c in ud_sent.get_colmuns(Field.HEAD))
+                assert heads_size > 0, "`root` must be rather one in sentence, but Zero root"
+                if heads_size == 1:
+                    continue
+                header = ud_sent.get_str_list(mode="header")
+                data = [
+                    line.rstrip("\n").split("\t")
+                    for line in ud_sent.get_str_list(mode="full")[len(header):]
+                ]
+                data = __convert_to_single_root(data)
+                # ここに非交差修正ルール
+                data = fix_projectivity_rule_to_punct(data)
+                # ここにpunct修正ルール
+                data = fix_leafpunct_rule_to_punct(data)
+                sent = header + ["\t".join(ll) for ll in data]
+                nsent = Sentence.load_from_list(sent)
+                self.target.update_sentence_of_index(pos, nsent)
+        elif self.rep_multi_root_mode == "remove":
+            rm_sent_lst: list[int] = []
+            for pos, ud_sent in enumerate(self.target.sentences()):
+                heads_size = sum(c.get_content() == "0" for c in ud_sent.get_colmuns(Field.HEAD))
+                assert heads_size > 0, "`root` must be rather one in sentence, but Zero root"
+                if heads_size == 1:
+                    continue
+                rm_sent_lst.append(pos)
+            self.target.remove_sentence_from_index(rm_sent_lst)
         else:
             raise ValueError("mode must be `remove` or `convert`")
-    if mode == "remove":
-        ud.remove_sentence_from_index(rm_sent_lst)
 
+
+COMPONENT = ReplaceMultiRootComponent
 
 def _main() -> None:
     parser = argparse.ArgumentParser()
@@ -179,11 +205,12 @@ def _main() -> None:
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("-w", "--writer", default="-", type=str)
     args = parser.parse_args()
-    logger = Logger(debug=args.debug)
-    logger.debug("mode: {}".format(args.mode))
-    ud = UniversalDependencies(file_name=args.conll_file)
-    do(ud, args.mode, logger=logger)
-    ud.write_ud_file(args.writer)
+    options = YamlDict(
+        init={"logger": Logger(debug=args.debug), "rep_multi_root_mode": args.mode}
+    )
+    _ud = UD(file_name=args.conll_file, options=options)
+    COMPONENT(_ud,  opts=options)()
+    _ud.write_ud_file(args.writer)
 
 
 if __name__ == '__main__':

@@ -15,7 +15,7 @@ ATTR_NAMES = [
 
 def separate_information_from_excabocha(doc: list[str]) -> Tuple[list[str], list[str], list[str]]:
     """ 拡張Cabochaの特定範囲から情報を抽出する
-        参照： https://ja.osdn.net/projects/chaki/wiki/%E6%8B%A1%E5%BC%B5Cabocha%E3%83%95%E3%82%A9%E3%83%BC%E3%83%9E%E3%83%83%E3%83%88%E3%81%B8%E3%81%AE%E3%82%A8%E3%82%AF%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%88
+        参照： https://00m.in/z1jkb
         prefix, cont, suffix に分解する
     """
     prefix: list[str] = []
@@ -39,7 +39,9 @@ def separate_information_from_excabocha(doc: list[str]) -> Tuple[list[str], list
     return (prefix, doc, suffix)
 
 
-def iterate_document(lines: list[str], separate_info: bool=True, strip_end=True) -> Iterator[Tuple[Optional[list[str]], list[str], Optional[list[str]]]]:
+def iterate_document(
+    lines: list[str], separate_info: bool=True, strip_end=True
+) -> Iterator[Tuple[Optional[list[str]], list[str], Optional[list[str]]]]:
     """
         Create iterate per document
     Args:
@@ -81,7 +83,9 @@ def iterate_document(lines: list[str], separate_info: bool=True, strip_end=True)
             yield (None, doc, None)
 
 
-def iterate_sentence(lines: list[str], separate_info: bool=True) -> Iterator[Tuple[list[str], Optional[list[str]]]]:
+def iterate_sentence(
+    lines: list[str], separate_info: bool=True
+) -> Iterator[Tuple[list[str], Optional[list[str]]]]:
     """
         iterate sentence
     """
@@ -127,7 +131,7 @@ def iterate_seg_and_link(lines: list[str]) -> Iterator[list[list[str]]]:
     try:
         while True:
             line = next(lineit)
-            if any([tmp[-1].startswith("#! " + name) for name in ATTR_NAMES]):
+            if any(tmp[-1].startswith("#! " + name) for name in ATTR_NAMES):
                 while line.startswith("#! ATTR"):
                     tmp.append(line)
                     line = next(lineit)

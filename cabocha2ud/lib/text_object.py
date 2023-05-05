@@ -4,12 +4,11 @@
 utility File object
 """
 
-import os
+import argparse
 import sys
-from pathlib import Path
-from typing import Iterator, Iterable, Union, Optional, List
 from contextlib import contextmanager
-
+from pathlib import Path
+from typing import Iterable, Iterator, TextIO, Union
 
 
 class TextObject:
@@ -27,6 +26,7 @@ class TextObject:
         self.file_path: Path = Path()
         self.file_name: str = "-"
         self.mode: str = mode
+        self.encoding = "utf-8"
         if file_name != "-":
             if isinstance(file_name, str):
                 self.file_path = Path(file_name)
@@ -39,7 +39,8 @@ class TextObject:
         if self.mode == "r" and not (self.file_name == "-" or self.file_path.exists()):
             raise FileNotFoundError("File not found: " + self.file_name)
 
-    def set_filename(self, file_name: Union[str, Path]):
+    def set_filename(self, file_name: Union[str, Path]) -> None:
+        """ Set filename """
         if file_name == "-":
             self.file_path = Path()
             self.file_name = "-"
@@ -51,8 +52,8 @@ class TextObject:
             self.file_name = str(self.file_path)
 
     @contextmanager
-    def open_data(self) -> Iterator:
-        """open_data
+    def open_data(self) -> Iterator[TextIO]:
+        """ Open data
 
         Yields:
             file stream: sys.stdin or OpenFile
@@ -65,14 +66,16 @@ class TextObject:
                 yield sys.stdout
         else:
             if self.mode == "r":
-                fobj = self.file_path.open("r")
+                with self.file_path.open("r", encoding=self.encoding) as rdr:
+                    yield rdr
+            elif self.mode == "w":
+                with self.file_path.open("w", encoding=self.encoding) as wrd:
+                    yield wrd
             else:
-                fobj = self.file_path.open("w")
-            yield fobj
-            fobj.close()
+                raise ValueError("Please choice [r: read mode | w: write mode]")
 
     def read(self) -> Iterator[str]:
-        """read method
+        """ Read method
 
         Yields:
             file stream: str lists
@@ -88,7 +91,7 @@ class TextObject:
                 yield line.rstrip("\n")
 
     def write(self, content: Iterable[str]) -> None:
-        """write method
+        """ Write method
 
         Yields:
             file stream: str lists
@@ -104,8 +107,8 @@ class TextObject:
                 writer.write(line + "\n")
 
 
-    def write_list(self, content: Iterable[List[str]], sep: str="\t") -> None:
-        """write method
+    def write_list(self, content: Iterable[list[str]], sep: str="\t") -> None:
+        """ Write method
 
         Yields:
             file stream: str lists
@@ -121,8 +124,8 @@ class TextObject:
                 writer.write(sep.join(lst) + "\n")
 
 
-if __name__ == '__main__':
-    import argparse
+def _main():
+    """ function to check do """
     parser = argparse.ArgumentParser()
     parser.add_argument("file_name", type=str)
     args = parser.parse_args()
@@ -130,3 +133,6 @@ if __name__ == '__main__':
     for line in fobj.read():
         print(line)
 
+
+if __name__ == '__main__':
+    _main()

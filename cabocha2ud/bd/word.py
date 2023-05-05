@@ -8,9 +8,12 @@ from __future__ import annotations
 
 import re
 import string
-from typing import TYPE_CHECKING, Literal, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union, cast
 
-from ..lib.logger import Logger
+from cabocha2ud.bd.util import LUWFeaField as LField
+from cabocha2ud.bd.util import SUWFeaField as SField
+from cabocha2ud.bd.util import csv_join, csv_split
+from cabocha2ud.lib.logger import Logger
 
 if TYPE_CHECKING:
     from .annotation import Annotation, AnnotationList, Segment
@@ -18,6 +21,7 @@ if TYPE_CHECKING:
     from .document import Document
     from .sentence import Sentence
 
+from .annotation import Annotation, AnnotationList, Segment
 
 JP_SP_MARK = "[JSP]"
 RE_CASE_MATH = re.compile("助詞-[係格副]助詞")
@@ -58,10 +62,11 @@ UNIDIC_ORIGIN_CONV = {
 }
 
 
-def conv_v29_lemma(origin: str, features: list[str], pos1_pos: int, lemma_pos: int, orthbase_pos: int) -> str:
-    lemma_dic = {
-        "ぽい": "ぽい", "臭い": "臭い", "辛い": "辛い"
-    }
+def conv_v29_lemma(
+    origin: str, features: list[str], pos1_pos: int, lemma_pos: int, orthbase_pos: int
+) -> str:
+    """ Convert old lemma """
+    lemma_dic = {"ぽい": "ぽい", "臭い": "臭い", "辛い": "辛い"}
     if features[lemma_pos] in lemma_dic:
         return lemma_dic[features[lemma_pos]]
     if features[pos1_pos] == "助動詞":
@@ -76,9 +81,15 @@ def conv_v29_lemma(origin: str, features: list[str], pos1_pos: int, lemma_pos: i
 
 
 class Property:
+    """ Base Object """
+    attr_property: list[str]
+
 
     def __init__(self, **kwargs):
         self.logger: Logger = kwargs.get("logger") or Logger()
+
+    def __str__(self) -> str:
+        raise NotImplementedError
 
 
 class Reference(Property):
@@ -90,55 +101,65 @@ class Reference(Property):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.__doc: Optional[Document] = kwargs.get("doc")
-        self.__bunsetu: "Bunsetu" = kwargs.get("bunsetu")
-        self.__sent_pos: int = kwargs.get("sent_pos")  # 文書中の文の位置
-        self.__bunsetu_pos: int = kwargs.get("bunsetu_pos")  # 文中の文節の位置
+        self.__bunsetu: Bunsetu = cast("Bunsetu", kwargs.get("bunsetu"))
+        self.__sent_pos: int = cast(int, kwargs.get("sent_pos"))
+        self.__bunsetu_pos: int = cast(int, kwargs.get("bunsetu_pos"))
+
+    def __str__(self) -> str:
+        raise NotImplementedError
 
     @property
     def doc(self):
+        """ getter Document object """
         return self.__doc
 
     @doc.setter
     def doc(self, doc: Optional[Document]):
+        """ settter Document object """
         self.__doc = doc
 
     @property
     def bunsetu(self):
+        """ getter Bunsetu object """
         return self.__bunsetu
 
     @bunsetu.setter
     def bunsetu(self, bunsetu: "Bunsetu"):
+        """ setter Bunsetu object """
         self.__bunsetu = bunsetu
 
     @property
     def sent_pos(self):
+        """" getter sent pos """
         return self.__sent_pos
 
     @sent_pos.setter
     def sent_pos(self, sent_pos: int):
+        """ setter sent pos """
         self.__sent_pos = sent_pos
 
     @property
     def bunsetu_pos(self):
+        """" getter bunsetu pos """
         return self.__bunsetu_pos
 
     @bunsetu_pos.setter
     def bunsetu_pos(self, bunsetu_pos: int):
+        """" setter bunsetu pos """
         self.__bunsetu_pos = bunsetu_pos
 
     def get_bunsetu_jp_type(self) -> Optional[str]:
-        from .bunsetu import Bunsetu
-        assert self.bunsetu is not None and isinstance(self.bunsetu, Bunsetu)
+        """ get JP Bunsetu Type """
+        assert isinstance(self.bunsetu.bunsetu_type, str) or self.bunsetu.bunsetu_type is None
         return self.bunsetu.bunsetu_type
 
     def get_bunsetu_position_word(self, bpos: str) -> Optional[Word]:
         """
             get word has `bpos` type, the bunsetu position word
         """
-        from .bunsetu import Bunsetu
-        assert self.bunsetu is not None and isinstance(self.bunsetu, Bunsetu)
         for target_wrd in self.bunsetu:
             if bpos == target_wrd.get_bunsetu_position_type():
+                assert isinstance(target_wrd, Word)
                 return target_wrd
         return None
 
@@ -146,7 +167,6 @@ class Reference(Property):
         """
             get Sentence object
         """
-        from .document import Document
         assert isinstance(self.doc, Document) and isinstance(self.sent_pos, int)
         return self.doc[self.sent_pos]
 
@@ -154,10 +174,10 @@ class Reference(Property):
         """
             get segment for word
         """
-        assert self.doc is not None
         sword_pos = self.doc[self.sent_pos].get_pos_from_word(self)
         if self.doc[self.sent_pos].annotation_list is not None:
-            return cast("AnnotationList", self.doc[self.sent_pos].annotation_list).get_segment(sword_pos)
+            return cast("AnnotationList",
+                        self.doc[self.sent_pos].annotation_list).get_segment(sword_pos)
         raise KeyError
 
     def get_luw_units(self) -> list[Word]:
@@ -169,16 +189,19 @@ class Reference(Property):
         Returns:
             list[Word]: 自身を含むLUW（Wordのリスト）
         """
-        from .bunsetu import Bunsetu
-        assert isinstance(self.bunsetu, Bunsetu)
         for luw_unit in self.bunsetu.get_luw_list():
             for wrd in luw_unit:
                 if wrd == self:
+                    assert isinstance(luw_unit, list)
                     return luw_unit
         raise KeyError("not found from bunsetu")
 
 
 class SUW(Property):
+    """
+     Implementation of SUW
+    """
+
     attr_property: list[str] = [
         "word_pos", "surface", "features", "jp_pos", "origin", "usage",
         "yomi", "katuyo"
@@ -187,36 +210,40 @@ class SUW(Property):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # 文節中の語の位置（SUW）
-        self.word_pos: int = kwargs.get("word_pos")
+        self.word_pos: int = cast(int, kwargs.get("word_pos"))
         # 表層系
-        self.surface: str = kwargs.get("surface")
+        self.surface: str = cast(str, kwargs.get("surface"))
+        # 品詞
+        self.jp_pos: str = cast(str, kwargs.get("jp_pos"))
+        # 原型
+        self.origin: str = cast(str, kwargs.get("origin"))
+        # 用法（BCCWJのみ）
+        self.usage: str = cast(str, kwargs.get("usage"))
+        # 読み
+        self.yomi: str = cast(str, kwargs.get("yomi"))
+        # 活用形
+        self.katuyo: str = cast(str, kwargs.get("katuyo"))
         # 特徴(2列目)
         self.features: list[str] = kwargs.get("features", [])
-        # 品詞
-        self.jp_pos: str = kwargs.get("jp_pos")
-        # 原型
-        self.origin: str = kwargs.get("origin")
-        # 用法（BCCWJのみ）
-        self.usage: str = kwargs.get("usage")
-        # 読み
-        self.yomi: str = kwargs.get("yomi")
-        # 活用形
-        self.katuyo: str = kwargs.get("katuyo")
+
+    def __str__(self) -> str:
+        raise NotImplementedError
 
     def parse_suw_part(self, token: list[str]):
-        from .util import SUWFeaField as Field
+        """ parse SUW part """
         self.surface = token[0]
-        self.features = token[1].split(",")
-        self.jp_pos = self.features[Field.pos1]
+        self.features = csv_split(token[1])
+        assert len(self.features) == len(SField)
+        self.jp_pos = self.features[SField.pos1]
         # self.origin = self.features[Field.orthBase]
-        self.origin = self.features[Field.lemma]
+        self.origin = self.features[SField.lemma]
         if self.origin == "":
-            self.origin = self.features[Field.lemma]
-        if self.features[Field.pos2] == "数詞":
-            self.origin = self.features[Field.lemma]
-        self.usage = self.features[Field.iForm]
-        self.yomi = self.features[Field.lForm]
-        self.katuyo = self.features[Field.cForm]
+            self.origin = self.features[SField.lemma]
+        if self.features[SField.pos2] == "数詞":
+            self.origin = self.features[SField.lemma]
+        self.usage = self.features[SField.iForm]
+        self.yomi = self.features[SField.lForm]
+        self.katuyo = self.features[SField.cForm]
 
     def get_surface(self) -> str:
         """
@@ -234,12 +261,12 @@ class SUW(Property):
         """
             get xpos
         """
-        from .util import SUWFeaField as Field
-        return "-".join([
-            f for f in self.features[Field.pos1:Field.cForm] if f != "*" and f != ""
-        ])
+        return "-".join(
+            f for f in self.features[SField.pos1:SField.cForm] if f not in ["*", ""]
+        )
 
     def get_features(self) -> list[str]:
+        """ get Features """
         return self.features
 
     def get_jp_origin(self) -> str:
@@ -252,8 +279,6 @@ class SUW(Property):
         """
             get origin
         """
-        from .util import SUWFeaField as Field
-
         if RE_PROP_MATH.match(self.get_xpos()) or RE_ASCII_MATH.match(self.get_surface()):
             # 「固有名詞」か「英数字文字列」は表層を返す
             return self.get_surface()
@@ -261,17 +286,16 @@ class SUW(Property):
             return "_"
         if self.origin == "　":
             return "[SP]"
+        if len(self.origin.split("-")) == 2:
+            # 語彙素細分類がまざっているので、除く
+            return self.origin.split("-")[0]
         if do_conv29:
-            return conv_v29_lemma(self.origin, self.features, Field.pos1, Field.lemma, Field.orthBase)
-        else:
-            return self.origin
+            return conv_v29_lemma(
+                self.origin, self.features, SField.pos1, SField.lemma, SField.orthBase
+            )
+        return self.origin
 
     def get_unidic_info(self, delimiter: str=",") -> str:
-        """ UniDic 情報を返す
-
-        Returns:
-            str: UniDic情報
-        """
         """ UniDic 情報を返す
 
         Returns:
@@ -279,21 +303,22 @@ class SUW(Property):
             「lForm 語彙素読み」「lemma 語彙素」「orth 書字形出現形」「pron 発音形出現形」
             「orthBase 書字形基本形」「pronBase 発音形基本形」「form 語形出現形」「formBase  語形基本形」
         """
-        from .util import SUWFeaField as Field
         unidic_info: list[str] = [
-            SUW.get_features(self)[Field.lForm],
-            SUW.get_features(self)[Field.lemma],
-            SUW.get_features(self)[Field.orth],
-            SUW.get_features(self)[Field.orthBase],
-            SUW.get_features(self)[Field.pron],
-            SUW.get_features(self)[Field.pronBase],
-            SUW.get_features(self)[Field.form],
-            SUW.get_features(self)[Field.formBase]
+            SUW.get_features(self)[SField.lForm],
+            SUW.get_features(self)[SField.lemma],
+            SUW.get_features(self)[SField.orth],
+            SUW.get_features(self)[SField.orthBase],
+            SUW.get_features(self)[SField.pron],
+            SUW.get_features(self)[SField.pronBase],
+            SUW.get_features(self)[SField.form],
+            SUW.get_features(self)[SField.formBase]
         ]
-        return delimiter.join(unidic_info)
+        return csv_join(unidic_info, delimiter=delimiter)
 
 
 class LUW(Property):
+    """ LUW property """
+
     attr_property: list[str] = [
         "luw_pos", "luw_label", "luw_origin", "luw_yomi", "luw_katuyo",
         "luw_form", "luw_features"
@@ -318,11 +343,15 @@ class LUW(Property):
         # 前の単語
         self.l_bunsetu: Optional[Bunsetu] = None
 
+    def __str__(self) -> str:
+        raise NotImplementedError
+
     def get_surface(self) -> str:
+        """ get Surface (Form) """
         return self.luw_form
 
     def get_origin(self, do_conv29=False) -> str:
-        from .util import LUWFeaField as Field
+        """ get Origin """
         if RE_PROP_MATH.match(self.get_xpos()) or RE_ASCII_MATH.match(self.get_surface()):
             # 「固有名詞」か「英数字文字列」は表層を返す
             return self.get_surface()
@@ -332,10 +361,10 @@ class LUW(Property):
             return "[SP]"
         if do_conv29:
             return conv_v29_lemma(
-                self.luw_origin, self.luw_features, Field.l_pos1, Field.l_lemma, Field.l_lemma
+                self.luw_origin, self.luw_features,
+                LField.l_pos1, LField.l_lemma, LField.l_lemma
             )
-        else:
-            return self.luw_origin
+        return self.luw_origin
 
     def get_unidic_info(self, delimiter: str=",") -> str:
         """ UniDic 情報を返す
@@ -343,10 +372,9 @@ class LUW(Property):
         Returns:
             str: UniDic情報、語彙素（l_lemma） 読み（l_reading）
         """
-        from .util import LUWFeaField as Field
         unidic_info: list[str] = [
-            LUW.get_features(self)[Field.l_reading],
-            LUW.get_features(self)[Field.l_lemma]
+            LUW.get_features(self)[LField.l_reading],
+            LUW.get_features(self)[LField.l_lemma]
         ]
         return delimiter.join(unidic_info)
 
@@ -357,13 +385,17 @@ class LUW(Property):
         return self.luw_katuyo
 
     def get_xpos(self) -> str:
+        """ get XPOS for LUW POS """
         return self.luw_pos
 
     def get_features(self) -> list[str]:
+        """ get LUW features """
         return self.luw_features
 
     def parse_luw_part(self, token: list[str], luw_info: Optional[Word], bunsetu: Bunsetu) -> None:
-        from .util import LUWFeaField as Field
+        """
+            parse LUW Part
+        """
         self.l_bunsetu = bunsetu
         if token[2] == "":
             target = None
@@ -371,12 +403,12 @@ class LUW(Property):
                 self.luw_label = "I"
                 self.luw_form = luw_info.luw_form
                 self.luw_features = luw_info.luw_features
-                self.luw_origin = luw_info.luw_features[Field.l_lemma]
-                self.luw_yomi = luw_info.luw_features[Field.l_reading]
-                self.luw_pos = "-".join([
-                    f for f in self.luw_features[Field.l_pos1:Field.l_cForm] if f != "*" and f != ""
-                ])
-                self.luw_katuyo = luw_info.luw_features[Field.l_cForm]
+                self.luw_origin = luw_info.luw_features[LField.l_lemma]
+                self.luw_yomi = luw_info.luw_features[LField.l_reading]
+                self.luw_pos = "-".join(
+                    f for f in self.luw_features[LField.l_pos1:LField.l_cForm] if f not in ["*", ""]
+                )
+                self.luw_katuyo = luw_info.luw_features[LField.l_cForm]
                 return
             if len(self.l_bunsetu) > 0:
                 target = self.l_bunsetu[-1]
@@ -394,18 +426,23 @@ class LUW(Property):
             self.luw_features = target.luw_features
         else:
             self.luw_label = "B"
-            self.luw_features = token[3].split(",")
+            self.luw_features = csv_split(token[3])
+            assert len(self.luw_features) == len(LField)
             self.luw_form = token[2]
-            if len(self.luw_features) < 8:
-                self.logger.debug("WARNING: {} size small".format(self.luw_features))
-                self.luw_features.insert(3, '*')
-            self.luw_origin = self.luw_features[Field.l_lemma]
-            self.luw_yomi = self.luw_features[Field.l_reading]
-            self.luw_pos = "-".join([f for f in self.luw_features[Field.l_pos1:Field.l_cForm] if f != "*" and f != ""])
-            self.luw_katuyo = self.luw_features[Field.l_cForm]
+            self.luw_origin = self.luw_features[LField.l_lemma]
+            self.luw_yomi = self.luw_features[LField.l_reading]
+            self.luw_pos = "-".join(
+                f for f in self.luw_features[LField.l_pos1:LField.l_cForm]
+                if f not in ["*", ""]
+            )
+            self.luw_katuyo = self.luw_features[LField.l_cForm]
 
 
 class BunDepInfo(Property):
+    """
+        Bunsetu Dependencies Info
+    """
+
     attr_property: list[str] = [
         "dep_num", "is_subj_val", "is_func_val", "link_label", "case_set",
         "parent_word", "child_words", "sem_head_word", "syn_head_word", "bunsetu_position_type"
@@ -423,6 +460,9 @@ class BunDepInfo(Property):
         self.sem_head_word: Optional[Word] = kwargs.get("sem_head_word", None)
         self.syn_head_word: Optional[Word] = kwargs.get("syn_head_word", None)
         self.bunsetu_position_type: Optional[str] = kwargs.get("bunsetu_position_type", None)
+
+    def __str__(self) -> str:
+        raise NotImplementedError
 
     def set_bunsetsu_info(self, subj: Optional[bool], func: Optional[bool]) -> None:
         """
@@ -445,12 +485,15 @@ class BunDepInfo(Property):
 
 
 class UD(Property):
+    """
+        UD property object class
+    """
     attr_property: list[str] = ["token_pos", "ud_misc", "ud_feat", "en_pos", "dep_label"]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # UDでの単語位置
-        self.token_pos: int = kwargs.get("token_pos")
+        self.token_pos: int = cast(int, kwargs.get("token_pos"))
         # MISC
         self.ud_misc: dict[str, str] = kwargs.get("ud_misc", {"SpaceAfter": "No"})
         # FEAT
@@ -459,6 +502,9 @@ class UD(Property):
         self.en_pos: list[str] = kwargs.get("en_pos", [])
         # 掛かりラベル
         self.dep_label: Optional[str] = kwargs.get("dep_label")
+
+    def __str__(self) -> str:
+        raise NotImplementedError
 
     def get_udfeat(self) -> str:
         """
@@ -482,36 +528,40 @@ class UD(Property):
         return ",".join(self.en_pos)
 
     def get_bunsetu_position_type(self) -> str:
+        """ return Bunsetu position type """
         assert "BunsetuPositionType" in self.ud_misc
         return self.ud_misc["BunsetuPositionType"]
 
 
 class Word(Reference, SUW, LUW, BunDepInfo, UD):
-
     """
         word class
     """
 
-    def __init__(self, **kwargs):
-        assert kwargs.get("bunsetu") is not None
+    def __init__(self, **kwargs: dict[str, Any]):
 
         # 機能的なものは通常定義
-        self.logger: Logger = kwargs.get("logger") or Logger()
-        self.base_file_name: Optional[str] = kwargs.get("base_file_name")
-        self.debug: bool = kwargs.get("debug", True)
-        self.word_unit_mode: str = kwargs.get("word_unit_mode", "suw")
+        self.logger: Logger = cast(Logger, kwargs.get("logger")) or Logger()
+        self.base_file_name: Optional[str] = cast(str, kwargs.get("base_file_name"))
+        self.debug: bool = cast(bool, kwargs.get("debug", True))
+        self.word_unit_mode: str = cast(str, kwargs.get("word_unit_mode", "suw"))
         self._token: list[str] = []
 
-        super(Word, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         if kwargs.get("token") is not None:
-            self._token: list[str] = kwargs.get("token").split("\t")
-        self.parse(luw_info=kwargs.get("luw_info", None))
+            if isinstance(kwargs.get("token"), str):
+                tok = cast(str, kwargs.get("token"))
+                self._token = tok.split("\t")
+            if isinstance(kwargs.get("token"), list):
+                self._token = cast(list[str], kwargs.get("token"))
+        self.parse(luw_info=cast(Word, kwargs.get("luw_info", None)))
 
     def parse(self, luw_info: Optional[Word]) -> None:
+        """ parse WORD line """
         self.parse_suw_part(self._token)
         if len(self._token) == 2:
-            # 長単位情報がない
+            # 長単位情報がないため解析をしない
             return
         self.parse_luw_part(self._token, luw_info, self.bunsetu)
 
@@ -519,9 +569,22 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
         org = "\t".join(self._token)
         return org
 
+    def get_tokens(self) -> list[str]:
+        """ get base token str list """
+        return self._token
+
+    def get_token(self, pos: int) -> str:
+        """ get base token by position """
+        return self._token[pos]
+
+    def set_token(self, pos: int, token_s: str):
+        """ set token overwrite """
+        assert pos <= len(self._token)
+        self._token[pos] = token_s
+
     def get_instance_for_pos(self) -> dict[str, str]:
-        from .document import Document
-        assert isinstance(self.dep_num, int) and isinstance(self.doc, Document)
+        """ Instance for POS """
+        assert isinstance(self.dep_num, int) and self.doc is not None
         parent_word = self.get_parent_word()
         return {
             "pos": self.get_xpos(),
@@ -531,15 +594,17 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
             "parent_upos": parent_word.get_ud_pos() if parent_word is not None else "THIS_ROOT"
         }
 
-    def get_link(self, aword: Word) -> Union[Literal[-1], Tuple["Annotation", "Segment", "Segment"]]:
+    def get_link(self, awrd: Word) -> Union[Literal[-1], tuple["Annotation", "Segment", "Segment"]]:
         """
             get link for aword
         """
-        from .document import Document
-        assert self.doc is not None and isinstance(self.doc, Document)
+        # mypy: disable=warn-return-any
         sword_pos = self.doc.get_pos_from_word(self)
-        aword_pos = self.doc.get_pos_from_word(aword)
-        return self.doc.doc_annotation.get_link(sword_pos, aword_pos)
+        aword_pos = self.doc.get_pos_from_word(awrd)
+        return cast(
+            Union[Literal[-1], tuple["Annotation", "Segment", "Segment"]],
+            self.doc.doc_annotation.get_link(sword_pos, aword_pos)
+        )
 
     def get_parent_word(self) -> Optional[Word]:
         """
@@ -572,36 +637,36 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
                 str: ga, o, ni のどれか
         Literal[-1]: リンクなかった
         """
-        from .annotation import Annotation, Segment
         if self.ud_misc["BunsetuPositionType"] != "SEM_HEAD":
             return -1
         parent_word = self.get_parent_word()
         if parent_word is None:
             return -1
         for wrd in self.get_luw_units():
-            _link_label: Union[Tuple[Annotation, Segment, Segment], Literal[-1]] = parent_word.get_link(wrd)
+            _link_label = parent_word.get_link(wrd)
             if _link_label != -1:
                 # 格情報を抽出 (ga, o, ni)]
-                return cast(Tuple[Annotation, Segment, Segment], _link_label)[0].name.split(":")[-1]
+                assert isinstance(_link_label, tuple)
+                return _link_label[0].name.split(":")[-1]
         return -1
 
     def get_link_label(self) -> Union[str, Literal[-1]]:
-        from .annotation import Annotation, Segment
         """
         自分と親とのリンクを確認して返す
         Returns:
-                str: ga, o, ni のどれか
-        Literal[-1]: リンクなかった
+                str: ga, o, ni のどれか  or Literal[-1]: リンクなかった
         """
         parent_word = self.get_parent_word()
         if parent_word is not None:
-            _link_label: Union[Tuple[Annotation, Segment, Segment], Literal[-1]] = parent_word.get_link(self)
+            _link_label = parent_word.get_link(self)
             if _link_label != -1:
                 # 格情報を抽出 (ga, o, ni)]
-                return cast(Tuple[Annotation, Segment, Segment], _link_label)[0].name.split(":")[-1]
+                assert isinstance(_link_label, tuple)
+                return _link_label[0].name.split(":")[-1]
         return -1
 
     def get_child_words(self) -> list[Word]:
+        """ get children words """
         assert self.doc is not None
         self.child_words = []
         for child_pos in self.doc[self.sent_pos].get_ud_children(self):
@@ -612,12 +677,12 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
         return self.child_words
 
     def has_space_after(self) -> bool:
-        from .annotation import Segment
+        """ has space after """
         sent = self.doc[self.sent_pos]
         wrd_pos = sent.get_pos_from_word(self)
         res = sent.annotation_list.get_segment(wrd_pos)
-        if isinstance(res, Segment) and res.get_name() == "space-after:seg":
-            value = res.get_attr("space-after:value")
+        if res not in [None, -1] and res.get_name() == "space-after:seg":
+            value = res.get_attr_value("space-after:value")
             return value is not None
         return False
 
@@ -639,7 +704,9 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
             self.ud_misc["UnidicInfo"] = self.get_unidic_info()
         return "|".join([
             "{}={}".format(k, v) for k, v in sorted(self.ud_misc.items())
-            if self.word_unit_mode == "suw" or (self.word_unit_mode == "luw" and k not in ["LUWPOS", "LUWBILabel"])
+            if self.word_unit_mode == "suw" or (
+                self.word_unit_mode == "luw" and k not in ["LUWPOS", "LUWBILabel"]
+            )
         ])
 
     def get_unidic_info(self, delimiter: str=",") -> str:
@@ -666,7 +733,8 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
             deps="_", misc=self.get_udmisc()
         )
 
-    def build_luw_unit(self, luw_unit: list[Word]=None, suw_delimter: str=";"):
+    def build_luw_unit(self, luw_unit: list[Word], suw_delimter: str=";"):
+        """ Build LUW Unit """
         assert self.word_unit_mode == "luw", "differ mode: " + self.word_unit_mode
         self._token[0] = self.get_surface()
         if luw_unit is None:
@@ -679,6 +747,7 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
             self.features = self._token[1].split(",")
 
     def get_surface(self) -> str:
+        """ get Surface """
         if self.word_unit_mode == "luw":
             return LUW.get_surface(self)
         if self.word_unit_mode == "suw":
@@ -686,6 +755,7 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
         raise NotImplementedError
 
     def get_origin(self, do_conv29=False):
+        """ Get Origin """
         if self.word_unit_mode == "luw":
             return LUW.get_origin(self, do_conv29=do_conv29)
         if self.word_unit_mode == "suw":
@@ -693,6 +763,7 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
         raise NotImplementedError
 
     def get_xpos(self):
+        """ get XPOS """
         if self.word_unit_mode == "luw":
             return LUW.get_xpos(self)
         if self.word_unit_mode == "suw":
@@ -700,12 +771,13 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
         raise NotImplementedError
 
     def get_luw_pos(self) -> str:
+        """ get LUW POS """
         if self.luw_pos is not None:
             return self.luw_pos
-        else:
-            return self.get_xpos()
+        return self.get_xpos()
 
     def get_katuyo(self) -> str:
+        """ get katuyo """
         if self.word_unit_mode == "luw":
             return LUW.get_katuyo(self)
         if self.word_unit_mode == "suw":
@@ -713,6 +785,7 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
         raise NotImplementedError
 
     def get_features(self) -> list[str]:
+        """ get features """
         if self.word_unit_mode == "luw":
             return LUW.get_features(self)
         if self.word_unit_mode == "suw":

@@ -4,30 +4,35 @@
 BCCWJ DepParaPAS Annotation class
 """
 
+from dataclasses import dataclass
 from itertools import permutations
 from typing import Literal, NamedTuple, Optional, Union
 
 
 class AnnoPosition(NamedTuple):
+    """ AnnoPosition """
     pos1: int
     pos2: int
 
 
-class DocAnnotation(NamedTuple):
-    id: int
+@dataclass
+class DocAnnotation:
+    """ DocAnnotation """
+    _id: int
     bibinfo: Optional[str]
     attrib: Optional[str]
 
     def __str__(self) -> str:
-        sss = "#! DOC\t{}\n".format(self.id)
+        sss = "#! DOC\t{}\n".format(self._id)
         if self.bibinfo is not None:
-            sss += "#! DOCID\t{}\t{}\n".format(self.id, self.bibinfo)
+            sss += "#! DOCID\t{}\t{}\n".format(self._id, self.bibinfo)
         if self.attrib is not None:
             sss += "#! DOCATTR\t{}\n".format(self.attrib)
         return sss
 
 
 def generate_docannotation(prefix: list[str]) -> DocAnnotation:
+    """ generate doc annotation """
     _id: int = -1
     bibinfo: Optional[str] = None
     attrib: Optional[str] = None
@@ -44,25 +49,87 @@ def generate_docannotation(prefix: list[str]) -> DocAnnotation:
     return DocAnnotation(_id, bibinfo, attrib)
 
 
-class Annotation(object):
+class Attribute:
     """
-        annotation class
+        Attribute class
+        #! ATTR <Key> <Value> "<Comment>"
     """
 
-    def __init__(self, segment_lines: list[list[str]]):
-        self.segment_lines: list[list[str]] = segment_lines
+    def __init__(self, items: list[str]):
+        assert items[0] == '#!' and items[1] == "ATTR"
+        self.items: list[str] = items
+        self.full_key = items[2]
+        self.label: str = items[2].split(":")[1] if len(items[2].split(":")) == 2 else items[2]
+        self.value: str = items[3].strip('"')
+        self.namespace: Optional[str] = None
+        self.namespace = items[2].split(":")[0] if len(items[2].split(":")) == 2 else None
+        self.comment: str = items[4].strip('"') if len(items) == 5 else ""
+
+    def __str__(self) -> str:
+        __l = '#! ATTR {key} "{value}"'.format(key=self.get_full_key(), value=self.get_value())
+        if self.get_comment() != "":
+            __l = __l + " " + '"{}"'.format(self.get_comment())
+        return __l
+
+    def get_label(self) -> str:
+        """ get label """
+        return self.label
+
+    def get_full_key(self) -> str:
+        """ get key with namespaced """
+        return self.full_key
+
+    def get_value(self) -> str:
+        """ <value> """
+        return self.value
+
+    def get_comment(self) -> str:
+        """ <comment> """
+        return self.comment
+
+
+class Annotation:
+    """
+        Annotation class
+    """
+
+    def __init__(self):
         self.identifier: Optional[str] = None
-        self.start_pos: int = -1
-        self.end_pos: int = -1
-        self.comment: Optional[str] = None
+        self.attributes: dict[str, Attribute] = {}
+        self.attrs_list: list[str] = []
+        self.pos: AnnoPosition
+        self.comment: str = ""
         self.name: str = ""
 
+    def _parse(self, segment_lines: list[list[str]]) -> None:
+        self.identifier = segment_lines[0][1]
+        self.name = segment_lines[0][2]
+        for items in segment_lines[1:]:
+            if items[1] != "ATTR":
+                raise TypeError("is not be ATTR", items[1])
+            attr = Attribute(items)
+            self.attributes[attr.get_label()] = attr
+            self.attributes[attr.get_full_key()] = attr
+            self.attrs_list.append(attr.get_full_key())
+        self.comment = segment_lines[0][-1]
+
+    def get_attr_value(self, attr_name: str) -> Optional[str]:
+        """ get attribute's value """
+        assert self.attributes is not None
+        if self.attributes.get(attr_name) is None:
+            return None
+        _val = self.attributes.get(attr_name)
+        if _val:
+            return _val.get_value()
+        return None
+
     def get_name(self) -> str:
+        """ get name """
         return self.name
 
     def get_comment(self) -> Optional[str]:
         """ get comment """
-        return self.comment
+        return self.comment.strip('"')
 
     def get_identifier(self) -> Optional[str]:
         """
@@ -71,99 +138,129 @@ class Annotation(object):
         return self.identifier
 
     def __str__(self) -> str:
-        return "\n".join([
-            " ".join(ss) for ss in self.segment_lines
-        ])
+        raise NotImplementedError
 
 
 class Segment(Annotation):
     """
-        segment
+        Segment
+        #! SEGMENT_S <TagName> <StartPos> <EndPos> "<Comment>"
     """
 
-    def __init__(self, segment_lines: list[list[str]]):
-        super(Segment, self).__init__(segment_lines)
-        self.attributes: dict[str, str] = {}
-        self.position: AnnoPosition
-        self.__parse()
+    def __init__(self, segment_lines: Optional[list[list[str]]]):
+        super().__init__()
+        if segment_lines:
+            self._parse(segment_lines)
         assert self.identifier in ["SEGMENT_S", "SEGMENT"]
 
-    def get_attr(self, attr_name: str) -> Optional[str]:
-        return self.attributes.get(attr_name)
+    def _parse(self, segment_lines: list[list[str]]) -> None:
+        super()._parse(segment_lines)
+        _start_pos = int(segment_lines[0][3])
+        _end_pos = int(segment_lines[0][4])
+        self.pos = AnnoPosition(_start_pos, _end_pos)
 
-    def __parse(self) -> None:
-        self.identifier = self.segment_lines[0][1]
-        self.name = self.segment_lines[0][2]
-        self.start_pos = int(self.segment_lines[0][3])
-        self.end_pos = int(self.segment_lines[0][4])
-        self.position = AnnoPosition(self.start_pos, self.end_pos)
-        self.comment = self.segment_lines[0][5]
-        for items in self.segment_lines[1:]:
-            if items[1] != "ATTR":
-                raise TypeError("is not be ATTR", items[1])
-            self.attributes[items[2]] = items[3]
+    @property
+    def start_pos(self) -> int:
+        """ start pos """
+        return self.pos.pos1
+
+    @property
+    def end_pos(self) -> int:
+        """ start pos """
+        return self.pos.pos2
+
+    def __str__(self) -> str:
+        _sss = '#! {iden} {full_name} {spos} {epos} "{comment}"'.format(
+            iden=self.get_identifier(), full_name=self.get_name(),
+            spos=self.pos.pos1, epos=self.pos.pos2, comment=self.get_comment()
+        )
+        if len(self.attrs_list) > 0:
+            _sss += "\n" + "\n".join([str(self.attributes[attr]) for attr in self.attrs_list])
+        return _sss
 
 
 class Link(Annotation):
     """
-        link
+        Link object
+        #! LINK_S <TagName> <FromSegNo> <ToSegNo> "<Comment>"
     """
-    def __init__(self, segment_lines: list[list[str]]):
-        super(Link, self).__init__(segment_lines)
-        # assert len(segment_lines) == 1  # 本来はこうのはず...?
-        self.__parse()
+    def __init__(self, segment_lines: Optional[list[list[str]]]):
+        super().__init__()
+        if segment_lines:
+            self._parse(segment_lines)
         assert self.identifier in ["LINK", "LINK_S"]
 
-    def __parse(self) -> None:
-        self.identifier = self.segment_lines[0][1]
-        self.name = self.segment_lines[0][2]
-        self.start_pos = int(self.segment_lines[0][3])
-        self.end_pos = int(self.segment_lines[0][4])
-        self.position = AnnoPosition(self.start_pos, self.end_pos)
-        self.comment = self.segment_lines[0][5]
+    def _parse(self, segment_lines: list[list[str]]) -> None:
+        super()._parse(segment_lines)
+        _start_pos = int(segment_lines[0][3])
+        _end_pos = int(segment_lines[0][4])
+        self.pos = AnnoPosition(_start_pos, _end_pos)
+
+    @property
+    def start_pos(self) -> int:
+        """ start pos """
+        return self.pos.pos1
+
+    @property
+    def end_pos(self) -> int:
+        """ start pos """
+        return self.pos.pos2
+
+    def __str__(self) -> str:
+        _sss = '#! {iden} {full_name} {spos} {epos} "{comment}"'.format(
+            iden=self.get_identifier(), full_name=self.get_name(),
+            spos=self.pos.pos1, epos=self.pos.pos2, comment=self.get_comment()
+        )
+        if len(self.attrs_list) > 0:
+            _sss += "\n" + "\n".join([str(self.attributes[attr]) for attr in self.attrs_list])
+        return _sss
 
 
 class Group(Annotation):
     """
         Group
+        #! GROUP_S <TagName> <SegNo>... "<Comment>"
     """
-    def __init__(self, segment_lines: list[list[str]]):
-        super(Group, self).__init__(segment_lines)
-        # assert len(segment_lines) == 1  # 本来はこうのはず...?
-        self.groups_ids: set[int] = set([])
-        self.__parse()
+    def __init__(self, segment_lines: Optional[list[list[str]]]):
+        super().__init__()
+        self.groups_ids: list[int] = []
+        if segment_lines:
+            self._parse(segment_lines)
         assert self.identifier in ["GROUP", "GROUP_S"]
 
-    def __parse(self) -> None:
-        self.identifier = self.segment_lines[0][1]
-        self.name = self.segment_lines[0][2]
-        self.groups_ids = set([
-            int(s) for s in self.segment_lines[0][3:-1] if s != ""
-        ])
-        self.comment = self.segment_lines[0][-1]
+    def _parse(self, segment_lines: list[list[str]]) -> None:
+        super()._parse(segment_lines)
+        self.groups_ids = [int(s) for s in segment_lines[0][3:-1] if s != ""]
+        self.pos = AnnoPosition(self.groups_ids[0], self.groups_ids[1])
+
+    def __str__(self) -> str:
+        _sss = '#! {iden} {full_name} {rpos} "{comment}"'.format(
+            iden=self.get_identifier(), full_name=self.get_name(),
+            rpos=" ".join([str(s) for s in self.groups_ids]), comment=self.get_comment()
+        )
+        if len(self.attrs_list) > 0:
+            _sss += "\n" + "\n".join([str(self.attributes[attr]) for attr in self.attrs_list])
+        return _sss
 
 
-class AnnotationList(object):
+class AnnotationList:
     """
         Annotation list
     """
 
-    def __init__(self, annotation_list: list[Annotation]):
-        self.seg_pos: int = 0
-        self._annotation_list: list[Annotation] = list(annotation_list)
+    def __init__(self, annotation_list: Optional[list[Annotation]]):
+        self._annotation_list: list[Annotation] = []
+        if annotation_list is not None:
+            self._annotation_list.extend(annotation_list)
         self._segments: list[Segment] = [
             seg for seg in self._annotation_list if isinstance(seg, Segment)
         ]
-        self._annotation: list[Annotation] = [
-            seg for seg in self._annotation_list
-            if seg.get_identifier() not in ["SEGMENT_S", "SEGMENT"]
-        ]
         self._seg_dict: dict[AnnoPosition, int] = {
-            s.position: p for p, s in enumerate(self._segments)
+            s.pos: p for p, s in enumerate(self._segments)
         }
         self._link_dict: dict[tuple[int, int], tuple[Annotation, Segment, Segment]] = {
-            (seg.start_pos, seg.end_pos): (
-                seg, self._segments[seg.start_pos], self._segments[seg.end_pos]
+            (seg.pos.pos1, seg.pos.pos2): (
+                seg, self._segments[seg.pos.pos1], self._segments[seg.pos.pos2]
             ) for seg in self._annotation_list
             if seg.get_identifier() in ["LINK_S", "LINK"]
         }
@@ -172,7 +269,7 @@ class AnnotationList(object):
             if isinstance(seg, Group):
                 for sid1, sid2 in permutations(seg.groups_ids, 2):
                     seg1, seg2 = self._segments[sid1], self._segments[sid2]
-                    self._group_dict[(seg1.position, seg2.position)] = seg
+                    self._group_dict[(seg1.pos, seg2.pos)] = seg
 
     def __len__(self) -> int:
         return len(self._annotation_list)
@@ -183,7 +280,9 @@ class AnnotationList(object):
     def __getitem__(self, ind: int) -> Annotation:
         return self._annotation_list[ind]
 
-    def get_group(self, anno: str, word1_pos: tuple[int, int], word2_pos: tuple[int, int]) -> Union[Literal[-1], Group]:
+    def get_group(
+        self, anno: str, word1_pos: tuple[int, int], word2_pos: tuple[int, int]
+    ) -> Union[Literal[-1], Group]:
         """
             get anno for the two words
         """
@@ -199,7 +298,10 @@ class AnnotationList(object):
                 return seg
         return -1
 
-    def get_link(self, start_word_pos: Union[tuple[int, int], AnnoPosition], end_word_pos: Union[tuple[int, int], AnnoPosition]) -> Union[Literal[-1], tuple[Annotation, Segment, Segment]]:
+    def get_link(
+        self, start_word_pos: Union[tuple[int, int], AnnoPosition],
+        end_word_pos: Union[tuple[int, int], AnnoPosition]
+    ) -> Union[Literal[-1], tuple[Annotation, Segment, Segment]]:
         """
             get link
         """
@@ -210,13 +312,17 @@ class AnnotationList(object):
             return -1
         return self._link_dict[(start, end)]
 
-    def get_appos(self, word1_pos: tuple[int, int], word2_pos: tuple[int, int]) -> Union[Literal[-1], Group]:
+    def get_appos(
+        self, word1_pos: tuple[int, int], word2_pos: tuple[int, int]
+    ) -> Union[Literal[-1], Group]:
         """
             get appos
         """
         return self.get_group("Apposition", word1_pos, word2_pos)
 
-    def get_conj(self, word1_pos: tuple[int, int], word2_pos: tuple[int, int]) -> Union[Literal[-1], Group]:
+    def get_conj(
+        self, word1_pos: tuple[int, int], word2_pos: tuple[int, int]
+    ) -> Union[Literal[-1], Group]:
         """
             get conj
         """
@@ -251,23 +357,27 @@ class AnnotationList(object):
         """
             get full annotations
         """
-        return self._annotation
+        return self._annotation_list
+
+    def find_key_annotations(self, key: str) -> list[Annotation]:
+        """
+            get full annotations
+        """
+        return [a for a in self._annotation_list if a.get_attr_value(key)]
 
     def append_segment(self, seg: Union[Segment, list[list[str]]]):
+        """ append segment """
         if isinstance(seg, list):
             seg = Segment(seg)
         self._annotation_list.append(seg)
         self._segments.append(seg)
-        self._seg_dict = {
-            s.position: p for p, s in enumerate(self._segments)
-        }
+        self._seg_dict = {s.pos: p for p, s in enumerate(self._segments)}
 
     def remove_segment(self, seg: Segment):
+        """ remove segment """
         self._annotation_list.remove(seg)
         self._segments.remove(seg)
-        self._seg_dict = {
-            s.position: p for p, s in enumerate(self._segments)
-        }
+        self._seg_dict = {s.pos: p for p, s in enumerate(self._segments)}
 
 
 def get_annotation_object(seg: list[list[str]]) -> Annotation:

@@ -6,15 +6,15 @@ RULE POS
 
 
 import re
-import ruamel.yaml
-from typing import TYPE_CHECKING, Generator, TypedDict, NamedTuple
+from typing import TYPE_CHECKING, Generator, NamedTuple, TypedDict, cast
+
+from cabocha2ud.lib.yaml_dict import YamlDict
 
 if TYPE_CHECKING:
     from ..bd.word import Word
 
 
 REGEX_TYPE = type(re.compile(''))
-NUM_RE = re.compile(r"\* (\d+) (-?\d+)([A-Z][A-Z]?) (\d+)/(\d+) .*$")
 BUNSETU_FUNC_MATCH_RE = re.compile(
     r"(?:助詞|助動詞|接尾辞,形容詞的|接尾辞,形状詞的|接尾辞,動詞的)"
 )
@@ -37,11 +37,17 @@ POS_RULE_FUNC: dict = {
 TARGET_POS_RULE = None
 
 class POSRule(NamedTuple):
+    """
+    POS rule
+    """
     rule: dict[str, str]
     res: str
 
 
 class POSRuleBase(TypedDict):
+    """
+    POS rule list
+    """
     default: list[str]
     rule: list[POSRule]
 
@@ -50,8 +56,7 @@ def load_pos_rule(file_name: str=POS_RULE_FILE) -> list[tuple]:
     """
         load rule file
     """
-    yaml = ruamel.yaml.YAML()
-    rule_set: POSRuleBase = yaml.load(open(file_name).read().replace('\t', '    '))
+    rule_set: POSRuleBase = cast(POSRuleBase, dict(YamlDict(file_name=file_name, auto_load=True)))
     full_rule_set: list[tuple] = []
     for rule_pair in rule_set["rule"]:
         rule, result = rule_pair
@@ -72,13 +77,13 @@ def is_neg(word: "Word") -> bool:
         否定表現かどうか
     """
     pos, pos3, base_lexeme = word.get_xpos().split("-")[0], word.get_xpos(), word.get_jp_origin()
-    if pos == "助動詞" and (base_lexeme == "ない" or base_lexeme == "ず" or base_lexeme == "ぬ"):
+    if pos == "助動詞" and base_lexeme in ["ない", "ず", "ぬ"]:
         return True
-    elif RE_NEG_SETUBI_EXP.search(pos3) and base_lexeme == "ない":
+    if RE_NEG_SETUBI_EXP.search(pos3) and base_lexeme == "ない":
         return True
-    elif RE_NEG_SETTOU_EXP.search(pos3) and base_lexeme in NEG_EXP:
+    if RE_NEG_SETTOU_EXP.search(pos3) and base_lexeme in NEG_EXP:
         return True
-    elif RE_NOUN_NEG_EXP.search(pos3) and base_lexeme == "無し":
+    if RE_NOUN_NEG_EXP.search(pos3) and base_lexeme == "無し":
         return True
     return False
 

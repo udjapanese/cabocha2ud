@@ -1,4 +1,3 @@
-bunsetu-func: type2
 skip-space: True
 space-marker: hankaku
 pipeline: merge_number,replace_multi_root

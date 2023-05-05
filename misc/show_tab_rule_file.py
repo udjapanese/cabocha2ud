@@ -4,7 +4,6 @@
     ルールファイルをテーブルに変換
 """
 
-import json
 import argparse
 
 import ruamel.yaml

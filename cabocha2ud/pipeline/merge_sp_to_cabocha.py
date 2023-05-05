@@ -5,20 +5,19 @@ merge to sp information to GSD cabocha
 """
 
 import argparse
-import re
-from typing import Optional, Union, cast
-
 from difflib import SequenceMatcher
+from typing import Optional
 
-from cabocha2ud.lib.logger import Logger
-from cabocha2ud.bd import BunsetsuDependencies
+from cabocha2ud.bd import BunsetsuDependencies as BD
 from cabocha2ud.bd.sentence import Sentence
-
+from cabocha2ud.lib.logger import Logger
+from cabocha2ud.lib.yaml_dict import YamlDict
+from cabocha2ud.pipeline.component import BDPipeLine
 
 
 def load_db_file(db_file: Optional[str]) -> list[list[dict[str, str]]]:
     """
-        load dainagon data
+        Load SP data
     """
     if db_file is None:
         return []
@@ -26,7 +25,7 @@ def load_db_file(db_file: Optional[str]) -> list[list[dict[str, str]]]:
     target_column: str = "boundary(S)"
     nfull: list[list[dict[str, str]]] = []
     stack: list[dict[str, str]] = []
-    with open(db_file) as db_data:
+    with open(db_file, "r", encoding="utf-8") as db_data:
         header = next(db_data).rstrip("\r\n").split("\t")
         for line in db_data:
             item: dict[str, str] = dict(list(zip(header, line.rstrip("\r\n").split("\t"))))
@@ -45,100 +44,133 @@ def load_db_file(db_file: Optional[str]) -> list[list[dict[str, str]]]:
 
 
 def similarity(alst: str, blst: str) -> float:
+    """ caluclate similarity """
     if len(alst) < len(blst):
         alst, blst = blst, alst
     return SequenceMatcher(None, alst, blst).ratio()
 
 
-def get_merged_poslist(bd: BunsetsuDependencies, sp_data: list[list[dict[str, str]]]) -> list[tuple[int, int]]:
-    """ SPデータと統合する
-     conllデータとSPデータをマッチングする
-    Args:
-        conll_data ([type]): [description]
-        sp_data ([type]): [description]
-
-    Returns:
-        [type]: [description]
-    """
-    if len(bd.sentences()) == len(sp_data):
-        return [(p, p) for p in range(len(bd.sentences()))]
-    sp_it = iter(enumerate(sp_data))
-    pos_list: list[tuple[int, int]] = []
-    for cpos, sentence in enumerate(bd.sentences()):
-        spos, cand_sp = next(sp_it)
-        stext = "".join([c["orthToken(S)"] for c in cand_sp])
-        ctext = sentence.get_text()
-        while similarity(stext, ctext) < 0.8:
-            spos, cand_sp = next(sp_it)
-            stext = "".join([c["orthToken(S)"] for c in cand_sp])
-        pos_list.append((cpos, spos))
-    assert len(pos_list) == len(bd.sentences())
-    return pos_list
-
-
-def matching_from_seqmath(sentence: Sentence, spd: list[dict[str, str]]) -> list[tuple[Union[int, tuple[int, int]], tuple[int,...]]]:
+def matching_from_spd(snt: Sentence, spd: list[dict[str, str]]) -> list[tuple[int, tuple[int,...]]]:
     """
         diff using by SequenceMatcher
          return [(conll_wrd_pos, spd_wrd_pos_tuple), ....]
     """
-    assert len(sentence.words()) <= len(spd)
-    cwrds = [w.get_surface() for w in sentence.words()]
+    assert len(snt.words()) <= len(spd)
+    cwrds = [w.get_surface() for w in snt.words()]
     swrds = [c["orthToken(S)"] for c in spd]
     if len(cwrds) == len(swrds):
         return [(p, (p, )) for p in range(len(cwrds))]
-    sentence.logger.debug("cwrds: ", cwrds, "swrds: ", swrds)
+    snt.logger.debug("cwrds: ", cwrds, "swrds: ", swrds)
     smcr = SequenceMatcher(None, cwrds, swrds)
-    # pos_lst: list[tuple[int, tuple[int,...]]] = []
-    pos_lst: list[ tuple[Union[int, tuple[int, int]], tuple[int,...]] ] = []
+    pos_lst: list[tuple[int, tuple[int, ...]]] = []
     for opt, ii1, ii2, jj1, jj2 in smcr.get_opcodes():
-        sentence.logger.debug(opt, cwrds[ii1:ii2], swrds[jj1:jj2])
+        snt.logger.debug(opt, cwrds[ii1:ii2], swrds[jj1:jj2])
         if opt == 'equal':
             assert cwrds[ii1:ii2] == swrds[jj1:jj2]
             for iii, jjj in zip(range(ii1, ii2), range(jj1, jj2)):
                 pos_lst.append((iii, (jjj, )))
         elif opt == 'replace':
             assert ii2 - ii1 <= jj2 - jj1 and ii2 - ii1 == 1
-            pos_lst.append(
-                (ii1, tuple([j for j in range(jj1, jj2)]))
-            )
+            pos_lst.append((ii1, tuple(range(jj1, jj2))))
         else:
             assert KeyError("not found: ", opt)
     return pos_lst
 
 
 def adapt_spafter_to_cabocha(sentence: Sentence, spd: list[dict[str, str]]) -> None:
-    """ adapt spafter to Cabocha Data
-
     """
-    if all([s["SpaceAfter"] != "YES" for s in spd]):
+        adapt spafter to Cabocha Data
+    """
+    if all(s["SpaceAfter"] != "YES" for s in spd):
         return
     assert len(sentence.words()) <= len(spd)
-    result_pos = matching_from_seqmath(sentence, spd)
-    # assert [p for p, _ in result_pos] == list(range(len(conll[hpos:])))
-    for cpos, sp_pos in result_pos:
+    result_pos = matching_from_spd(sentence, spd)
+    for bpos, sp_pos in result_pos:
         assert isinstance(sp_pos, tuple)
         if len(sp_pos) == 1:  # 1対1
             if spd[sp_pos[0]]["SpaceAfter"] == "YES":
-                wrd = sentence.words()[cpos]
+                wrd = sentence.words()[bpos]
                 pos = sentence.get_pos_from_word(wrd)
                 assert sentence.annotation_list is not None
-                sentence.annotation_list.append_segment([
-                    '#! SEGMENT_S space-after:seg {} {} "{}"'.format(pos[0], pos[1], wrd.get_surface()).split(" "),
-                    '#! ATTR space-after:value "YES"'.split(" ")
-                ])
+                seg_s = [
+                    f'#! SEGMENT_S space-after:seg {pos[0]} {pos[1]} "{wrd.get_surface()}"',
+                    '#! ATTR space-after:value "YES"'
+                ]
+                sentence.annotation_list.append_segment([s.split(" ") for s in seg_s])
         elif len(sp_pos) > 1:
-            assert all([spd[spos]["SpaceAfter"] != "YES" for spos in sp_pos])
+            assert all(spd[spos]["SpaceAfter"] != "YES" for spos in sp_pos)
 
 
-def do(bd: BunsetsuDependencies, sp_data: list[list[dict[str, str]]], logger: Optional[Logger]=None) -> None:
+def get_merged_poslist(_bd: BD, sp_data: list[list[dict[str, str]]]) -> list[tuple[int, int]]:
+    """
+        SPデータと統合する
+        cabochaデータとSPデータをマッチングする
+
+    Args:
+        _bd (BunsetsuDependencies): Bunsetsu Dependencies
+        sp_data (list[list[dict[str, str]]]): [description]
+
+    Returns:
+        list[tuple[int, int]]: [description]
+    """
+    if len(_bd.sentences()) == len(sp_data):
+        return [(p, p) for p in range(len(_bd.sentences()))]
+    sp_it = iter(enumerate(sp_data))
+    pos_list: list[tuple[int, int]] = []
+    for bpos, sentence in enumerate(_bd.sentences()):
+        spos, cand_sp = next(sp_it)
+        stext = "".join([c["orthToken(S)"] for c in cand_sp])
+        ctext = sentence.get_text()
+        while similarity(stext, ctext) < 0.8:
+            spos, cand_sp = next(sp_it)
+            stext = "".join([c["orthToken(S)"] for c in cand_sp])
+        pos_list.append((bpos, spos))
+    assert len(pos_list) == len(_bd.sentences())
+    return pos_list
+
+
+def do_pipe(_bd: BD, sp_data: list[list[dict[str, str]]], logger: Optional[Logger]=None) -> None:
+    """ Do pipeline
+
+    Args:
+        bd (BunsetsuDependencies): _description_
+        sp_data (list[list[dict[str, str]]]): _description_
+        logger (Optional[Logger], optional): logger object. Defaults to None.
+    """
     if logger is None:
         logger = Logger()
     logger.debug("do merge sp to cabocha")
-    pos_list = get_merged_poslist(bd, sp_data)
-    for cpos, spos in pos_list:
-        sentence = bd.get_sentence(cpos)
-        adapt_spafter_to_cabocha(sentence, sp_data[spos])
+    pos_list = get_merged_poslist(_bd, sp_data)
+    for bpos, spos in pos_list:
+        adapt_spafter_to_cabocha(_bd.get_sentence(bpos), sp_data[spos])
 
+
+class MergeSPtoCabochaComponent(BDPipeLine):
+    """ Build LUW
+
+    Args:
+        PipeLineComponent (_type_): _description_
+    """
+    name = "merge_sp_to_cabocha"
+    need_opt = ["sp_file"]
+
+    def __init__(self, target: BD, opts: YamlDict) -> None:
+        self.sp_data: list[list[dict[str, str]]]
+        super().__init__(target, opts)
+
+    def prepare(self) -> None:
+        assert "sp_file" in self.opts, "please set sp_file"
+        self.sp_data = load_db_file(self.opts["sp_file"])
+
+    def __call__(self) -> None:
+        assert isinstance(self.target, BD)
+        self.logger.debug(f"do {self.name}")
+        pos_list = get_merged_poslist(self.target, self.sp_data)
+        for bpos, spos in pos_list:
+            adapt_spafter_to_cabocha(self.target.get_sentence(bpos), self.sp_data[spos])
+
+
+COMPONENT = MergeSPtoCabochaComponent
 
 def main() -> None:
     """
@@ -150,11 +182,10 @@ def main() -> None:
     parser.add_argument("-w", "--writer", default="-", type=str)
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
-    logger = Logger(debug=args.debug)
-    bd = BunsetsuDependencies(file_name=args.cabocha_file)
-    sp_data: list[list[dict[str, str]]] = load_db_file(args.sp_file)
-    do(bd, sp_data, logger=logger)
-    bd.write_cabocha_file(args.writer)
+    options = YamlDict(init={"logger": Logger(debug=args.debug), "sp_file": args.sp_file})
+    bobj = BD(file_name=args.cabocha_file, options=options)
+    COMPONENT(bobj, opts=options)()
+    bobj.write_cabocha_file(args.writer)
 
 
 if __name__ == '__main__':

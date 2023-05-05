@@ -16,13 +16,10 @@ BASE_DIR=../cabocha_files/GSD/UD-Japanese-GSDPUD-Cabocha
 WORK_DIR=../cabocha_files/GSD/work
 SP_DIR=../cabocha_files/GSD/sp_data
 
-while getopts "p:b:s:w:h" optKey; do
+while getopts "b:s:w:h" optKey; do
   case "$optKey" in
     b)
       BASE_DIR=$OPTARG
-      ;;
-    p)
-      PATTERN_DIR=$OPTARG
       ;;
     w)
       WORK_DIR=$OPTARG
@@ -48,9 +45,6 @@ if [ ! -d $WORK_DIR ]; then
 fi
 
 # GNU `parallel`を使っています
-
-# 重複文チェック
-python validators/duplicate_checker.py $BASE_DIR/*.cabocha
 cp $BASE_DIR/*.cabocha $WORK_DIR/
 
 # cabocha -> UD 作業

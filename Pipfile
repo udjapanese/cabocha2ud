@@ -11,6 +11,8 @@ pytest = "*"
 mypy = "*"
 flake8 = "*"
 line-profiler = "*"
+pandas = "*"
+jinja2 = "*"
 
 [packages]
 configargparse = "*"
@@ -23,5 +25,4 @@ typing-extensions = "*"
 python_version = "3.9"
 
 [scripts]
-check = "./tests/check.sh"
 test = "pytest tests"

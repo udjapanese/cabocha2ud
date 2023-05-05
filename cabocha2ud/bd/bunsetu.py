@@ -8,14 +8,19 @@ from __future__ import annotations
 
 import bisect
 import copy
-from typing import TYPE_CHECKING, Optional, cast
+import re
+from typing import TYPE_CHECKING, Any, Optional, Pattern, cast
 
 if TYPE_CHECKING:
     from .word import Word
     from .sentence import Sentence
 
+from cabocha2ud.rule.bunsetu_rule import detect_bunsetu_pos
+
 from ..lib.logger import Logger
 from .word import Word
+
+NUM_RE: Pattern[str] = re.compile(r"\* (\d+) (-?\d+)([A-Z][A-Z]?) (\d+)/(\d+)( (.+))?$")
 
 
 class Bunsetu(list["Word"]):
@@ -49,15 +54,17 @@ class Bunsetu(list["Word"]):
         self.__parse(bunsetu, sent_pos)
 
     def set_sent(self, parent_sent: Sentence):
+        """ set sentence parent """
         self.parent_sent = parent_sent
 
     def get_header(self) -> str:
         """
             get the bunsetu's header
         """
-        org = "* {} {}{} {}/{} {}".format(
+        org = "* {} {}{} {}/{}{}".format(
             self.bunsetu_pos, self.dep_pos, self.dep_type,
-            self.subj_pos, self.func_pos, self.bunsetu_append_info
+            self.subj_pos, self.func_pos,
+            " " + self.bunsetu_append_info if self.bunsetu_append_info is not None else ""
         )
         return org
 
@@ -88,31 +95,30 @@ class Bunsetu(list["Word"]):
             for wpos, wrd in enumerate(self.words())
             if wrd.get_xpos().startswith("補助記号-括弧")
         ]
-        assert all([c in ["開", "閉"] for _, c in kakko_res])
+        assert all(c in ["開", "閉"] for _, c in kakko_res)
         if len(kakko_res) == 0:  # かっこがないので
             return False
         tpos = bisect.bisect(kakko_res, (pos, "対"))
         if tpos == 0:
             # 「？, ）」で並んでいるならカッコ内部
             return kakko_res[0][1] == "閉"
-        elif tpos == len(kakko_res):
+        if tpos == len(kakko_res):
             # 「（, ？」で並んでいるならカッコ内部
             return kakko_res[len(kakko_res)-1][1] == "開"
-        else:
-            tem_pos = tpos
-            while tem_pos > 0:
-                if kakko_res[tem_pos][1] == "開":
-                    return True
-                tem_pos = tem_pos - 1
-            tem_pos = tpos
-            while tem_pos < len(kakko_res):
-                if kakko_res[tem_pos][1] == "閉":
-                    return True
-                tem_pos = tem_pos + 1
-            return False
+        tem_pos = tpos
+        while tem_pos > 0:
+            if kakko_res[tem_pos][1] == "開":
+                return True
+            tem_pos = tem_pos - 1
+        tem_pos = tpos
+        while tem_pos < len(kakko_res):
+            if kakko_res[tem_pos][1] == "閉":
+                return True
+            tem_pos = tem_pos + 1
+        return False
 
     def __parse(self, bunsetu_lines: list[str], sent_pos: int) -> None:
-        from ..rule.bunsetu_rule import NUM_RE
+        """ parse bunsetu line """
         nbunsetu_lines = bunsetu_lines[:]
         # dep info
         if (attributes := NUM_RE.match(nbunsetu_lines[0])):
@@ -121,22 +127,23 @@ class Bunsetu(list["Word"]):
             self.dep_type = attributes.group(3)
             self.subj_pos = int(attributes.group(4))
             self.func_pos = int(attributes.group(5))
-            self.bunsetu_append_info = attributes.group(6)
+            self.bunsetu_append_info = attributes.group(7)
         if self.dep_pos == self.bunsetu_pos:
             # ループ、NO_HEAD
             self.is_loop = True
         for pos, token in enumerate(nbunsetu_lines[1:]):
-            self.append(Word(
-                base_file_name=self.base_file_name,
-                sent_pos=sent_pos,
-                bunsetu_pos=self.bunsetu_pos, word_pos=pos, token=token,
-                word_unit_mode=self.word_unit_mode,
-                bunsetu=self, logger=self.logger
-            ))
-        return None
+            _ddd: dict[str, Any] = {
+                "base_file_name": self.base_file_name,
+                "sent_pos": sent_pos,
+                "bunsetu_pos": self.bunsetu_pos,
+                "word_pos": pos, "token": token,
+                "word_unit_mode": self.word_unit_mode,
+                "bunsetu": self, "logger": self.logger
+            }
+            self.append(Word(**_ddd))
 
     def update_bunsetu_pos(self):
-        from ..rule.bunsetu_rule import detect_bunsetu_pos
+        """ update bunset position """
         detect_bunsetu_pos(self)
         if self.subj_pos == -1 and self.func_pos == -1:
             for word in self.words():
@@ -161,6 +168,7 @@ class Bunsetu(list["Word"]):
         self.update_word_list(new_lst)
 
     def get_luw_list(self) -> list[list[Word]]:
+        """ get luw list """
         luw_lst: list[list[Word]] = []
         for wrd in self.words():
             if wrd.word_pos == 0:
@@ -173,16 +181,18 @@ class Bunsetu(list["Word"]):
         return luw_lst
 
     def update_word_list(self, wrd_lst:list[Word]) -> None:
+        """ update word list """
         self.clear()
         for wpos, wrd in enumerate(wrd_lst):
             wrd.word_pos = wpos
             wrd.bunsetu_pos = cast(int, self.bunsetu_pos)
             self.append(wrd)
-        if self.parent_sent is not None:
-            wrd.sent_pos = self.parent_sent.sent_pos
-            self.parent_sent.update_word_pos()
+            if self.parent_sent is not None:
+                wrd.sent_pos = self.parent_sent.sent_pos
+                self.parent_sent.update_word_pos()
 
     def update_word(self, position: int, wrd:Word) -> None:
+        """ update one word """
         assert 0 < position < len(self)
         self[position] = copy.deepcopy(wrd)
         if self.parent_sent is not None:
@@ -190,6 +200,7 @@ class Bunsetu(list["Word"]):
             self.parent_sent.update_word_pos()
 
     def remove_word(self, position: int) -> None:
+        """ remove one word """
         assert 0 < position < len(self)
         _ = self.pop(position)
         for wpos, wrd in enumerate(self.words()):
