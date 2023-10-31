@@ -10,16 +10,15 @@ tqdm = "*"
 pytest = "*"
 mypy = "*"
 flake8 = "*"
-line-profiler = "*"
 pandas = "*"
-jinja2 = "*"
 
 [packages]
 configargparse = "*"
-pyyaml = "*"
 logzero = "*"
 ruamel-yaml = "==0.17.4"
-typing-extensions = "*"
+tomlkit = "*"
+click = "*"
+tomli = "*"
 
 [requires]
 python_version = "3.9"

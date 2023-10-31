@@ -92,7 +92,7 @@ def _main() -> None:
     parser.add_argument("-w", "--writer", default="-", type=str)
     args = parser.parse_args()
     options = YamlDict(
-        init={"logger": Logger(debug=args.debug), "patch_file": args.path_file}
+        init={"logger": Logger(debug=args.debug), "patch_file": args.patch_file}
     )
     _ud = UD(file_name=args.conll_file, options=options)
     COMPONENT(_ud,  opts=options)()

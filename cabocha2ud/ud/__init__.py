@@ -5,10 +5,10 @@
 Universal Dependency class
 """
 
-import copy
 from typing import Iterator, Optional, Union, cast
 
 from cabocha2ud.bd import BunsetsuDependencies
+from cabocha2ud.lib.iterate_function import iterate_ud_sentence
 from cabocha2ud.lib.logger import Logger
 from cabocha2ud.lib.text_object import TextObject
 from cabocha2ud.lib.yaml_dict import YamlDict
@@ -16,17 +16,6 @@ from cabocha2ud.rule import dep
 from cabocha2ud.ud.sentence import Header, Sentence
 from cabocha2ud.ud.util import Field as UField
 from cabocha2ud.ud.word import Misc
-
-
-def iterate_ud_sentence(lines: Union[list[str], Iterator[str]]) -> Iterator[list[str]]:
-    """ Iterator sentence list """
-    sent: list[str] = []
-    for line in lines:
-        if line == "":
-            yield sent
-            sent = []
-        else:
-            sent.append(line)
 
 
 class UniversalDependencies:
@@ -46,6 +35,9 @@ class UniversalDependencies:
         self.file_name: Optional[str] = file_name
         self.file_obj: Optional[TextObject] = None
         self.options: YamlDict = options
+        self._sp = None
+        if self.options.get("space_marker") is not None:
+            self._sp = self.options.get("space_marker")
         self._sentences: list[Sentence] = []
         self.sentence_ids: list[str] = []
         self.logger: Logger
@@ -65,9 +57,18 @@ class UniversalDependencies:
     def __str__(self) -> str:
         return "\n".join([str(s) for s in self._sentences])
 
+    def get_sp(self) -> str:
+        """ get sp marker """
+        assert isinstance(self._sp, str)
+        return self._sp
+
     def sentences(self) -> list[Sentence]:
         """ return sentences list """
         return self._sentences
+
+    def set_sentences(self, sents: list[Sentence]) -> None:
+        """ return sentences list """
+        self._sentences = list(sents)
 
     def get_sentence(self, index: int) -> Sentence:
         """ return one sentence for index """
@@ -83,8 +84,8 @@ class UniversalDependencies:
                 sent_id = nsent.get_header("sent_id")
                 assert sent_id is not None
                 sids.append(sent_id.get_value())
-        self._sentences = copy.deepcopy(ncontent)
-        self.sentence_ids = copy.deepcopy(sids)
+        self._sentences = list(ncontent)
+        self.sentence_ids = list(sids)
         assert len(self.sentence_ids) == len(self._sentences)
 
     def remove_sentence_from_sentid(self, sent_id_list: list[str]) -> None:
@@ -123,12 +124,26 @@ class UniversalDependencies:
             self.file_obj = TextObject(file_name=self.file_name)
         if self.file_obj is None:
             raise KeyError("must give file-like content")
-        self.load(self.file_obj.read())
+        self.load(self.file_obj.read(), spt=self._sp)
 
-    def load(self, str_content: Union[list[str], Iterator[str]]):
+    def load(self, str_content: Union[list[str], Iterator[str]], spt: Optional[str]=None):
         """ load UD from str list """
-        for sent_pos, sent in enumerate(iterate_ud_sentence(str_content)):
-            sent_obj = Sentence.load_from_list(sent, logger=self.logger)
+        sent_datas = list(enumerate(iterate_ud_sentence(str_content)))
+        # 一度スペースを決める必要がある
+        if spt is None:
+            for sent_pos, sent in sent_datas:
+                sss = [s for s in sent if s.startswith("# text = ")]
+                if len(sss) == 0:
+                    continue
+                for txt in sss:
+                    if "　" in txt.split("=")[1].strip(" "):
+                        spt = "　"
+            if spt is None:
+                spt = " "
+            self._sp = spt
+        assert self._sp is not None
+        for sent_pos, sent in sent_datas:
+            sent_obj = Sentence.load_from_list(sent, spt=self._sp, logger=self.logger)
             self._sentences.append(sent_obj)
             sent_id = sent_obj.get_header("sent_id")
             if sent_id is not None:
@@ -142,74 +157,83 @@ class UniversalDependencies:
         writer = TextObject(file_name=file_name, mode="w")
         writer.write([str(s) for s in self._sentences])
 
-    def fit(
-        self, bobj: BunsetsuDependencies,
-        pos_rule: list, dep_rule: list[tuple[list[dep.SubRule], str]]
-    ) -> None:
-        """
-        Convert BD to UD
 
-        Args:
-            bobj (BunsetsuDependencies): converted BunsetsuDependencies
-        """
-        prev_text: Optional[str] = None
-        target_newdoc_text: Optional[str] = None
-        tmp_content: list[Union[str, Sentence]] = []
-        for doc_id, doc in enumerate(bobj):
-            sentences = doc.convert_ud(
-                pos_rule, dep_rule, skip_space=self.options.get("skip_space", False)
-            )
-            if doc.doc_attrib_xml is None or len(list(doc.doc_attrib_xml.iter("newdoc_id"))) == 0:
-                tmp_content.extend([Sentence.load_from_string(sent) for sent in sentences])
-                continue
-            target_newdoc_text = list(doc.doc_attrib_xml.iter("newdoc_id"))[0].text
-            if doc_id == 0 and target_newdoc_text is not None:
-                tmp_content.append(target_newdoc_text)
-                prev_text = target_newdoc_text
-            elif target_newdoc_text is not None and prev_text != target_newdoc_text:
-                tmp_content.append(target_newdoc_text)
-                prev_text = target_newdoc_text
-            tmp_content.extend([Sentence.load_from_string(sent) for sent in sentences])
-        if all(isinstance(c, Sentence) for c in tmp_content):
-            self._sentences = cast(list[Sentence], tmp_content[:])
-            for cpos, cont in enumerate(self._sentences):
-                sent_id = cont.get_header("sent_id")
-                if sent_id is not None:
-                    self.sentence_ids.append(sent_id.get_value())
-                else:
-                    self.sentence_ids.append("sent-{:02}".format(cpos))
-            assert len(self.sentence_ids) == len(self._sentences)
-            return
-        # new doc の処理をする
-        tmp_lst: list[str] = []
-        self._sentences = []
-        for ccc in tmp_content:
-            if isinstance(ccc, str):
-                tmp_lst.append(ccc)
+def fit(
+    uobj: UniversalDependencies, bobj: BunsetsuDependencies,
+    pos_rule: list, dep_rule: list[tuple[list[dep.SubRule], str]]
+) -> None:
+    """
+    Convert BD to UD
+
+    Args:
+        bobj (BunsetsuDependencies): converted BunsetsuDependencies
+    """
+    prev_text: Optional[str] = None
+    target_newdoc_text: Optional[str] = None
+    tmp_content: list[Union[str, Sentence]] = []
+    for doc_id, doc in enumerate(bobj):
+        sentences = doc.convert_ud(
+            pos_rule, dep_rule, skip_space=uobj.options.get("skip_space", False)
+        )
+        if doc.doc_attrib_xml is None or len(list(doc.doc_attrib_xml.iter("newdoc_id"))) == 0:
+            tmp_content.extend([
+                Sentence.load_from_string(sent, spt=doc.space_marker) for sent in sentences
+            ])
+            continue
+        target_newdoc_text = list(doc.doc_attrib_xml.iter("newdoc_id"))[0].text
+        if doc_id == 0 and target_newdoc_text is not None:
+            tmp_content.append(target_newdoc_text)
+            prev_text = target_newdoc_text
+        elif target_newdoc_text is not None and prev_text != target_newdoc_text:
+            tmp_content.append(target_newdoc_text)
+            prev_text = target_newdoc_text
+        tmp_content.extend([
+            Sentence.load_from_string(sent, spt=doc.space_marker) for sent in sentences
+        ])
+
+    if all(isinstance(c, Sentence) for c in tmp_content):
+        uobj.set_sentences(cast(list[Sentence], tmp_content))
+        for cpos, cont in enumerate(uobj.sentences()):
+            sent_id = cont.get_header("sent_id")
+            if sent_id is not None:
+                uobj.sentence_ids.append(sent_id.get_value())
             else:
-                assert isinstance(ccc, Sentence)
-                sent: Sentence = ccc
-                if len(tmp_lst) > 0:  # 統合する
-                    for hhh in tmp_lst:
-                        sent.set_header(0, Header(cont=hhh))
-                    tmp_lst = []
-                self._sentences.append(sent)
-                sent_id = self._sentences[-1].get_header("sent_id")
-                if sent_id is not None:
-                    self.sentence_ids.append(sent_id.get_value())
-                else:
-                    self.sentence_ids.append("sent-{:02}".format(len(self._sentences)))
-        assert len(self.sentence_ids) == len(self._sentences)
-        spos_lst: list[int] = []
-        for spos, sent in enumerate(self.sentences()):
-            header_keys = sent.get_header_keys()
-            if spos == len(self.sentences()) - 1:
-                spos_lst.append(spos)
-            if "newdoc id" not in header_keys:
-                continue
-            if spos > 0:
-                spos_lst.append(spos - 1)
-        for spos in spos_lst:
-            sent = self.sentences()[spos]
-            misc = cast(Misc, sent.words()[-1][UField.MISC])
+                uobj.sentence_ids.append("sent-{:02}".format(cpos))
+        assert len(uobj.sentence_ids) == len(uobj.sentences())
+        return
+
+    # new doc の処理をする
+    tmp_lst: list[str] = []
+    _sentences: list[Sentence] = []
+    for ccc in tmp_content:
+        if isinstance(ccc, str):
+            tmp_lst.append(ccc)
+        else:
+            assert isinstance(ccc, Sentence)
+            sent: Sentence = ccc
+            if len(tmp_lst) > 0:  # 統合する
+                for hhh in tmp_lst:
+                    sent.set_header(0, Header(cont=hhh))
+                tmp_lst = []
+            _sentences.append(sent)
+            sent_id = _sentences[-1].get_header("sent_id")
+            if sent_id is not None:
+                uobj.sentence_ids.append(sent_id.get_value())
+            else:
+                uobj.sentence_ids.append("sent-{:02}".format(len(_sentences)))
+    uobj.set_sentences(_sentences)
+    assert len(uobj.sentence_ids) == len(uobj.sentences())
+    spos_lst: list[int] = []
+    for spos, sent in enumerate(uobj.sentences()):
+        header_keys = sent.get_header_keys()
+        if spos == len(uobj.sentences()) - 1:
+            spos_lst.append(spos)
+        if "newdoc id" not in header_keys:
+            continue
+        if spos > 0:
+            spos_lst.append(spos - 1)
+    for spos in spos_lst:
+        sent = uobj.sentences()[spos]
+        misc = cast(Misc, sent.words()[-1][UField.MISC])
+        if "SpaceAfter" in misc:
             misc.remove("SpaceAfter")

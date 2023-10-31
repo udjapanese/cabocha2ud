@@ -5,7 +5,7 @@ iterator functions for cabocha format
 """
 
 import re
-from typing import Iterator, Optional, Tuple
+from typing import Iterator, Optional, Union
 
 RE_DOC_HEADER = re.compile(r'^#! DOC\s+[0-9]+$')
 ATTR_NAMES = [
@@ -13,7 +13,7 @@ ATTR_NAMES = [
 ]
 
 
-def separate_information_from_excabocha(doc: list[str]) -> Tuple[list[str], list[str], list[str]]:
+def separate_information_from_excabocha(doc: list[str]) -> tuple[list[str], list[str], list[str]]:
     """ 拡張Cabochaの特定範囲から情報を抽出する
         参照： https://00m.in/z1jkb
         prefix, cont, suffix に分解する
@@ -41,7 +41,7 @@ def separate_information_from_excabocha(doc: list[str]) -> Tuple[list[str], list
 
 def iterate_document(
     lines: list[str], separate_info: bool=True, strip_end=True
-) -> Iterator[Tuple[Optional[list[str]], list[str], Optional[list[str]]]]:
+) -> Iterator[tuple[Optional[list[str]], list[str], Optional[list[str]]]]:
     """
         Create iterate per document
     Args:
@@ -85,7 +85,7 @@ def iterate_document(
 
 def iterate_sentence(
     lines: list[str], separate_info: bool=True
-) -> Iterator[Tuple[list[str], Optional[list[str]]]]:
+) -> Iterator[tuple[list[str], Optional[list[str]]]]:
     """
         iterate sentence
     """
@@ -125,10 +125,10 @@ def iterate_seg_and_link(lines: list[str]) -> Iterator[list[list[str]]]:
         iterate seg and link
     """
     if len(lines) == 0:
-        return []
+        return
     lineit = iter(lines)
-    tmp = [next(lineit)]
     try:
+        tmp = [next(lineit)]
         while True:
             line = next(lineit)
             if any(tmp[-1].startswith("#! " + name) for name in ATTR_NAMES):
@@ -142,3 +142,14 @@ def iterate_seg_and_link(lines: list[str]) -> Iterator[list[list[str]]]:
             tmp.append(line)
     except StopIteration:
         yield [t.split(" ") for t in tmp]
+
+
+def iterate_ud_sentence(lines: Union[list[str], Iterator[str]]) -> Iterator[list[str]]:
+    """ Iterator sentence list """
+    sent: list[str] = []
+    for line in lines:
+        if line == "":
+            yield sent
+            sent = []
+        else:
+            sent.append(line)

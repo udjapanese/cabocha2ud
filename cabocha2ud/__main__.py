@@ -11,7 +11,7 @@ from configargparse import ArgumentParser, Namespace
 from cabocha2ud.bd import BunsetsuDependencies
 from cabocha2ud.lib.logger import Logger
 from cabocha2ud.lib.yaml_dict import YamlDict
-from cabocha2ud.pipeline import RunnerPipeline, PIPE_FUNCS_NAMES
+from cabocha2ud.pipeline import PIPE_FUNCS_NAMES, RunnerPipeline
 from cabocha2ud.ud import UniversalDependencies
 
 

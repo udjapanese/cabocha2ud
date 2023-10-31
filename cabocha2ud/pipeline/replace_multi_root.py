@@ -10,11 +10,11 @@ from typing import cast
 
 from cabocha2ud.lib.dependency import get_caused_nonprojectivities
 from cabocha2ud.lib.logger import Logger
+from cabocha2ud.lib.yaml_dict import YamlDict
+from cabocha2ud.pipeline.component import UDPipeLine
 from cabocha2ud.ud import UniversalDependencies as UD
 from cabocha2ud.ud.sentence import Sentence
 from cabocha2ud.ud.util import DEPREL, HEAD, ID, UPOS, XPOS, Field
-from cabocha2ud.lib.yaml_dict import YamlDict
-from cabocha2ud.pipeline.component import UDPipeLine
 
 
 def fix_projectivity_rule_to_punct(data: list[list[str]]) -> list[list[str]]:
@@ -97,7 +97,8 @@ def __restore_rel(line: list[str]) -> None:
         line[DEPREL] = "discourse"
 
 
-def __detect_true_root(data: list[list[str]], numlst: list[int]) -> tuple[list[int], int]:
+def detect_true_root(data: list[list[str]], numlst: list[int]) -> tuple[list[int], int]:
+    """ ひとまずひとつの root を決める関数 """
     target_pos = 1
     true_root = numlst[len(numlst)-1]
     num_line = {int(line[0]): line for line in data}
@@ -113,7 +114,7 @@ def __detect_true_root(data: list[list[str]], numlst: list[int]) -> tuple[list[i
     return frmpos, true_root
 
 
-def __convert_to_single_root(data: list[list[str]]) -> list[list[str]]:
+def convert_to_single_root(data: list[list[str]]) -> list[list[str]]:
     """
         複数あるルートの中で基本のルートを決める
     """
@@ -124,7 +125,7 @@ def __convert_to_single_root(data: list[list[str]]) -> list[list[str]]:
             tree[dnum] = set()
         tree[dnum].add(pos)
     numlst = sorted(tree[0])
-    frmpos, true_root = __detect_true_root(data, numlst)
+    frmpos, true_root = detect_true_root(data, numlst)
     for line in data:
         num, dnum = int(line[ID]), int(line[HEAD])
         if num not in frmpos:
@@ -149,11 +150,14 @@ class ReplaceMultiRootComponent(UDPipeLine):
 
     def __init__(self, target: UD, opts: YamlDict) -> None:
         self.rep_multi_root_mode: str = ""
+        self.sp_marker: str = " "
         super().__init__(target, opts)
 
     def prepare(self) -> None:
         if self.opts.get("rep_multi_root_mode") is not None:
             self.rep_multi_root_mode = cast(str, self.opts.get("rep_multi_root_mode"))
+        if self.opts.get("sp_marker") is not None:
+            self.sp_marker = cast(str, self.opts.get("sp_marker"))
         assert self.rep_multi_root_mode in ["convert", "remove"]
 
     def __call__(self) -> None:
@@ -170,13 +174,13 @@ class ReplaceMultiRootComponent(UDPipeLine):
                     line.rstrip("\n").split("\t")
                     for line in ud_sent.get_str_list(mode="full")[len(header):]
                 ]
-                data = __convert_to_single_root(data)
+                data = convert_to_single_root(data)
                 # ここに非交差修正ルール
                 data = fix_projectivity_rule_to_punct(data)
                 # ここにpunct修正ルール
                 data = fix_leafpunct_rule_to_punct(data)
                 sent = header + ["\t".join(ll) for ll in data]
-                nsent = Sentence.load_from_list(sent)
+                nsent = Sentence.load_from_list(sent, spt=self.sp_marker)
                 self.target.update_sentence_of_index(pos, nsent)
         elif self.rep_multi_root_mode == "remove":
             rm_sent_lst: list[int] = []
@@ -209,6 +213,8 @@ def _main() -> None:
         init={"logger": Logger(debug=args.debug), "rep_multi_root_mode": args.mode}
     )
     _ud = UD(file_name=args.conll_file, options=options)
+    if options.get("sp_marker") is None:
+        options["sp_marker"] = _ud.get_sp()
     COMPONENT(_ud,  opts=options)()
     _ud.write_ud_file(args.writer)
 

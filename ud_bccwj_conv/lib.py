@@ -46,7 +46,7 @@ def separate_conll_sentence(conll_file: TextIO, expand_sp: bool=False) -> Iterab
         if expand_sp and not items[0].startswith("#"):
             yesno = [
                 s.split("=")[1] for s in items[MISC].split("|")
-                if s.split("=")[0] == "SpaceAfter"
+                if s.split("=")[0] == "SpacesAfter"
             ][0]
             if yesno == "Yes":
                 cstack.append(["　"] + ["_" for _ in range(COLCOUNT-1)])
@@ -103,7 +103,8 @@ def load_bccwj_core_file(
     """
     if load_pkl:
         with open(base_file_name + ".pkl", "rb") as rdr:
-            return pkl.load(rdr)
+            ldata: dict[str, list[list[dict[str, str]]]] = pkl.load(rdr)
+            return ldata
     assert unit in ["suw", "luw"]
     nbase_file_map: dict[str, list[dict[str, str]]] = {}
     base_file_map: dict[str, list[list[dict[str, str]]]] = {}
@@ -154,6 +155,8 @@ def is_spaceafter_yes(line: list[str]) -> bool:
         return False
     for ddd in line[MISC].split("|"):
         kkk, vvv = ddd.split("=")
-        if kkk == "SpaceAfter":
+        if kkk == "SpacesAfter":
             return vvv == "Yes"
-    raise ValueError
+        if kkk == "SpaceAfter":
+            return vvv != "No"
+    return True

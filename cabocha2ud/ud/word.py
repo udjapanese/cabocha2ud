@@ -56,7 +56,10 @@ class Misc(Content):
             self._load(content.split("|"))
 
     def __str__(self) -> str:
-        return str(self.content)
+        return self.get_content()
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.keys
 
     @staticmethod
     def split_data(content: str):
@@ -68,9 +71,13 @@ class Misc(Content):
         _content = sorted([Misc.split_data(c) for c in content])
         self.keys = [k for k, _ in _content]
         self.dcont = dict((k, v) for k, v in _content)
+        if "SpacesAfter" in self.dcont and self.dcont["SpacesAfter"] == "Yes":
+            if "SpaceAfter" in self.dcont and self.dcont["SpaceAfter"] == "No":
+                self.remove("SpaceAfter")
+                self.remove("SpacesAfter")
 
     def get_content_from_key(self, key: str) -> str:
-        """ get from key """
+        """ Get from key """
         if key in self.dcont:
             return self.dcont[key]
         return "_"
@@ -88,6 +95,15 @@ class Misc(Content):
             bisect.insort_left(self.keys, value)
         self.dcont[key] = value
         super().set_content("|".join(["{}={}".format(k, self.dcont[k]) for k in self.keys]))
+
+    def get_content(self) -> str:
+        """ get content """
+        if "SpaceAfter=No|SpacesAfter=Yes" in str(self.content):
+            self.remove("SpaceAfter")
+            self.remove("SpacesAfter")
+        if "SpacesAfter=Yes" in str(self.content):
+            self.remove("SpacesAfter")
+        return self.content
 
     def set_content(self, content: str) -> None:
         if content is not None:
@@ -137,7 +153,7 @@ class Word(list[Content]):
         """
         misc = cast(Misc, self.get(Field.MISC))
         res = misc.get_content_from_key("SpaceAfter")
-        return res != "No"
+        return res == "_"
 
     def set_by_str(self, content: str):
         """ alias to set by str to list """

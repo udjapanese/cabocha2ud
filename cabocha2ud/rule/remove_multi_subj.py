@@ -3,21 +3,99 @@
 """
 BCCWJ DepParaPAS remove multi subj
 """
-from typing import cast
 
-from ..bd.sentence import Sentence
-from ..bd.word import Word
+import argparse
+from dataclasses import dataclass
+from typing import TypedDict, cast
+
+import tomli
+
+from cabocha2ud.bd.sentence import Sentence
+from cabocha2ud.bd.word import Word
+
+REPLACE_NSUBJ_RULE_FILE = "conf/rule_nsubjcase_list.toml"
+
+class IsCase(TypedDict):
+    """ is case 
+    [[rule.condition.is_case]]
+    pos = 0
+    case = ["は"]
+    """
+    pos: int
+    case: list[str]
 
 
-def is_case(tok: Word, case_lst: list[str]) -> bool:
+class Condition(TypedDict):
+    """ condition 
+    [[rule.condition]]
+    size = 3
+    [[rule.condition.is_case]]
+    pos = 1
+    case = ["も"]
+    """
+    size: int
+    is_case: list[IsCase]
+
+
+class Eval(TypedDict):
+    """ eval 
+    [[rule.eval]]
+    pos = 2
+    dep = "obj"
+    """
+    pos: int
+    dep: str
+
+
+@dataclass
+class Rule:
+    """ rule """
+    condition: Condition
+    eval: list[Eval]
+
+    @classmethod
+    def to_obj(cls, dic: dict) -> "Rule":
+        """ rule """
+        rrs = cls(
+            condition=Condition(
+                size=dic["condition"]["size"],
+                is_case=[IsCase(pos=c["pos"], case=c["case"]) for c in dic["condition"]["is_case"]]
+            ),
+            eval=[Eval(pos=e["pos"], dep=e["dep"]) for e in dic["eval"]]
+        )
+        assert rrs.check_valid_rule()
+        return rrs
+
+    def check_valid_rule(self) -> bool:
+        """ check valid rule """
+        return all(isc["pos"] < self.condition["size"] for isc in self.condition["is_case"])
+
+    def adapt_rule(self, wrd: list[Word]) -> bool:
+        """ Wordにたいして結果を返す """
+        if len(wrd) != self.condition["size"]:
+            return False
+        if not all(is_case(wrd, isc["pos"], isc["case"]) for isc in self.condition["is_case"]):
+            return False
+        for evl in self.eval:
+            assert wrd[evl["pos"]].dep_label is not None
+            wrd[evl["pos"]].dep_label = evl["dep"] if evl["dep"] != ":outer"\
+                else cast(str, wrd[evl["pos"]].dep_label) + ":outer"
+        return True
+
+
+REP_NSUBJ_RULES: list[Rule] = []
+with open(REPLACE_NSUBJ_RULE_FILE, "r", encoding="utf-8") as rdr:
+    REP_NSUBJ_RULES = [Rule.to_obj(jdict) for jdict in tomli.loads(rdr.read())["rule"]]
+
+
+def is_case(toks: list[Word], tpos: int, case_lst: list[str]) -> bool:
     """ remove multi subject """
-    if len(tok.get_surface_case()) != len(case_lst):
+    if len(toks[tpos].get_surface_case()) != len(case_lst):
         return False
-    return all(case in tok.get_surface_case() for case in case_lst)
+    return all(case in toks[tpos].get_surface_case() for case in case_lst)
 
 
 def adapt_nsubj_to_dislocated_rule(sent: Sentence) -> None:
-    # pylint: disable=line-too-long
     """
         nsubj/csubjの中で指定のものをnsubj:outerに
     """
@@ -33,136 +111,34 @@ def adapt_nsubj_to_dislocated_rule(sent: Sentence) -> None:
     if len(parent_nsubj_pos) == 0:
         return
     for _, ctok_pos_lst in list(parent_nsubj_pos.items()):
-        ctok_pos_lst = sorted(ctok_pos_lst)
         toks: list[Word] = [cast(Word, sent.get_word_from_tokpos(ctok-1)) for ctok in ctok_pos_lst]
-        cases: list[list[str]] = [[c for c in ctok.get_surface_case()] for ctok in toks]
+        cases: list[list[str]] = [list(ctok.get_surface_case()) for ctok in toks]
         nctok_pos_lst: list[int] = []
-        if any([len(case) > 1 for case in cases]):
-            for pos, (tok, case) in enumerate(zip(toks, cases)):
-                if len(case) > 1:
-                    tok.dep_label = "obl"
-                else:
-                    nctok_pos_lst.append(ctok_pos_lst[pos])
-        else:
-            nctok_pos_lst = ctok_pos_lst[:]
+        for pos, (tok, case) in enumerate(zip(toks, cases)):
+            if len(case) > 1:
+                tok.dep_label = "obl"
+                continue
+            nctok_pos_lst.append(ctok_pos_lst[pos])
         ctok_pos_lst = sorted(nctok_pos_lst)
         toks = [cast(Word, sent.get_word_from_tokpos(ctok-1)) for ctok in ctok_pos_lst]
-        sent.logger.debug(sent.sent_id, " bbbbb ", ctok_pos_lst)
-        for ccc, case in enumerate([[c for c in ctok.get_surface_case()] for ctok in toks]):
-            sent.logger.debug("tok {} ->".format(ccc), "/".join([k for k in case]))
-        if len(ctok_pos_lst) == 2 and is_case(toks[0], ["は"]) and is_case(toks[1], ["が"]):
-            # 一つの語に nsubj の子が2つあって、1つめが「は」、2つめが「が」の場合：1つめを nsubj:outer に
-            toks[0].dep_label = str(toks[0].dep_label) + ":outer"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[1], ["も"]) and is_case(toks[2], ["も"]):
-            # 2つめが「も」、3つめが「も」
-            toks[1].dep_label = "obj"
-            toks[2].dep_label = "obj"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["も"]) and is_case(toks[1], ["は"]) and is_case(toks[2], ["も"]):
-            # 1つめ「も」、2つめ「は」、3つめ「も」
-            toks[0].dep_label = "obl"
-            toks[2].dep_label = "obl"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["も"]) and is_case(toks[1], ["も"]) and is_case(toks[2], ["が"]):
-            # 1つめが「も」、2つめが「も」、３つめが「が」の場合：3つめをnsubj、他をobl
-            toks[0].dep_label = "obl"
-            toks[1].dep_label = "obl"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["は"]) and is_case(toks[2], ["が"]):
-            # 1つめが「は」、3つめが「が」の場合：1つめを nsubj:outer に
-            toks[0].dep_label = str(toks[0].dep_label) + ":outer"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["など", "は"]) and is_case(toks[2], ["は"]):
-            # 1つめが「などは」、3つめが「が」の場合：1つめを nsubj:outer に
-            toks[0].dep_label = str(toks[0].dep_label) + ":outer"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["は"]) and is_case(toks[2], ["は"]):
-            # 1つめが「は」、3つめが「は」の場合：1つめを nsubj:outer に
-            toks[0].dep_label = str(toks[0].dep_label) + ":outer"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["は"]) and is_case(toks[1], ["は"]) and is_case(toks[2], ["の"]):
-            # 1つめが「は」、2つめが「は」、3つめ「の」の場合：1つめを nsubj:outer に
-            toks[2].dep_label = "nmod"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["の"]) and is_case(toks[1], ["は"]) and is_case(toks[2], ["の"]):
-            # 「の」「は」「の」
-            toks[0].dep_label = "nmod"
-            toks[1].dep_label = "nmod"
-            toks[2].dep_label = "nmod"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["が"]) and is_case(toks[2], ["が"]):
-            # 1つめが「が」、3つめが「が」の場合：1つめを nsubj:outer に
-            toks[0].dep_label = str(toks[0].dep_label) + ":outer"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["の"]) and is_case(toks[1], ["の"]) and is_case(toks[2], ["の"]):
-            toks[0].dep_label = "nmod"
-            toks[1].dep_label = "nmod"
-            toks[2].dep_label = "nmod"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[1], ["の"]) and is_case(toks[2], ["の"]):
-            toks[1].dep_label = "nmod"
-            toks[2].dep_label = "nmod"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["は"]) and is_case(toks[1], ["が"]) and is_case(toks[2], ["の"]):
-            toks[0].dep_label = str(toks[0].dep_label) + ":outer"
-            toks[2].dep_label = "nmod"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["の"]) and is_case(toks[1], ["が"]) and is_case(toks[2], ["の", "から"]):
-            # D068p_PB37_00050-50
-            toks[2].dep_label = "obl"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["も"]) and is_case(toks[1], ["が"]) and is_case(toks[2], ["が"]):
-            toks[0].dep_label = "obl"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["は"]) and is_case(toks[1], ["が"]) and is_case(toks[2], ["も"]):
-            # 1つめ「は」、2つめ「が」、3つめ「も」
-            toks[0].dep_label = str(toks[0].dep_label) + ":outer"
-            toks[2].dep_label = "obl"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["は"]) and is_case(toks[1], ["は"]) and is_case(toks[2], ["も"]):
-            toks[2].dep_label = "obl"
-            toks[0].dep_label = str(toks[0].dep_label) + ":outer"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["も"]) and is_case(toks[1], ["は"]) and is_case(toks[2], ["が"]):
-            toks[1].dep_label = str(toks[0].dep_label) + ":outer"
-            toks[0].dep_label = "obl"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["も"]) and is_case(toks[1], ["は"]) and is_case(toks[2], ["は"]):
-            toks[0].dep_label = str(toks[0].dep_label) + ":outer"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["も"]) and is_case(toks[1], ["も"]) and is_case(toks[2], ["は"]):
-            toks[0].dep_label = str(toks[0].dep_label) + ":outer"
-            toks[1].dep_label = str(toks[1].dep_label) + ":outer"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["は"]) and is_case(toks[1], ["も"]) and is_case(toks[2], ["は"]):
-            toks[0].dep_label = str(toks[0].dep_label) + ":outer"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[1], ["が"]) and is_case(toks[2], ["も"]):
-            toks[0].dep_label = str(toks[0].dep_label) + ":outer"
-            toks[2].dep_label = "obl"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[1], ["は"]) and is_case(toks[2], ["も"]):
-            toks[0].dep_label = str(toks[0].dep_label) + ":outer"
-            toks[2].dep_label = "obl"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["が"]) and is_case(toks[1], ["も"]):
-            toks[0].dep_label = str(toks[0].dep_label) + ":outer"
-            toks[1].dep_label = "obl"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["が"]) and is_case(toks[1], ["も"]):
-            toks[0].dep_label = str(toks[0].dep_label) + ":outer"
-            toks[1].dep_label = "obl"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["も"]) and is_case(toks[1], ["も"]) and is_case(toks[2], ["が"]):
-            toks[0].dep_label = "obj"
-            toks[1].dep_label = "obj"
-        elif len(ctok_pos_lst) == 3 and is_case(toks[0], ["が"]) and is_case(toks[1], ["は"]) and is_case(toks[2], ["は"]):
-            toks[0].dep_label = "obl"
-            toks[1].dep_label = str(toks[1].dep_label) + ":outer"
-        elif len(ctok_pos_lst) == 4 and is_case(toks[0], ["は"]) and is_case(toks[1], ["が"]) and is_case(toks[2], ["は"]) and is_case(toks[3], ["が"]):
-            toks[0].dep_label = str(toks[0].dep_label) +  ":outer"
-            toks[2].dep_label = str(toks[2].dep_label) + ":outer"
-        elif len(ctok_pos_lst) == 4 and is_case(toks[0], ["は"]) and is_case(toks[1], ["は"]) and is_case(toks[3], ["が"]):
-            toks[0].dep_label = str(toks[0].dep_label) + ":outer"
-            toks[1].dep_label = str(toks[1].dep_label) + ":outer"
-        elif len(ctok_pos_lst) == 4 and is_case(toks[0], ["が"]) and is_case(toks[1], ["は"]) and is_case(toks[2], ["も"]) and is_case(toks[3], ["が"]):
-            toks[2].dep_label = "obl"
-            toks[1].dep_label = str(toks[1].dep_label) + ":outer"
-        elif len(ctok_pos_lst) == 4 and is_case(toks[1], ["の"]) and is_case(toks[2], ["の"]) and is_case(toks[3], ["の"]):
-            toks[1].dep_label = "nmod"
-            toks[2].dep_label = "nmod"
-            toks[3].dep_label = "nmod"
-        elif len(ctok_pos_lst) == 4 and is_case(toks[1], ["も"]) and is_case(toks[3], ["も"]):
-            toks[2].dep_label = "obj"
-            toks[3].dep_label = "obj"
-        elif len(ctok_pos_lst) == 4 and is_case(toks[1], ["は"]) and is_case(toks[2], ["も"]) and is_case(toks[3], ["も"]):
-            toks[2].dep_label = "obl"
-            toks[3].dep_label = "obl"
-        elif len(ctok_pos_lst) == 4 and is_case(toks[0], ["が"]) and is_case(toks[1], ["も"]) and is_case(toks[2], ["も"]) and is_case(toks[3], ["が"]):
-            toks[0].dep_label = str(toks[0].dep_label) + ":outer"
-            toks[1].dep_label = "obj"
-            toks[2].dep_label = "obj"
-        elif len(ctok_pos_lst) == 4 and is_case(toks[1], ["も"]) and is_case(toks[2], ["も"]) and is_case(toks[3], ["が"]):
-            toks[1].dep_label = "obj"
-            toks[2].dep_label = "obj"
-        # toks確認
+        for rep_rule in REP_NSUBJ_RULES:
+            if rep_rule.adapt_rule(toks):
+                break
         npos_lst = [t for t in toks if t.dep_label in ["nsubj", "csubj"]]
-        if len(npos_lst) >= 2:
-            assert len(npos_lst) == 2
-            npos_lst[0].dep_label = str(npos_lst[0].dep_label) + ":outer"
+        if len(npos_lst) >= 2:  # toks確認
+            for tok in npos_lst[:-1]:
+                tok.dep_label = str(tok.dep_label) + ":outer"
+
+
+def _main() -> None:
+    """
+        main function
+    """
+    parser = argparse.ArgumentParser(description='')
+    _ = parser.parse_args()
+    for rule in REP_NSUBJ_RULES:
+        print(rule)
+
+
+if __name__ == '__main__':
+    _main()

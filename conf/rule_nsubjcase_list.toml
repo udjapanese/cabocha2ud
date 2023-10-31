@@ -1,0 +1,633 @@
+
+[[rule]]
+# 一つの語に nsubj の子が2つあって、1つめが「は」、2つめが「が」の場合：1つめを nsubj:outer に
+[rule.condition]
+size = 2
+[[rule.condition.is_case]]
+pos = 0
+case = ["は"]
+[[rule.condition.is_case]]
+pos = 1
+case = ["が"]
+[[rule.eval]]
+pos = 0
+dep = ":outer"
+
+[[rule]]
+# 2つめが「も」、3つめが「も」 なら 2つめ obj  3つめ obj
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 1
+case = ["も"]
+[[rule.condition.is_case]]
+pos = 2
+case = ["も"]
+[[rule.eval]]
+pos = 1
+dep = "obj"
+[[rule.eval]]
+pos = 2
+dep = "obj"
+
+[[rule]]
+# 1つめ「も」、2つめ「は」、3つめ「も」 1 obl  2 obl
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case = ["も"]
+[[rule.condition.is_case]]
+pos = 1
+case = ["は"]
+[[rule.condition.is_case]]
+pos = 2
+case = ["も"]
+[[rule.eval]]
+pos = 0
+dep = "obl"
+[[rule.eval]]
+pos = 2
+dep = "obl"
+
+
+[[rule]]
+# 1つめが「も」、2つめが「も」、３つめが「が」の場合：3つめをnsubj、他をobl
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case = ["も"]
+[[rule.condition.is_case]]
+pos = 1
+case = ["も"]
+[[rule.condition.is_case]]
+pos = 2
+case = ["が"]
+[[rule.eval]]
+pos = 0
+dep = "obl"
+[[rule.eval]]
+pos = 1
+dep = "obl"
+
+[[rule]]
+# 1つめが「は」、3つめが「が」の場合：1つめを nsubj:outer に
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case = ["は"]
+[[rule.condition.is_case]]
+pos = 2
+case = ["が"]
+[[rule.eval]]
+pos = 0
+dep = ":outer"
+
+[[rule]]
+# 1つめが「などは」、3つめが「が」の場合：1つめを nsubj:outer に
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case = ["など", "は"]
+[[rule.condition.is_case]]
+pos = 2
+case = ["は"]
+[[rule.eval]]
+pos = 0
+dep = ":outer"
+
+[[rule]]
+# 1つめが「は」、3つめが「は」の場合：1つめを nsubj:outer に
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case = ["は"]
+[[rule.condition.is_case]]
+pos = 2
+case = ["は"]
+[[rule.eval]]
+pos = 0
+dep = ":outer"
+
+[[rule]]
+# 1つめが「は」、2つめが「は」、3つめ「の」の場合：1つめを nmod に
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case = ["は"]
+[[rule.condition.is_case]]
+pos = 1
+case = ["は"]
+[[rule.condition.is_case]]
+pos = 2
+case = ["の"]
+[[rule.eval]]
+pos = 2
+dep = "nmod"
+
+[[rule]]
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case = ["の"]
+[[rule.condition.is_case]]
+pos = 1
+case = ["は"]
+[[rule.condition.is_case]]
+pos = 2
+case = ["の"]
+[[rule.eval]]
+pos = 0
+dep = "nmod"
+[[rule.eval]]
+pos = 1
+dep = "nmod"
+[[rule.eval]]
+pos = 2
+dep = "nmod"
+
+[[rule]]
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case =  ["が"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["が"]
+# 1つめが「が」、3つめが「が」の場合：1つめを nsubj:outer に
+[[rule.eval]]
+pos = 0
+dep = ":outer"
+
+[[rule]]
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case =  ["の"]
+[[rule.condition.is_case]]
+pos = 1
+case =  ["の"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["の"]
+[[rule.eval]]
+pos = 0
+dep = "nmod"
+[[rule.eval]]
+pos = 1
+dep = "nmod"
+[[rule.eval]]
+pos = 2
+dep = "nmod"
+
+[[rule]]
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 1
+case =  ["の"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["の"]
+[[rule.eval]]
+pos = 1
+dep = "nmod"
+[[rule.eval]]
+pos = 2
+dep = "nmod"
+
+[[rule]]
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case =  ["は"]
+[[rule.condition.is_case]]
+pos = 1
+case =  ["が"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["の"]
+[[rule.eval]]
+pos = 0
+dep = ":outer"
+[[rule.eval]]
+pos = 2
+dep = "nmod"
+
+[[rule]]
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case =  ["の"]
+[[rule.condition.is_case]]
+pos = 1
+case =  ["が"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["の", "から"]
+# D068p_PB37_00050-50
+[[rule.eval]]
+pos = 2
+dep = "obl"
+
+[[rule]]
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case =  ["も"]
+[[rule.condition.is_case]]
+pos = 1
+case =  ["が"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["が"]
+[[rule.eval]]
+pos = 0
+dep = "obl"
+
+[[rule]]
+[rule.condition]
+# 1つめ「は」、2つめ「が」、3つめ「も」
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case =  ["は"]
+[[rule.condition.is_case]]
+pos = 1
+case =  ["が"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["も"]
+[[rule.eval]]
+pos = 0
+dep = ":outer"
+[[rule.eval]]
+pos = 2
+dep = "obl"
+
+[[rule]]
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case =  ["は"]
+[[rule.condition.is_case]]
+pos = 1
+case =  ["は"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["も"]
+[[rule.eval]]
+pos = 2
+dep = "obl"
+[[rule.eval]]
+pos = 0
+dep = ":outer"
+
+[[rule]]
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case =  ["も"]
+[[rule.condition.is_case]]
+pos = 1
+case =  ["は"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["が"]
+[[rule.eval]]
+pos = 1
+dep = ":outer"
+[[rule.eval]]
+pos = 0
+dep = "obl"
+
+[[rule]]
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case =  ["も"]
+[[rule.condition.is_case]]
+pos = 1
+case =  ["は"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["は"]
+[[rule.eval]]
+pos = 0
+dep = ":outer"
+
+[[rule]]
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case =  ["も"]
+[[rule.condition.is_case]]
+pos = 1
+case =  ["も"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["は"]
+[[rule.eval]]
+pos = 0
+dep = ":outer"
+[[rule.eval]]
+pos = 1
+dep = ":outer"
+
+[[rule]]
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case =  ["は"]
+[[rule.condition.is_case]]
+pos = 1
+case =  ["も"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["は"]
+[[rule.eval]]
+pos = 0
+dep = ":outer"
+
+[[rule]]
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 1
+case =  ["が"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["も"]
+[[rule.eval]]
+pos = 0
+dep = ":outer"
+[[rule.eval]]
+pos = 2
+dep = "obl"
+
+[[rule]]
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 1
+case =  ["は"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["も"]
+[[rule.eval]]
+pos = 0
+dep = ":outer"
+[[rule.eval]]
+pos = 2
+dep = "obl"
+
+[[rule]]
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case =  ["が"]
+[[rule.condition.is_case]]
+pos = 1
+case =  ["も"]
+[[rule.eval]]
+pos = 0
+dep = ":outer"
+[[rule.eval]]
+pos = 1
+dep = "obl"
+
+[[rule]]
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case =  ["が"]
+[[rule.condition.is_case]]
+pos = 1
+case =  ["も"]
+[[rule.eval]]
+pos = 0
+dep = ":outer"
+[[rule.eval]]
+pos = 1
+dep = "obl"
+
+[[rule]]
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case =  ["も"]
+[[rule.condition.is_case]]
+pos = 1
+case =  ["も"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["が"]
+[[rule.eval]]
+pos = 0
+dep = "obj"
+[[rule.eval]]
+pos = 1
+dep = "obj"
+
+[[rule]]
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case =  ["が"]
+[[rule.condition.is_case]]
+pos = 1
+case =  ["は"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["は"]
+[[rule.eval]]
+pos = 0
+dep = "obl"
+[[rule.eval]]
+pos = 1
+dep = ":outer"
+
+[[rule]]
+[rule.condition]
+size = 4
+[[rule.condition.is_case]]
+pos = 0
+case =  ["は"]
+[[rule.condition.is_case]]
+pos = 1
+case =  ["が"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["は"]
+[[rule.condition.is_case]]
+pos = 3
+case =  ["が"]
+[[rule.eval]]
+pos = 0
+dep = ":outer"
+[[rule.eval]]
+pos = 2
+dep = ":outer"
+
+[[rule]]
+[rule.condition]
+size = 4
+[[rule.condition.is_case]]
+pos = 0
+case =  ["は"]
+[[rule.condition.is_case]]
+pos = 1
+case =  ["は"]
+[[rule.condition.is_case]]
+pos = 3
+case =  ["が"]
+[[rule.eval]]
+pos = 0
+dep = ":outer"
+[[rule.eval]]
+pos = 1
+dep = ":outer"
+
+[[rule]]
+[rule.condition]
+size = 4
+[[rule.condition.is_case]]
+pos = 0
+case =  ["が"]
+[[rule.condition.is_case]]
+pos = 1
+case =  ["は"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["も"]
+[[rule.condition.is_case]]
+pos = 3
+case =  ["が"]
+[[rule.eval]]
+pos = 2
+dep = "obl"
+[[rule.eval]]
+pos = 1
+dep = ":outer"
+
+[[rule]]
+[rule.condition]
+size = 4
+[[rule.condition.is_case]]
+pos = 1
+case =  ["の"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["の"]
+[[rule.condition.is_case]]
+pos = 3
+case =  ["の"]
+[[rule.eval]]
+pos = 1
+dep = "nmod"
+[[rule.eval]]
+pos = 2
+dep = "nmod"
+[[rule.eval]]
+pos = 3
+dep = "nmod"
+
+[[rule]]
+[rule.condition]
+size = 4
+[[rule.condition.is_case]]
+pos = 1
+case =  ["も"]
+[[rule.condition.is_case]]
+pos = 3
+case =  ["も"]
+[[rule.eval]]
+pos = 2
+dep = "obj"
+[[rule.eval]]
+pos = 3
+dep = "obj"
+
+[[rule]]
+[rule.condition]
+size = 4
+[[rule.condition.is_case]]
+pos = 1
+case =  ["は"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["も"]
+[[rule.condition.is_case]]
+pos = 3
+case =  ["も"]
+[[rule.eval]]
+pos = 2
+dep = "obl"
+[[rule.eval]]
+pos = 3
+dep = "obl"
+
+[[rule]]
+[rule.condition]
+size = 4
+[[rule.condition.is_case]]
+pos = 0
+case =  ["が"]
+[[rule.condition.is_case]]
+pos = 1
+case =  ["も"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["も"]
+[[rule.condition.is_case]]
+pos = 3
+case =  ["が"]
+[[rule.eval]]
+pos = 0
+dep = ":outer"
+[[rule.eval]]
+pos = 1
+dep = "obj"
+[[rule.eval]]
+pos = 2
+dep = "obj"
+
+[[rule]]
+[rule.condition]
+size = 4
+[[rule.condition.is_case]]
+pos = 1
+case =  ["も"]
+[[rule.condition.is_case]]
+pos = 2
+case =  ["も"]
+[[rule.condition.is_case]]
+pos = 3
+case =  ["が"]
+[[rule.eval]]
+pos = 1
+dep = "obj"
+[[rule.eval]]
+pos = 2
+dep = "obj"
+

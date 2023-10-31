@@ -8,10 +8,9 @@ import functools
 from collections.abc import Callable
 from typing import Generator, NamedTuple, Optional, TypedDict, Union, cast
 
+from cabocha2ud.bd.word import Word
 from cabocha2ud.lib.yaml_dict import YamlDict
-
-from ..bd.word import Word
-from . import dep_rule_func
+from cabocha2ud.rule import dep_rule_func
 
 
 class Rule(NamedTuple):
@@ -19,16 +18,19 @@ class Rule(NamedTuple):
     func_name: str
     elem_arg: Union[int, str, list, set]
 
+
 class SubRule(NamedTuple):
     """ Sub rule """
     ifunc: functools.partial[bool]
     iargs: Callable[[Optional[Word]], Union[None, list[Word]]]
     str_func: str
 
+
 class RuleInst(TypedDict):
     """ Rule Instance """
     res: str
     rule: list[Rule]
+
 
 class RuleBase(TypedDict):
     """ Rule base component """

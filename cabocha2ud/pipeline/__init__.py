@@ -4,22 +4,26 @@
 Pipeline base function
 """
 
+import argparse
+import importlib
+import pathlib
+import re
 from typing import Optional, Type
 
 from cabocha2ud.bd import BunsetsuDependencies as BD
 from cabocha2ud.lib.logger import Logger
 from cabocha2ud.lib.yaml_dict import YamlDict
-from cabocha2ud.pipeline import (build_luw, convert_paren,
-                                 merge_number, merge_sp_to_cabocha, patch_fix,
-                                 replace_multi_root)
 from cabocha2ud.pipeline.component import PipeLineComponent
 from cabocha2ud.rule import dep, pos
-from cabocha2ud.ud import UniversalDependencies as UD
+from cabocha2ud.ud import fit, UniversalDependencies as UD
 
+MODULE_FILES = importlib.import_module("cabocha2ud.pipeline").__file__
+assert MODULE_FILES is not None
 PIPE_FUNCS: list[Type[PipeLineComponent]] = [
-    merge_number.COMPONENT, merge_sp_to_cabocha.COMPONENT, build_luw.COMPONENT,
-    replace_multi_root.COMPONENT, convert_paren.COMPONENT,
-    patch_fix.COMPONENT
+    p.COMPONENT for p in [
+        importlib.import_module(f'cabocha2ud.pipeline.{p.name.replace(".py", "")}')
+        for p in pathlib.Path(MODULE_FILES).parent.glob("*.py") if re.match("^[^_].*.py$", p.name)
+    ] if 'COMPONENT' in p.__dict__
 ]
 PIPE_FUNCS_NAMES = [f.name for f in PIPE_FUNCS]
 PIPE_FUNC_MAPS: dict[str, Type[PipeLineComponent]] = dict(zip(PIPE_FUNCS_NAMES, PIPE_FUNCS))
@@ -82,6 +86,17 @@ class RunnerPipeline:
         """ パイプラインを実行する """
         for pre in self.components["pre"]:
             pre()
-        self._ud.fit(self._bd, self.pos_rule, self.dep_rule)
+        fit(self._ud, self._bd, self.pos_rule, self.dep_rule)
         for post in self.components["post"]:
             post()
+
+
+def _main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--debug", action="store_true")
+    _ = parser.parse_args()
+    print(PIPE_FUNC_MAPS)
+
+
+if __name__ == '__main__':
+    _main()

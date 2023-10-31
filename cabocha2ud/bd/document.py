@@ -9,18 +9,20 @@ import re
 import xml.etree.ElementTree as ET
 from typing import TYPE_CHECKING, Optional, cast
 
-from ..lib.iterate_function import iterate_seg_and_link, iterate_sentence
-from ..lib.logger import Logger
-from ..rule.bunsetu_rule import detect_bunsetu_jp_type
+from cabocha2ud.lib.iterate_function import (iterate_seg_and_link,
+                                             iterate_sentence)
+from cabocha2ud.lib.logger import Logger
+from cabocha2ud.rule.bunsetu_rule import detect_bunsetu_jp_type
 
 if TYPE_CHECKING:
     from .word import Word
 
-from ..rule.bunsetu_rule import detect_dep_bunsetu
-from ..rule.dep import SubRule, detect_ud_label
-from ..rule.pos import detect_ud_pos
-from ..rule.remove_multi_subj import adapt_nsubj_to_dislocated_rule
-from ..rule.remove_space import skip_jsp_token_from_sentence
+from cabocha2ud.rule.bunsetu_rule import detect_dep_bunsetu
+from cabocha2ud.rule.dep import SubRule, detect_ud_label
+from cabocha2ud.rule.pos import detect_ud_pos
+from cabocha2ud.rule.remove_multi_subj import adapt_nsubj_to_dislocated_rule
+from cabocha2ud.rule.remove_space import skip_jsp_token_from_sentence
+
 from .annotation import (AnnotationList, DocAnnotation, generate_docannotation,
                          get_annotation_object)
 from .sentence import Sentence
@@ -29,7 +31,7 @@ from .word import Word
 RE_SAHEN_MATCH = re.compile("^名詞.*サ変.*")
 
 
-def __replace_pos_and_label(sent: "Sentence"):
+def __replace_pos_and_label(sent: "Sentence") -> None:
     """
     後処理のPOSとDEPRELの置換
 
@@ -43,9 +45,9 @@ def __replace_pos_and_label(sent: "Sentence"):
         if len(wrd.en_pos) > 0:
             if wrd.en_pos[0] == "AUX" and wrd.dep_label == "compound":
                 wrd.dep_label = "aux"
-            if wrd.en_pos[0] == "AUX" and wrd.dep_label == "cc":
+            elif wrd.en_pos[0] == "AUX" and wrd.dep_label == "cc":
                 wrd.en_pos[0] = "CCONJ"
-            if wrd.en_pos[0] == "NOUN" and wrd.get_luw_pos() == "助動詞":
+            elif wrd.en_pos[0] == "NOUN" and wrd.get_luw_pos() == "助動詞":
                 wrd.en_pos[0] = "AUX"
         parent = wrd.get_parent_word()
         if parent is None:
@@ -126,7 +128,7 @@ class Document(list["Sentence"]):
         if skip_space:
             skip_jsp_token_from_sentence(self)
         # UD確定の後処理
-        post_proceeing_function(self)
+        post_proceeing_function(self, dep_rule)
         return [
             sent.convert() + sep for sent in self.sentences()
         ]
@@ -191,7 +193,10 @@ class Document(list["Sentence"]):
             sent.set_sent_id()
             for wrd in sent.words():
                 if wrd.has_space_after():
-                    wrd.ud_misc["SpaceAfter"] = "Yes"
+                    wrd.ud_misc["SpacesAfter"] = "Yes"
+                    if "SpaceAfter" in wrd.ud_misc["SpaceAfter"]:
+                        assert wrd.ud_misc["SpaceAfter"] == "No"
+                        del wrd.ud_misc["SpaceAfter"]
 
     def detect_ud_dependencies(self):
         """ Detect UD label """
@@ -229,11 +234,55 @@ def get_doc_id(doc: Document) -> str:
     return os.path.splitext(os.path.basename(doc.base_file_name))[0].split(".")[0]
 
 
-def post_proceeing_function(doc: Document) -> None:
+def __replace_allfix_deps(sent: Sentence, dep_rule: list[tuple[list[SubRule], str]]) -> None:
+    for bunsetu in sent:
+        if not all(wrd.dep_label == "fixed" for wrd in bunsetu):
+            continue
+        if len(bunsetu) == 1:
+            # reparandum
+            bunsetu[0].dep_label = "reparandum"
+            continue
+        target_pos = bunsetu[0].token_pos
+        for wrd_pos, wrd in enumerate(bunsetu):
+            if wrd_pos == 0:
+                continue
+            wrd.dep_num = target_pos
+        if bunsetu[0].en_pos[0] == "AUX":
+            bunsetu[0].dep_label = "aux"
+        else:
+            detect_ud_label(bunsetu[0], dep_rule)
+
+
+def __replace_allcase_deps(sent: Sentence) -> None:
+    for wrd in sent.words():
+        if wrd.dep_label in ["fixed", "punct"] or wrd.dep_num == 0:
+            continue
+        assert wrd.dep_num is not None
+        twrd = sent.words()[wrd.dep_num-1]
+        if twrd.dep_label in ["cc", "aux"]:
+            wrd.dep_num = twrd.dep_num
+
+
+def __replace_iiyodomi(sent: Sentence) -> None:
+    print(sent)
+
+
+def __replace_fixed_gap(sent: Sentence) -> None:
+    """
+        条件として上の語も同じかかり先であることが条件
+    """
+    print(sent)
+
+
+def post_proceeing_function(doc: Document, dep_rule: list[tuple[list[SubRule], str]]) -> None:
     """
         hook function
     """
     for sent in doc.sentences():
-        # swap_dep_without_child_from_sent(sent)
         adapt_nsubj_to_dislocated_rule(sent)
         __replace_pos_and_label(sent)
+        # 言い淀み
+        # __replace_iiyodomi(sent)
+        # fixed
+        __replace_allfix_deps(sent, dep_rule)
+        __replace_allcase_deps(sent)

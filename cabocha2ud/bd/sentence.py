@@ -220,9 +220,7 @@ class Sentence(list["Bunsetu"]):
                     continue
                 nonprojectives[bunsetu.bunsetu_pos] = res
         if len(nonprojectives) > 0:
-            raise KeyError("has non-projective bunsetu: {}".format(
-                nonprojectives
-            ))
+            raise KeyError(f"has non-projective bunsetu: {self.sent_id} {nonprojectives}")
         return True
 
     def update_word_pos(self) -> None:

@@ -11,7 +11,7 @@ from typing import Optional, Union
 from cabocha2ud.lib.list_based_key import ListBasedKey
 from cabocha2ud.lib.logger import Logger
 from cabocha2ud.ud.util import Field
-from cabocha2ud.ud.word import Content, Word
+from cabocha2ud.ud.word import Content, Misc, Word
 
 
 class Header:
@@ -65,12 +65,15 @@ class Sentence(list[Word]):
         content: Optional[List[str]]: setence text list
     """
 
-    def __init__(self, content: Optional[list[str]]=None, logger: Optional[Logger]=None):
+    def __init__(
+        self, content: Optional[list[str]]=None, spt: str=" ",
+        logger: Optional[Logger]=None
+    ):
         super().__init__()
         self.logger: Logger = logger or Logger()
         self.headers: ListBasedKey[Header] = ListBasedKey()
         self.sentence_text: str = ""
-        self._sp: str = " "
+        self._sp: Optional[str] = spt
         if content is not None:
             self.load(content)
 
@@ -84,6 +87,7 @@ class Sentence(list[Word]):
 
     def update_sentence(self) -> None:
         """ update sentence text """
+        assert self._sp is not None
         self.sentence_text = "".join([
             wrd.get(Field.FORM).get_content() + (
                 self._sp if wrd.is_spaceafter() else ""
@@ -162,12 +166,30 @@ class Sentence(list[Word]):
             self.append(Word(content=cont.split("\t")))
         self.update_sentence()
 
-    @staticmethod
-    def load_from_string(sent_str: str) -> Sentence:
-        """ load Sentence object from string """
-        return Sentence(content=sent_str.rstrip("\n").split("\n"))
+    def get_bunsetsu_list(self) -> list[list[Word]]:
+        """
+            get splited list by bunsetsu
+        """
+        nlist: list[list[Word]] = []
+        for word in self.words():
+            misc_info = word[Field.MISC]
+            assert isinstance(misc_info, Misc)
+            if misc_info.get_content_from_key("BunsetuBILabel") == "B":
+                nlist.append([])
+            nlist[-1].append(word)
+        return nlist
 
     @staticmethod
-    def load_from_list(sent_lst: list[str], logger: Optional[Logger]=None) -> Sentence:
+    def load_from_string(sent_str: str, spt: str=" ") -> Sentence:
+        """ load Sentence object from string """
+        return Sentence(
+            content=sent_str.rstrip("\n").split("\n"),
+            spt=spt
+        )
+
+    @staticmethod
+    def load_from_list(
+        sent_lst: list[str], spt: str=" ", logger: Optional[Logger]=None
+    ) -> Sentence:
         """ load Sentence object from string list """
-        return Sentence(content=sent_lst, logger=logger)
+        return Sentence(content=sent_lst, spt=spt, logger=logger)

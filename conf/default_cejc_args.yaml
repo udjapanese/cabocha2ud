@@ -1,4 +1,4 @@
 skip-space: True
 space-marker: hankaku
-pipeline: merge_number,replace_multi_root
+pipeline: merge_number,change_bunsetu_root,fix_stutters
 rep-multi-root-mode: convert

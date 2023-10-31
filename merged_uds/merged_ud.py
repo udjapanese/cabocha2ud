@@ -4,21 +4,25 @@
 Library for merged some Japanese UDs (SUW, LUW, IBM)
 """
 
-from typing import Iterator, NamedTuple, Union, Optional
 from dataclasses import dataclass
+from typing import Iterator, NamedTuple, Optional, Union
 
-
-COLUMN: list[str] = ["ID", "FORM", "LEMMA", "UPOS", "XPOS", "FEATS", "HEAD", "DEPREL", "DEPS", "MISC"]
+COLUMN: list[str] = [
+    "ID", "FORM", "LEMMA", "UPOS", "XPOS", "FEATS", "HEAD", "DEPREL", "DEPS", "MISC"
+]
 ID, FORM, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC = range(len(COLUMN))
 
 
 class Range(NamedTuple):
+    """ Range class """
     start: int
     end: int
 
 
 @dataclass
 class Token:
+    """ Token class """
+    # pylint: disable=invalid-name
     ID: str
     FORM: str
     LEMMA: str
@@ -37,28 +41,32 @@ class Token:
     def __str__(self) -> str:
         return "\t".join([self[c] for c in COLUMN])
 
-    def __getitem__(self, x: Union[str, int]):
-      if isinstance(x, int):
-        x = COLUMN[x]
-      return getattr(self, x)
+    def __getitem__(self, xxx: Union[str, int]):
+        if isinstance(xxx, int):
+            xxx = COLUMN[xxx]
+        return getattr(self, xxx)
 
-    def __setitem__(self, x: str, y: Union[str, int]):
-      if isinstance(x, int):
-        x = COLUMN[x]
-      setattr(self, x, y)
+    def __setitem__(self, xxx: str, yyy: Union[str, int]):
+        if isinstance(xxx, int):
+            xxx = COLUMN[xxx]
+        setattr(self, xxx, yyy)
 
     def get_misc(self) -> dict[str, str]:
+        """ get misc """
         _misc = self[MISC]
         return dict([m.split("=") for m in _misc.split("|")])
 
     def get_char_range(self):
+        """ char range """
         return self._char_pos
 
     def has_range(self, rng: Range):
+        """ has range """
         return self._char_pos.start <= rng.start and rng.end <= self._char_pos.end
 
 
 class Sentence:
+    """ Sentence object """
     def __init__(self, attrs: dict[str, str], attrs_label: list[str], sents: list[Token]) -> None:
         self.attrs: dict[str, str] = attrs
         self.attrs_label: list[str] = attrs_label
@@ -76,6 +84,7 @@ class Sentence:
         return self.sent[item]
 
     def to_conllu(self) -> str:
+        """ to conllu """
         conllu_s: list[str] = []
         for label in self.attrs_label:
             conllu_s.append("# {} = {}".format(label, self.attrs[label]))
@@ -84,9 +93,11 @@ class Sentence:
         return "\n".join(conllu_s) + "\n"
 
     def has_token(self, tok1: Token, tok2: Token):
+        """ has token """
         return tok1.has_range(tok2.get_char_range())
 
     def get_token(self, indx: Union[int, str]) -> Token:
+        """ get token """
         if isinstance(indx, str):
             indx = int(indx)
         if indx == 0:
@@ -98,33 +109,38 @@ class Sentence:
         return self.sent[indx-1]
 
     def get_tokens_from_range(self, rng: Range) -> list[Token]:
-        return [token for token in self][rng.start:rng.end]
+        """ get tokens from range """
+        return list(self)[rng.start:rng.end]
 
     def get_sentid(self) -> str:
+        """" get sent_id """
         assert "sent_id" in self.attrs
         return self.attrs["sent_id"]
 
     def detect_senttype(self) -> str:
+        """ detect senttype """
         assert "sent_id" in self.attrs
         if "_" in self.attrs["sent_id"]:
             return "bccwj"
-        else:
-            return "gsd"
+        return "gsd"
 
     def get_text(self, remove_sp: bool=False) -> str:
+        """ get text """
         assert "text" in self.attrs
         if remove_sp:
-            sp = {"bccwj": "　", "gsd": " "}[self.detect_senttype()]
-            return self.attrs["text"].replace(sp, "")
+            ssp = {"bccwj": "　", "gsd": " "}[self.detect_senttype()]
+            return self.attrs["text"].replace(ssp, "")
         return self.attrs["text"]
 
 
 class MatchedSentence(NamedTuple):
+    """ Matched Sentence object """
     sent1: Sentence
     sent2: Sentence
     tok_range_pair: list[tuple[Range, Range]]
 
     def get_senttype(self):
+        """ get sent type """
         return self.sent1.detect_senttype()
 
     def iter_merged_token(self) -> Iterator[tuple[list[Token], list[Token]]]:
@@ -134,15 +150,20 @@ class MatchedSentence(NamedTuple):
             Iterator[tuple[list[Token], Token]]: _description_
         """
         for tok1_range, tok2_range in self.tok_range_pair:
-            yield self.sent1.get_tokens_from_range(tok1_range), self.sent2.get_tokens_from_range(tok2_range)
+            yield self.sent1.get_tokens_from_range(tok1_range),\
+                self.sent2.get_tokens_from_range(tok2_range)
 
 
-def merge_sentence(sent1: Sentence, sent2: Sentence, skip: bool=False) -> Optional[list[tuple[Range, Range]]]:
+def merge_sentence(
+    sent1: Sentence, sent2: Sentence, skip: bool=False
+) -> Optional[list[tuple[Range, Range]]]:
+    """ merge sentence """
     if sent1.get_text(remove_sp=True) != sent2.get_text(remove_sp=True):
         if not skip:
-            assert sent1.get_text(remove_sp=True) == sent2.get_text(remove_sp=True), "{} != {}".format(
-                sent1.get_text(remove_sp=True), sent2.get_text(remove_sp=True)
-            )
+            assert sent1.get_text(remove_sp=True) == sent2.get_text(remove_sp=True),\
+                "{} != {}".format(
+                    sent1.get_text(remove_sp=True), sent2.get_text(remove_sp=True)
+                )
         else:
             return None
     def get_substr(sent: Sentence, spos: int, epos: int) -> str:
@@ -169,14 +190,16 @@ def merge_sentence(sent1: Sentence, sent2: Sentence, skip: bool=False) -> Option
                 else:
                     assert ValueError("{} or {} ?".format(csent, dsent))
             if cpos >= len(sent1) or dpos >= len(sent2):
-                assert get_substr(sent1, apos, len(sent1)) == get_substr(sent2, bpos, len(sent2)), (get_substr(sent1, apos, len(sent1)), get_substr(sent2, bpos, len(sent2)))
+                assert get_substr(sent1, apos, len(sent1)) == get_substr(sent2, bpos, len(sent2)),\
+                    (get_substr(sent1, apos, len(sent1)), get_substr(sent2, bpos, len(sent2)))
                 match_pair.append((Range(apos, len(sent1)), Range(bpos, len(sent2))))
                 break
-            else:
-                assert get_substr(sent1, apos, cpos) == get_substr(sent2, bpos, dpos), (apos, cpos, bpos, dpos, get_substr(sent1, apos, cpos), get_substr(sent2, bpos, dpos))
-                match_pair.append((Range(apos, cpos), Range(bpos, dpos)))
-                apos = cpos
-                bpos = dpos
+            assert get_substr(sent1, apos, cpos) == get_substr(sent2, bpos, dpos),\
+                (apos, cpos, bpos, dpos,
+                    get_substr(sent1, apos, cpos), get_substr(sent2, bpos, dpos))
+            match_pair.append((Range(apos, cpos), Range(bpos, dpos)))
+            apos = cpos
+            bpos = dpos
     return match_pair
 
 
@@ -188,7 +211,7 @@ def separate_sentence(conll_file: str) -> Iterator[Sentence]:
     attrs: dict[str, str] = {}
     attrs_label: list[str] = []
     start, end = 0, 0
-    with open(conll_file, "r") as rdr:
+    with open(conll_file, "r", encoding="utf-8") as rdr:
         for line in rdr:
             line  = line.rstrip("\n")
             if line == "":
@@ -196,20 +219,21 @@ def separate_sentence(conll_file: str) -> Iterator[Sentence]:
                 attrs, stack, attrs_label = {}, [], []
                 continue
             if line.startswith("# "):
-                k = line.replace("# ", "").split("=")[0]
-                v = "=".join(line.replace("# ", "").split("=")[1:])
-                attrs[k.strip(" ")] = v.strip(" ").strip("　")
-                attrs_label.append(k.strip(" "))
+                kkk = line.replace("# ", "").split("=")[0]
+                vvv = "=".join(line.replace("# ", "").split("=")[1:])
+                attrs[kkk.strip(" ")] = vvv.strip(" ").strip("　")
+                attrs_label.append(kkk.strip(" "))
             else:
                 line_data: dict[str, str] = dict(zip(COLUMN, line.split("\t")))
                 end += len(line_data["FORM"])
-                if "SpaceAfter=Yes" in line_data["MISC"]:
+                if "SpacesAfter=Yes" in line_data["MISC"]:
                     end += 1
                 stack.append(Token(_char_pos=Range(start, end), **line_data))
                 start = end
 
 
 def get_matched_sentence(ud1_file: str, ud2_file: str) -> list[MatchedSentence]:
+    """ get matched sentence """
     ud1_sents, ud2_sents = list(separate_sentence(ud1_file)), list(separate_sentence(ud2_file))
     matched_sent_data: list[MatchedSentence] = []
     assert len(ud1_sents) == len(ud2_sents)

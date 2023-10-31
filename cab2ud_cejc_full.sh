@@ -47,8 +47,8 @@ if [ ! -d ${WORK_DIR}_mr ]; then
 fi
 
 ls $BASE_CABOCHA_DIR/*.cabocha | \
-  WORK_DIR=$WORK_DIR parallel 'pipenv run python cabocha2ud {} -w "$WORK_DIR"_mr/SUW/{/.}.mr.conllu -c conf/default_cejc_args.yaml -p merge_number'
+  WORK_DIR=$WORK_DIR parallel 'pipenv run python cabocha2ud {} -w "$WORK_DIR"_mr/SUW/{/.}.mr.conllu -c conf/default_cejc_args.yaml -p merge_number,fix_stutters'
 ls $BASE_CABOCHA_DIR/*.cabocha | \
-  WORK_DIR=$WORK_DIR parallel 'pipenv run python cabocha2ud {} -w "$WORK_DIR"_mr/LUW/{/.}.mr.conllu -c conf/luw_cejc_args.yaml -p build_luw'
+  WORK_DIR=$WORK_DIR parallel 'pipenv run python cabocha2ud {} -w "$WORK_DIR"_mr/LUW/{/.}.mr.conllu -c conf/luw_cejc_args.yaml -p build_luw,fix_stutters'
 pipenv run python ud_cejc_scirpt/split_train_cejc.py "$WORK_DIR"_mr --col-suffix="-dialog.mr.conllu" -i ud_cejc_scirpt/core_sp_info.tsv
 

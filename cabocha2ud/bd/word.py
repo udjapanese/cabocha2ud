@@ -695,7 +695,11 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
             self.ud_misc["LUWBILabel"] = self.luw_label
             self.ud_misc["LUWPOS"] = self.get_luw_pos()
         if self.has_space_after():
-            self.ud_misc["SpaceAfter"] = "Yes"
+            self.ud_misc["SpacesAfter"] = "Yes"
+            if "SpaceAfter" in self.ud_misc:
+                assert self.ud_misc["SpaceAfter"] == "No"
+                del self.ud_misc["SpaceAfter"]
+                # SpaceAfter=Noを取り除く
             # comment: BCCWJなどのYesを上書きする可能性があるのでNoにはしないこと
         if add_unidic_info:
             if self.get_origin() != self.get_origin(do_conv29=True):

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=unused-argument
 
 """
 BCCWJ DepParaPAS rule function

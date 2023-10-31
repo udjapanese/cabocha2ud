@@ -8,36 +8,39 @@ Convert CONLL file to blank data.
 
 import argparse
 import pickle as pkl
-from typing import Iterable, TextIO, TypedDict, Optional
-from lib import (
-    separate_document, load_bccwj_core_file, is_spaceafter_yes,
-    ID, FORM, LEMMA, XPOS, MISC
-)
+from typing import Iterable, Optional, TextIO, TypedDict
+
+from lib import (FORM, ID, LEMMA, MISC, XPOS, is_spaceafter_yes,
+                 load_bccwj_core_file, separate_document)
 
 
-class Misc_map_data(TypedDict):
+class MiscMapData(TypedDict):
+    """ Misc Map Data """
     cont_bl_to_org: dict[str, dict]
     cont_org_to_bl: dict[str, dict]
     label_bl_to_org: dict[str, str]
     label_org_to_bl: dict[str, str]
 
 
-def _convert_misc(conll: list[str], misc_data: Misc_map_data) -> list[str]:
+def _convert_misc(conll: list[str], misc_data: MiscMapData) -> list[str]:
     """
         convert MISC Filed
     """
     nfes: list[str] = []
     for item in conll[MISC].split("|"):
         key, value = item.split("=")
+        if key == "SpacesAfter" and value == "Yes":
+            continue
         if key in ["BunsetuPositionType", "LUWPOS", "UnidicInfo"]:
             value = misc_data["cont_org_to_bl"][key][value]
-        if key in ["BunsetuPositionType", "LUWPOS", "BunsetuBILabel", "LUWBILabel", "UnidicInfo", "PrevUDLemma"]:
+        if key in ["BunsetuPositionType", "LUWPOS", "BunsetuBILabel",
+                    "LUWBILabel", "UnidicInfo", "PrevUDLemma"]:
             key = misc_data["label_org_to_bl"][key]
         nfes.append(key + "=" + str(value))
     return nfes
 
 
-def _extract_num_info(bpos: int, bcc: list[dict[str, str]], cll: list[str]):
+def _extract_num_info(bpos: int, bcc: list[dict[str, str]], cll: list[str]) -> list:
     bccwj_info: list = [bpos, False, [0]]
     if [b["品詞"] for b in bcc][0] == "名詞-数詞" and len(bcc) > 1:
         bccwj_info[1] = True
@@ -51,7 +54,9 @@ def _extract_num_info(bpos: int, bcc: list[dict[str, str]], cll: list[str]):
     return bccwj_info
 
 
-def merge_conll_and_bccwj(bccwj_flat: list[list[dict[str, str]]], conll_flat: list[str], debug=False) -> Iterable[tuple[ tuple[int, str], Optional[tuple[int, list[dict[str, str]]]] ]]:
+def merge_conll_and_bccwj(
+    bccwj_flat: list[list[dict[str, str]]], conll_flat: list[str], debug=False
+) -> Iterable[tuple[tuple[int, str], Optional[tuple[int, list[dict[str, str]]]]]]:
     """
         merge bccwj and conll
     """
@@ -83,14 +88,22 @@ def merge_conll_and_bccwj(bccwj_flat: list[list[dict[str, str]]], conll_flat: li
                 while cnt > 0:
                     citem = next(conll_iter)
                     if debug:
-                        print("d", citem[1].split("\t")[FORM], "".join([b["原文文字列"] for b in bctm[1]]), cnt)
+                        print(
+                            "d", citem[1].split("\t")[FORM],
+                            "".join([b["原文文字列"] for b in bctm[1]]), cnt
+                        )
                     yield (citem, bctm)
                     cnt -= len(citem[1].split("\t")[FORM])
         except StopIteration:
             break
 
 
-def _write_sentence(sent: list[tuple[ tuple[int, str], Optional[tuple[int, list[dict[str, str]]]] ]], misc_data: Misc_map_data, tid: str, bcc_conll_map: dict[str, dict], errors: dict[tuple[str, ...], list[str]], filtered_ids: set[str], writer: TextIO, debug=False):
+def _write_sentence(
+    sent: list[tuple[ tuple[int, str], Optional[tuple[int, list[dict[str, str]]]] ]],
+    misc_data: MiscMapData, tid: str, bcc_conll_map: dict[str, dict],
+    errors: dict[tuple[str, ...], list[str]],
+    filtered_ids: set[str], writer: TextIO, debug=False
+):
     output_sent_lines: list[str] = []
     sent_id = sent[0][0][1].replace("# sent_id =", "")
     output_sent_lines.append(sent[0][0][1])
@@ -121,7 +134,10 @@ def _write_sentence(sent: list[tuple[ tuple[int, str], Optional[tuple[int, list[
         errors[sid] = output_sent_lines
 
 
-def replace_blank_files(conll_file: TextIO, base_data: dict[str, list[list[dict[str, str]]]], misc_data: Misc_map_data, filtered_ids: set[str], writer: TextIO, debug: bool=False):
+def replace_blank_files(
+    conll_file: TextIO, base_data: dict[str, list[list[dict[str, str]]]], misc_data: MiscMapData,
+    filtered_ids: set[str], writer: TextIO, debug: bool=False
+):
     """
         replace blank file
     """
@@ -129,7 +145,6 @@ def replace_blank_files(conll_file: TextIO, base_data: dict[str, list[list[dict[
     errors: dict[tuple[str, ...], list[str]] = {}
     orders: dict[str, int] = {}
     order_count: int = 0
-    # dict([(l.rstrip("\n"), p) for p, l in enumerate(args.bccwj_order_file)])
     for tid, cnl in separate_document(conll_file):
         assert cnl[0].startswith("# sent_id =")
         assert tid is not None and tid in base_data, tid
@@ -140,7 +155,9 @@ def replace_blank_files(conll_file: TextIO, base_data: dict[str, list[list[dict[
         bcc_conll_map[tid] = {}
         # merge mapping conll and bccwj
         map_lst = merge_conll_and_bccwj(base_data[tid], cnl, debug=debug)
-        sent_lists: list[list[tuple[tuple[int, str], Optional[tuple[int, list[dict[str, str]]]]]]] = []
+        sent_lists: list[
+            list[tuple[tuple[int, str], Optional[tuple[int, list[dict[str, str]]]]]]
+        ] = []
         sent: list[tuple[ tuple[int, str], Optional[tuple[int, list[dict[str, str]]]] ]] = []
         # divide each sentence
         for citem, bctm in map_lst:
@@ -153,7 +170,10 @@ def replace_blank_files(conll_file: TextIO, base_data: dict[str, list[list[dict[
             sent_lists.append(sent)
         for sent in sent_lists:
             assert sent[0][1] is None and sent[1][1] is None
-            _write_sentence(sent, misc_data, tid, bcc_conll_map, errors, filtered_ids, writer, debug=False)
+            _write_sentence(
+                sent, misc_data, tid, bcc_conll_map, errors,
+                filtered_ids, writer, debug=debug
+            )
     return bcc_conll_map, errors, orders
 
 
@@ -170,8 +190,8 @@ def main():
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("-w", "--writer", type=argparse.FileType("w"), default="-")
     args = parser.parse_args()
-    filtered_ids: set[str] = set([l.rstrip("\n") for l in args.filtered_file])
-    misc_data: Misc_map_data = pkl.load(args.misc_file)
+    filtered_ids: set[str] = set(l.rstrip("\n") for l in args.filtered_file)
+    misc_data: MiscMapData = pkl.load(args.misc_file)
     bccwj_data = load_bccwj_core_file(args.bccwj_file_name, load_pkl=True)
     bcc_conll_map, errors, orders = replace_blank_files(
         args.conll_file, bccwj_data, misc_data, filtered_ids, args.writer, debug=args.debug

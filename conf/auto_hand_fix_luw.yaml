@@ -147,6 +147,12 @@
     - ids: [60]
       target: DEPREL
       value: nmod
+    - ids: [62]
+      target: DEPREL
+      value: compound
+    - ids: [62]
+      target: HEAD
+      value: 63
 # 60      です    です    AUX     助動詞-助動詞-デス      _       63      aux     _       BunsetuBILabel=I|BunsetuPositionType=SEM_HEAD|SpaceAfter=No
 
 
@@ -237,6 +243,9 @@
     - ids: [2]
       target: DEPREL
       value: fixed
+    - ids: [2]
+      target: HEAD
+      value: 1
 ## [Line 619 Sent A233n_OY14_02975-40 Node 1]: [L3 Syntax leaf-cc] 'cc' not expected to have children (1:では:cc --> 2:では:cc)
 
 - sent_id: B027n_PM21_00037-46

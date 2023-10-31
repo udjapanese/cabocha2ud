@@ -39,10 +39,7 @@ class PipeLineComponent:
 
 
 class BDPipeLine(PipeLineComponent):
-    """_summary_
-
-    Args:
-        PipeLineComponent (_type_): _description_
+    """ Bunsetu Dependencies Input Component
 
     """
     mode = "bd"
@@ -53,7 +50,7 @@ class BDPipeLine(PipeLineComponent):
         super().__init__(target, opts)
 
     def __call__(self) -> None:
-        raise NotImplementedError
+        assert isinstance(self.target, BD)
 
     def prepare(self) -> None:
         """ prepare function """
@@ -61,10 +58,7 @@ class BDPipeLine(PipeLineComponent):
 
 
 class UDPipeLine(PipeLineComponent):
-    """_summary_
-
-    Args:
-        PipeLineComponent (_type_): _description_
+    """ Universal Dependencies Input Component
 
     """
     mode = "ud"

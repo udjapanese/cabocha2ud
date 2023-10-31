@@ -231,7 +231,10 @@ class Group(Annotation):
     def _parse(self, segment_lines: list[list[str]]) -> None:
         super()._parse(segment_lines)
         self.groups_ids = [int(s) for s in segment_lines[0][3:-1] if s != ""]
-        self.pos = AnnoPosition(self.groups_ids[0], self.groups_ids[1])
+        if len(self.groups_ids) == 1:
+            self.pos = AnnoPosition(self.groups_ids[0], self.groups_ids[0])
+        else:
+            self.pos = AnnoPosition(self.groups_ids[0], self.groups_ids[1])
 
     def __str__(self) -> str:
         _sss = '#! {iden} {full_name} {rpos} "{comment}"'.format(
