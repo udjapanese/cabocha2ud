@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
 
-"""
-BCCWJ DepParaPAS Annotation class
-"""
+"""BCCWJ DepParaPAS Annotation class."""
 
 from dataclasses import dataclass
 from itertools import permutations
@@ -10,29 +7,33 @@ from typing import Literal, NamedTuple, Optional, Union
 
 
 class AnnoPosition(NamedTuple):
-    """ AnnoPosition """
+    """AnnoPosition."""
+
     pos1: int
     pos2: int
 
 
 @dataclass
 class DocAnnotation:
-    """ DocAnnotation """
+    """DocAnnotation."""
+
     _id: int
     bibinfo: Optional[str]
     attrib: Optional[str]
 
-    def __str__(self) -> str:
-        sss = "#! DOC\t{}\n".format(self._id)
+    def __str__(self: "DocAnnotation") -> str:
+        """Return string for Ex-Cabocha format."""
+        sss = ""
         if self.bibinfo is not None:
-            sss += "#! DOCID\t{}\t{}\n".format(self._id, self.bibinfo)
+            sss += f"#! DOCID\t{self._id}\t{self.bibinfo}\n"
+        sss += f"#! DOC\t{self._id}\n"
         if self.attrib is not None:
-            sss += "#! DOCATTR\t{}\n".format(self.attrib)
+            sss += f"#! DOCATTR\t{self.attrib}\n"
         return sss
 
 
 def generate_docannotation(prefix: list[str]) -> DocAnnotation:
-    """ generate doc annotation """
+    """Generate doc annotation."""
     _id: int = -1
     bibinfo: Optional[str] = None
     attrib: Optional[str] = None
@@ -50,13 +51,15 @@ def generate_docannotation(prefix: list[str]) -> DocAnnotation:
 
 
 class Attribute:
-    """
-        Attribute class
-        #! ATTR <Key> <Value> "<Comment>"
+    """Attribute class.
+
+    #! ATTR <Key> <Value> "<Comment>"
     """
 
-    def __init__(self, items: list[str]):
-        assert items[0] == '#!' and items[1] == "ATTR"
+    def __init__(self: "Attribute", items: list[str]) -> None:
+        """Attrubute class."""
+        assert items[0] == "#!"
+        assert items[1] == "ATTR"
         self.items: list[str] = items
         self.full_key = items[2]
         self.label: str = items[2].split(":")[1] if len(items[2].split(":")) == 2 else items[2]
@@ -65,26 +68,27 @@ class Attribute:
         self.namespace = items[2].split(":")[0] if len(items[2].split(":")) == 2 else None
         self.comment: str = items[4].strip('"') if len(items) == 5 else ""
 
-    def __str__(self) -> str:
-        __l = '#! ATTR {key} "{value}"'.format(key=self.get_full_key(), value=self.get_value())
+    def __str__(self: "Attribute") -> str:
+        """Get attr string."""
+        __l = f'#! ATTR {self.get_full_key()} "{self.get_value()}"'
         if self.get_comment() != "":
-            __l = __l + " " + '"{}"'.format(self.get_comment())
+            __l = __l + " " + f'"{self.get_comment()}"'
         return __l
 
-    def get_label(self) -> str:
-        """ get label """
+    def get_label(self: "Attribute") -> str:
+        """Get label."""
         return self.label
 
-    def get_full_key(self) -> str:
-        """ get key with namespaced """
+    def get_full_key(self: "Attribute") -> str:
+        """Get key with namespaced."""
         return self.full_key
 
-    def get_value(self) -> str:
-        """ <value> """
+    def get_value(self: "Attribute") -> str:
+        """Return <value>."""
         return self.value
 
-    def get_comment(self) -> str:
-        """ <comment> """
+    def get_comment(self: "Attribute") -> str:
+        """Return <comment>."""
         return self.comment
 
 
@@ -161,12 +165,12 @@ class Segment(Annotation):
 
     @property
     def start_pos(self) -> int:
-        """ start pos """
+        """Start pos."""
         return self.pos.pos1
 
     @property
     def end_pos(self) -> int:
-        """ start pos """
+        """Start pos."""
         return self.pos.pos2
 
     def __str__(self) -> str:
@@ -180,10 +184,11 @@ class Segment(Annotation):
 
 
 class Link(Annotation):
+    """Link object.
+
+    #! LINK_S <TagName> <FromSegNo> <ToSegNo> "<Comment>"
     """
-        Link object
-        #! LINK_S <TagName> <FromSegNo> <ToSegNo> "<Comment>"
-    """
+
     def __init__(self, segment_lines: Optional[list[list[str]]]):
         super().__init__()
         if segment_lines:
@@ -217,10 +222,11 @@ class Link(Annotation):
 
 
 class Group(Annotation):
+    """Annotation of Group.
+
+    #! GROUP_S <TagName> <SegNo>... "<Comment>"
     """
-        Group
-        #! GROUP_S <TagName> <SegNo>... "<Comment>"
-    """
+
     def __init__(self, segment_lines: Optional[list[list[str]]]):
         super().__init__()
         self.groups_ids: list[int] = []
@@ -247,9 +253,7 @@ class Group(Annotation):
 
 
 class AnnotationList:
-    """
-        Annotation list
-    """
+    """Annotation list Object."""
 
     def __init__(self, annotation_list: Optional[list[Annotation]]):
         self._annotation_list: list[Annotation] = []
@@ -384,9 +388,7 @@ class AnnotationList:
 
 
 def get_annotation_object(seg: list[list[str]]) -> Annotation:
-    """
-        get annotation object
-    """
+    """Get annotation object."""
     return {
         "SEGMENT_S": Segment, "GROUP_S": Group, "LINK_S": Link,
         "SEGMENT": Segment, "GROUP": Group, "LINK": Link

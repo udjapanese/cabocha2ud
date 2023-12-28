@@ -11,6 +11,7 @@ pytest = "*"
 mypy = "*"
 flake8 = "*"
 pandas = "*"
+ruff = "*"
 
 [packages]
 configargparse = "*"
@@ -19,6 +20,7 @@ ruamel-yaml = "==0.17.4"
 tomlkit = "*"
 click = "*"
 tomli = "*"
+ruff = "*"
 
 [requires]
 python_version = "3.9"

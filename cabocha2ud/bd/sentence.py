@@ -256,7 +256,7 @@ class Sentence(list["Bunsetu"]):
             get header for sent
         """
         self.set_sent_id()
-        header = [("sent_id", self.sent_id)]
+        header: list = [("sent_id", self.sent_id)]
         header.append(("text", self.get_text().strip(self.space_marker)))
         if self.doc.doc_attrib_xml and self.doc.doc_attrib_xml.find('english_text'):
             txt = self.doc.doc_attrib_xml.find('english_text')

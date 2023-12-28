@@ -47,6 +47,7 @@ class ChangeBunsetuMultiRootComponent(BDPipeLine):
                         assert bun.bunsetu_pos is not None
                         last_pos = bun.bunsetu_pos
                     elif bun.bunsetu_pos == len(bunsetues) - 1 and last_pos == -100:
+                        assert bun.bunsetu_pos is not None
                         last_pos = bun.bunsetu_pos
                 assert last_pos != -100
                 for bun in bunsetues:

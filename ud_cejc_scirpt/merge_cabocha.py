@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
-
-"""
-merge CEJC cabocha to LUW
+"""merge CEJC cabocha to LUW.
 
 ```shell
 python merge_cejc/merge_cabocha.py ~/CEJC_data/20220914-CEJC-DEP\
@@ -120,7 +117,8 @@ class CEJCFiles:
             "".join([c.generate_filelist(self.speaker_ids) for _, c in self.cab_cont.items()])
         )
         return [
-            "#! DOC\t1", f"#! DOCID\t1\t{self.dialog_id}",
+            f"#! DOCID\t1\t{self.dialog_id}",
+            "#! DOC\t1",
             f"#! DOCATTR\t<DocInfo><DialogID>{self.dialog_id}</DialogID>{file_list}</DocInfo>"
         ]
 
@@ -228,7 +226,8 @@ def generate_morph_line(
         mlist.append(lmorph["書字形"])
         mlist.append(
             ",".join(
-                l for l in lmorph["品詞"].split("-") + (["*"] * (4 - len(lmorph["品詞"].split("-"))))
+                ltem for ltem in
+                    lmorph["品詞"].split("-") + (["*"] * (4 - len(lmorph["品詞"].split("-"))))
                 + [lmorph["活用型"], lmorph["活用形"], lmorph["発音形出現形"], lmorph["語彙素"]]
             )
         )

@@ -1,22 +1,19 @@
-# -*- coding: utf-8 -*-
 
-"""
-iterator functions for cabocha format
-"""
+"""Iterator functions for cabocha format."""
 
 import re
 from typing import Iterator, Optional, Union
 
-RE_DOC_HEADER = re.compile(r'^#! DOC\s+[0-9]+$')
 ATTR_NAMES = [
     "SEGMENT", "SEGMENT_S", "LINK", "GROUP", "GROUP_S"
 ]
 
 
 def separate_information_from_excabocha(doc: list[str]) -> tuple[list[str], list[str], list[str]]:
-    """ 拡張Cabochaの特定範囲から情報を抽出する
-        参照： https://00m.in/z1jkb
-        prefix, cont, suffix に分解する
+    """拡張Cabochaの特定範囲から情報を抽出する.
+
+    参照： https://00m.in/z1jkb
+    prefix, cont, suffix に分解する.
     """
     prefix: list[str] = []
     suffix: list[str] = []
@@ -40,33 +37,27 @@ def separate_information_from_excabocha(doc: list[str]) -> tuple[list[str], list
 
 
 def iterate_document(
-    lines: list[str], separate_info: bool=True, strip_end=True
+    lines: list[str], separate_info: bool=True, strip_end: bool=True
 ) -> Iterator[tuple[Optional[list[str]], list[str], Optional[list[str]]]]:
-    """
-        Create iterate per document
-    Args:
-        lines (list[str]): cabocha text
-        separate_info (bool, optional): [description]. Defaults to True.
-
-    Raises:
-        TypeError: [description]
-
-    Yields:
-        Iterator[Tuple[Optional[list[str]], list[str], Optional[list[str]]]]:
-            the first values: prefix information or None
-            the second values: content
-            the first values: suffix information or None
-    """
+    """Create iterate per document."""
     doc: list[str] = []
-    if strip_end:
-        if lines[-1] == "":
-            # 下に空行があるとエラーになるため空行を除く
-            pos = -1
-            while lines[pos] == "":
-                pos = pos - 1
-            lines = lines[:pos + 1]
+    if strip_end and lines[-1] == "":  # 下に空行があるとエラーになるため空行を除く
+        pos = -1
+        while lines[pos] == "":
+            pos = pos - 1
+        lines = lines[:pos + 1]
+
+    target_header: Optional[re.Pattern] = None
+    if lines[0].startswith("#! DOCID"):
+        target_header = re.compile(r"^#! DOCID\s+.*")
+    elif lines[0].startswith("#! DOC"):
+        target_header = re.compile(r"^#! DOC\s+.*")
+    else:
+        msg = "parse Error: first line must be `#! DOC` or `#! DOCID`"
+        raise TypeError(msg)
+
     for line in lines:
-        if RE_DOC_HEADER.match(line) and len(doc) > 0:
+        if target_header.match(line) and len(doc) > 0:
             if separate_info:
                 yield separate_information_from_excabocha(doc)
             else:
@@ -75,8 +66,9 @@ def iterate_document(
         else:
             doc.append(line)
     if len(doc) > 0:
-        if not RE_DOC_HEADER.match(doc[0]):
-            raise TypeError("parse Error: first line must be `#! DOC`")
+        if not target_header.match(doc[0]):
+            msg = "parse Error: first line must be `#! DOC`"
+            raise TypeError(msg)
         if separate_info:
             yield separate_information_from_excabocha(doc)
         else:
@@ -86,9 +78,7 @@ def iterate_document(
 def iterate_sentence(
     lines: list[str], separate_info: bool=True
 ) -> Iterator[tuple[list[str], Optional[list[str]]]]:
-    """
-        iterate sentence
-    """
+    """Iterate sentence."""
     sent: list[str] = []
     for line in lines:
         if line.startswith("EOS"):
@@ -101,15 +91,15 @@ def iterate_sentence(
         else:
             sent.append(line)
     if len(sent) > 0:
-        raise TypeError("parse Error: last line must be `EOS`")
+        msg = "parse Error: last line must be `EOS`"
+        raise TypeError(msg)
 
 
 def iterate_bunsetu(lines: list[str]) -> Iterator[list[str]]:
-    """
-        iterate bunsetu
-    """
+    """Iterate bunsetu."""
     if not lines[0].startswith("* "):
-        raise TypeError("parse Error: first line must be `* `")
+        msg = f"parse Error: first line must be `* ` {lines[0]}"
+        raise TypeError(msg)
     sent = [lines[0]]
     for line in lines[1:]:
         if line.startswith("* "):
@@ -121,14 +111,13 @@ def iterate_bunsetu(lines: list[str]) -> Iterator[list[str]]:
 
 
 def iterate_seg_and_link(lines: list[str]) -> Iterator[list[list[str]]]:
-    """
-        iterate seg and link
-    """
+    """Iterate seg and link."""
     if len(lines) == 0:
         return
     lineit = iter(lines)
+    tmp = []
     try:
-        tmp = [next(lineit)]
+        tmp.append(next(lineit))
         while True:
             line = next(lineit)
             if any(tmp[-1].startswith("#! " + name) for name in ATTR_NAMES):
@@ -138,14 +127,16 @@ def iterate_seg_and_link(lines: list[str]) -> Iterator[list[list[str]]]:
                 yield [t.split(" ") for t in tmp]
                 tmp = []
             else:
-                raise TypeError("do not recognize the line", tmp)
+                msg = f"do not recognize the line {tmp}"
+                raise TypeError(msg)
             tmp.append(line)
     except StopIteration:
+        assert isinstance(tmp, list)
         yield [t.split(" ") for t in tmp]
 
 
 def iterate_ud_sentence(lines: Union[list[str], Iterator[str]]) -> Iterator[list[str]]:
-    """ Iterator sentence list """
+    """Iterate sentence list."""
     sent: list[str] = []
     for line in lines:
         if line == "":

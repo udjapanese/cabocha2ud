@@ -58,8 +58,8 @@ def reconstract_space_after(sent: Sentence):
         luw_surface = wrd.get_surface()
         s_pos, e_pos = sent.get_pos_from_word(wrd)
         sent.annotation_list.append_segment([
-            '#! SEGMENT_S space-after:seg {} {} "{}"'.format(s_pos, e_pos, luw_surface).split(" "),
-            '#! ATTR space-after:value "YES"'.split(" ")
+            f'#! SEGMENT_S space-after:seg {s_pos} { e_pos} "{luw_surface}"'.split(" "),
+            str('#! ATTR space-after:value "YES"').split(" ")
         ])
 
 

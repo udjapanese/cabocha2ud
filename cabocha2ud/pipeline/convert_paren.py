@@ -218,7 +218,7 @@ def convparen_sub(sentence: Sentence, open_t: Token, close_t: Token, logger: Log
             outgoing_nodes.append(tok)
     logger.debug("---- outgoing_nodes -> " + str(len(outgoing_nodes)))
 
-    if prev_t.deprel_ in ['case', 'mark', 'punct'] and not prev_t.lemma_ in ['さ']:
+    if prev_t.deprel_ in ['case', 'mark', 'punct'] and prev_t.lemma_ not in ['さ']:
         # forward modification
         logger.debug('CASE!!!!!!', sentence.sent_id_)
         open_t.head_ = inhead.id_

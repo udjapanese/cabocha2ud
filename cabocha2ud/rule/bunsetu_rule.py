@@ -111,7 +111,7 @@ def detect_bunsetu_pos(bunsetu: "Bunsetu") -> None:
 def check_other_subj(
     bun_fes: list[str], tmp_s_pos: list[int], tmp_f_pos: list[int], bun: "Bunsetu"
 ) -> tuple[int, int]:
-    """[summary]
+    """
     お/願い/申し上げ/ます -> 「願い」主辞を「申し上げ」に
     見た/目、揚げ/アイス なども対象
     長単位/助詞or接続助詞or助動詞or補助記号除く
