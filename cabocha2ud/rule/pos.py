@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-
-"""
-RULE POS
-"""
+"""RULE POS."""
 
 
 import re
@@ -11,10 +7,10 @@ from typing import TYPE_CHECKING, Generator, NamedTuple, TypedDict, cast
 from cabocha2ud.lib.yaml_dict import YamlDict
 
 if TYPE_CHECKING:
-    from ..bd.word import Word
+    from cabocha2ud.bd.word import Word
 
 
-REGEX_TYPE = type(re.compile(''))
+REGEX_TYPE = type(re.compile(""))
 BUNSETU_FUNC_MATCH_RE = re.compile(
     r"(?:助詞|助動詞|接尾辞,形容詞的|接尾辞,形状詞的|接尾辞,動詞的)"
 )
@@ -37,25 +33,21 @@ POS_RULE_FUNC: dict = {
 TARGET_POS_RULE = None
 
 class POSRule(NamedTuple):
-    """
-    POS rule
-    """
+    """POS rule."""
+
     rule: dict[str, str]
     res: str
 
 
 class POSRuleBase(TypedDict):
-    """
-    POS rule list
-    """
+    """POS rule list."""
+
     default: list[str]
     rule: list[POSRule]
 
 
 def load_pos_rule(file_name: str=POS_RULE_FILE) -> list[tuple]:
-    """
-        load rule file
-    """
+    """Load rule file."""
     rule_set: POSRuleBase = cast(POSRuleBase, dict(YamlDict(file_name=file_name, auto_load=True)))
     full_rule_set: list[tuple] = []
     for rule_pair in rule_set["rule"]:
@@ -73,9 +65,7 @@ RE_NEG_SETUBI_EXP = re.compile(r"接尾辞")
 RE_NEG_SETTOU_EXP = re.compile(r"接頭辞")
 RE_NOUN_NEG_EXP = re.compile(r"名詞")
 def is_neg(word: "Word") -> bool:
-    """
-        否定表現かどうか
-    """
+    """否定表現かどうか."""
     pos, pos3, base_lexeme = word.get_xpos().split("-")[0], word.get_xpos(), word.get_jp_origin()
     if pos == "助動詞" and base_lexeme in ["ない", "ず", "ぬ"]:
         return True
@@ -83,15 +73,11 @@ def is_neg(word: "Word") -> bool:
         return True
     if RE_NEG_SETTOU_EXP.search(pos3) and base_lexeme in NEG_EXP:
         return True
-    if RE_NOUN_NEG_EXP.search(pos3) and base_lexeme == "無し":
-        return True
-    return False
+    return bool(RE_NOUN_NEG_EXP.search(pos3) and base_lexeme == "無し")
 
 
 def add_ud_feature(word: "Word") -> None:
-    """
-        UD 特徴をつける
-    """
+    """UD 特徴をつける."""
     if is_neg(word):
         word.ud_feat["Polarity"] = "Neg"
     if "英単語" in word.get_xpos():
@@ -99,9 +85,7 @@ def add_ud_feature(word: "Word") -> None:
 
 
 def detect_ud_pos(word: "Word", target_pos_rule: list) -> None:
-    """
-        detect UD POS
-    """
+    """Detect UD POS."""
     word.en_pos = []
     add_ud_feature(word)
     inst = word.get_instance_for_pos()

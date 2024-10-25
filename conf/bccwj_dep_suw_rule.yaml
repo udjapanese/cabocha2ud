@@ -401,6 +401,23 @@ order_rule:
   ]
   res: fixed
 
+#  連体詞+(くらい|ぐらい/を想定)+* detに子はないのでfixed
+- rule: [
+    [match_parent_bpos, "SEM_HEAD"],
+    [include_word_bpos, ["SYN_HEAD", "FUNC", "CONT"]],
+    [include_parent_upos, ["DET"]],
+    [match_parent_disformula, "X-Y>0"]
+  ]
+  res: dep
+
+- rule: [
+    [match_parent_bpos, "SEM_HEAD"],
+    [include_word_bpos, ["SYN_HEAD", "FUNC", "CONT"]],
+    [include_parent_upos, ["DET"]]
+  ]
+  res: fixed
+
+
 #  （別文節から）こと/が/できる  ことにする ことになる ことはない
 - rule: [
     [match_word_bpos, "SEM_HEAD"],

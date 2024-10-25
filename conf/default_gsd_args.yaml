@@ -1,4 +1,4 @@
 skip-space: True
 space-marker: hankaku
-pipeline: merge_sp_to_cabocha,merge_number,patch_fix
+pipeline: merge_sp_to_cabocha,merge_number,change_dep_det,patch_fix
 patch-file: conf/auto_hand_fix.yaml

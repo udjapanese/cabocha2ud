@@ -1,9 +1,4 @@
-
-# -*- coding: utf-8 -*-
-
-"""
-Util function or module for Bunsetu Depenedencies
-"""
+"""Util function or module for Bunsetu Depenedencies."""
 
 import csv
 from enum import IntEnum
@@ -12,7 +7,8 @@ from io import StringIO
 
 class SUWFeaField(IntEnum):
     # pylint: disable=invalid-name
-    """
+    """Items.
+
     (0): pos1
     (1): pos2
     (2): pos3
@@ -42,7 +38,9 @@ class SUWFeaField(IntEnum):
     (26): aModType
     (27): lid
     (28): lemma_id
+
     """
+
     pos1 = 0
     pos2 = 1
     pos3 = 2
@@ -76,7 +74,9 @@ class SUWFeaField(IntEnum):
 
 class LUWFeaField(IntEnum):
     # pylint: disable=invalid-name
-    """
+    # ruff: noqa: N815
+    """LUWFeat.
+
     (0): l_pos1
     (1): l_pos2
     (2): l_pos3
@@ -85,7 +85,9 @@ class LUWFeaField(IntEnum):
     (5): l_cForm
     (6): l_reading  <->  orthBase
     (7): l_lemma
+
     """
+
     l_pos1 = 0
     l_pos2 = 1
     l_pos3 = 2
@@ -96,17 +98,21 @@ class LUWFeaField(IntEnum):
     l_lemma = 7
 
 
-def csv_split(csv_str: str, delimiter: str=",") -> list[str]:
-    """ csv split """
-    if csv_str == '補助記号,読点,*,*,,,,，,,,,,,,記号,,,,,,,,,,,,,,,13752552530432,50':
+def csv_split(csv_str: str, delimiter: str=",", expect_size: int|None=None) -> list[str]:
+    """Csv split."""
+    # ruff: noqa: RUF001
+    if csv_str == "補助記号,読点,*,*,,,,，,,,,,,,記号,,,,,,,,,,,,,,,13752552530432,50":
         # GSDの例外
         csv_str = '補助記号,読点,*,*,,,,，,",",,",",,記号,,,,,,,,,,,,,,,13752552530432,50'
-    return list(csv.reader(StringIO(csv_str), delimiter=delimiter))[0]
+    splited =  next(iter(csv.reader(StringIO(csv_str), delimiter=delimiter)))
+    if expect_size is not None:
+        assert len(splited) == expect_size, csv_str
+    return next(iter(csv.reader(StringIO(csv_str), delimiter=delimiter)))
 
 
 def csv_join(cols: list[str], delimiter: str=",") -> str:
-    """ csv join function """
+    """Csv join function."""
     gstr = StringIO()
-    joiner = csv.writer(gstr, delimiter=delimiter, lineterminator='\n')
+    joiner = csv.writer(gstr, delimiter=delimiter, lineterminator="\n")
     joiner.writerow(cols)
     return gstr.getvalue().rstrip("\n")

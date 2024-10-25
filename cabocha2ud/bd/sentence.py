@@ -1,43 +1,39 @@
-# -*- coding: utf-8 -*-
-
-"""
-Bunsetsu Sentence Object
-"""
+"""Bunsetsu Sentence Object."""
 
 import xml.etree.ElementTree as ET
 from collections import deque
 from typing import TYPE_CHECKING, Optional, cast
 
 if TYPE_CHECKING:
+    from .bunsetu import Bunsetu
     from .document import Document
 
 from cabocha2ud.bd.annotation import AnnotationList, get_annotation_object
 from cabocha2ud.bd.bunsetu import Bunsetu
 from cabocha2ud.bd.word import Word
 from cabocha2ud.lib.dependency import get_caused_nonprojectivities
-from cabocha2ud.lib.iterate_function import (iterate_bunsetu,
-                                             iterate_seg_and_link)
+from cabocha2ud.lib.iterate_function import iterate_bunsetu, iterate_seg_and_link
 from cabocha2ud.lib.logger import Logger
 
 
 class Sentence(list["Bunsetu"]):
-    """
-        Sentence class: sentence class is Bunsetu List
-    """
+    """Sentence class: sentence class is Bunsetu List."""
 
     def __init__(
-            self, sent_pos: int, sentence_lines: list[str], suffix: Optional[list[str]],
-            doc: "Document", base_file_name=None,
-            word_unit_mode: str="suw",
-            space_marker: str="　", debug: bool=False, logger: Optional[Logger]=None
-    ):
-        self.base_file_name: Optional[str] = base_file_name
+        # ruff: noqa: PLR0913
+        self, sent_pos: int, sentence_lines: list[str], suffix: list[str] | None,
+        doc: "Document", base_file_name: str|None=None,
+        word_unit_mode: str="suw",
+        space_marker: str="　", debug: bool=False, logger: Optional[Logger]=None
+    ) -> None:
+        """Init Sentence."""
+        self.base_file_name: str|None = base_file_name
         self.debug: bool = debug
         self.logger: Logger = logger or Logger()
         self.word_unit_mode = word_unit_mode
         self.doc: Document = doc  # sentence's document
         self.sent_pos: int = sent_pos
-        self.sent_id: Optional[str] = None
+        self.sent_id: str|None = None
         self.annotation_list: AnnotationList
         self.word_dep_child: Optional[dict[int, set[int]]] = None
         # abs_pos_* represent abstract position (begin1, end1), (begin2, end2), ...
@@ -47,17 +43,18 @@ class Sentence(list["Bunsetu"]):
         self.__parse(sentence_lines, [] if suffix is None else suffix)
 
     def __str__(self) -> str:
+        """Return str."""
         org = "\n".join([str(bun) for bun in self])
         if self.annotation_list is not None and len(self.annotation_list) > 0:
             org = org + "\n" + str(self.annotation_list)
-        org = org + "\n" + "EOS"
-        return org
+        return org + "\n" + "EOS"
 
     def get_text(self) -> str:
-        """ get text for Sentence
+        """Get text for Sentence.
 
         Returns:
             str: return str
+
         """
         return "".join([
             w.get_surface() + self.space_marker
@@ -66,68 +63,57 @@ class Sentence(list["Bunsetu"]):
         ])
 
     def get_ud_children(self, word: Word, is_reconst: bool=False) -> set[int]:
-        """
-            get UD child position
-        """
+        """Get UD child position."""
         if self.word_dep_child is None or is_reconst:
             self._update_ud_children()
         assert self.word_dep_child is not None
         if word.token_pos in self.word_dep_child:
             return self.word_dep_child[word.token_pos]
-        return set([])
+        return set({})
 
-    def _update_ud_children(self):
+    def _update_ud_children(self) -> None:
+        """Update ud children."""
         word_dep_child: dict[int, set[int]] = {}
         for tword in self.words():
             assert isinstance(tword.dep_num, int)
             if tword.dep_num not in word_dep_child:
-                word_dep_child[tword.dep_num] = set([])
+                word_dep_child[tword.dep_num] = set({})
             word_dep_child[tword.dep_num].add(tword.token_pos)
         self.word_dep_child = word_dep_child.copy()
 
     def bunsetues(self) -> list[Bunsetu]:
-        """
-            return bunsetu list
-        """
+        """Return bunsetu list."""
         return list(self)
 
     def update_bunsetu(self, position: int, bun: Bunsetu) -> None:
-        """ update bunsetu """
+        """Update bunsetu."""
         assert 0 <= position < len(self)
         self[position] = bun
 
     def set_sent_pos(self, sent_pos: int) -> None:
-        """
-            set sent_pos
-        """
+        """Set sent_pos."""
         self.sent_pos = sent_pos
         for word in self.words():
             word.sent_pos = sent_pos
 
     def set_document(self, doc: "Document") -> None:
-        """
-            wordにdocumentをlinkする
-        """
+        """Wordにdocumentをlinkする."""
         for word in self.words():
             word.doc = doc
 
     def get_pos_from_word(self, word: Word) -> tuple[int, int]:
-        """
-            return word's pos
-        """
+        """Return word's pos."""
         return self.abs_pos_list[word.token_pos-1]
 
     def get_word_from_tokpos(self, tok_pos: int) -> Optional[Word]:
-        """
-            extract word by token pos
-        """
+        """Extract word by token pos."""
         if tok_pos < 0:
             return None
         assert all(len(bun) > 0 for bun in self)
         return self.words()[tok_pos]
 
     def iterate_word_tree(self) -> list[Word]:
-        """ return word tree iterator """
+        """Return word tree iterator."""
         _tree: dict[int, set[int]] = {}
         root_num: Optional[int] = None
         for word in self.words():
@@ -153,7 +139,7 @@ class Sentence(list["Bunsetu"]):
         return [self.words()[n] for n in norder]
 
     def words(self) -> list[Word]:
-        """ get word's list """
+        """Get word's list."""
         return [
             word for bunsetu in self.bunsetues()
             for word in bunsetu.words()
@@ -182,13 +168,14 @@ class Sentence(list["Bunsetu"]):
             self.validate_bunsetu_dependencies()
         except KeyError as _:
             self.set_sent_id()
-            self.logger.debug("The sentence has invalid tree: {}, skip".format(self.sent_id))
+            self.logger.debug("The sentence has invalid tree: %s, skip", self.sent_id)
 
-    def validate_bunsetu_dependencies(self, strict=False) -> bool:
-        """ 文節間の依存関係にエラーがないか確認する
+    def validate_bunsetu_dependencies(self, strict:bool=False) -> bool:
+        """文節間の依存関係にエラーがないか確認する.
 
         Returns:
             bool: 問題なければTrue、問題があるならFalse
+
         """
         # 文節木の構築
         _bunsetu_dep: list[int] = [-1]
@@ -197,10 +184,9 @@ class Sentence(list["Bunsetu"]):
             assert isinstance(bunsetu.bunsetu_pos, int)
             assert isinstance(bunsetu.dep_pos, int), "must be set integer number"
             assert bunsetu.bunsetu_pos == prev_pos + 1, "`bunsetu_pos` must be sequential"
-            assert bunsetu.dep_pos in list(range(0, len(self.bunsetues()))) + [-1], \
-                "`bunsetu.dep_pos`: {} must be range: {}".format(
-                    bunsetu.dep_pos, list(range(0, len(self.bunsetues()))) + [-1]
-            )
+            blng = [*list(range(len(self.bunsetues()))), -1]
+            assert bunsetu.dep_pos in blng, \
+                f"`bunsetu.dep_pos`: {bunsetu.dep_pos} must be range: {blng}"
             _bunsetu_dep.append(bunsetu.dep_pos + 1)
             prev_pos = bunsetu.bunsetu_pos
         if not strict:
@@ -208,7 +194,8 @@ class Sentence(list["Bunsetu"]):
         # 文節間で交差があるか確認をする
         nonprojectives = {}
         for bunsetu in self.bunsetues():
-            assert isinstance(bunsetu.bunsetu_pos, int) and isinstance(bunsetu.dep_pos, int)
+            assert isinstance(bunsetu.bunsetu_pos, int)
+            assert isinstance(bunsetu.dep_pos, int)
             res = [
                 r - 1 for r in get_caused_nonprojectivities(bunsetu.bunsetu_pos+1, _bunsetu_dep)
             ]
@@ -220,11 +207,12 @@ class Sentence(list["Bunsetu"]):
                     continue
                 nonprojectives[bunsetu.bunsetu_pos] = res
         if len(nonprojectives) > 0:
-            raise KeyError(f"has non-projective bunsetu: {self.sent_id} {nonprojectives}")
+            msg = f"has non-projective bunsetu: {self.sent_id!r} {nonprojectives}"
+            raise KeyError(msg)
         return True
 
     def update_word_pos(self) -> None:
-        """ 単語の位置を決める """
+        """単語の位置を決める."""
         self.abs_pos_list = []
         for pos, word in enumerate(self.words()):
             word.sent_pos = self.sent_pos
@@ -236,38 +224,35 @@ class Sentence(list["Bunsetu"]):
                 self.abs_pos_list.append((last[1], last[1] + len(word.get_surface())))
         self.abs_pos_dict = {s: p for p, s in enumerate(self.abs_pos_list)}
 
-    def set_sent_id(self):
-        """ set sent_id
-            if doc_id is set: with doc_id
+    def set_sent_id(self) -> None:
+        """Set sent_id to self.
+
+        if doc_id is set, the sent_id is with doc_id.
         """
         if self.annotation_list.find_key_annotations("sent-id"):
             sent_attr = self.annotation_list.find_key_annotations("sent-id")[0]
             self.sent_id = sent_attr.get_attr_value("sent-id")
+        elif self.doc.doc_id is not None:
+            self.sent_id = self.doc.doc_id
+            if len(self.doc.sentences()) > 1:
+                self.sent_id += "-" + str(self.sent_pos + 1)
         else:
-            if self.doc.doc_id is not None:
-                self.sent_id = self.doc.doc_id
-                if len(self.doc.sentences()) > 1:
-                    self.sent_id += "-" + str(self.sent_pos + 1)
-            else:
-                self.sent_id = "sent" + "-" + str(self.sent_pos + 1)
+            self.sent_id = "sent" + "-" + str(self.sent_pos + 1)
 
     def get_ud_header(self) -> str:
-        """
-            get header for sent
-        """
+        """Get header for sent."""
         self.set_sent_id()
         header: list = [("sent_id", self.sent_id)]
         header.append(("text", self.get_text().strip(self.space_marker)))
-        if self.doc.doc_attrib_xml and self.doc.doc_attrib_xml.find('english_text'):
-            txt = self.doc.doc_attrib_xml.find('english_text')
+        if self.doc.doc_attrib_xml is not None and\
+            self.doc.doc_attrib_xml.find("english_text") is not None:
+            txt = self.doc.doc_attrib_xml.find("english_text")
             eng_txt = cast(str, cast(ET.Element, txt).text).replace("# english_text = ", "")
             header.append(("text_en", eng_txt))
-        return "\n".join(["# {} = {}".format(t, i) for t, i in header]) + "\n"
+        return "\n".join([f"# {t} = {i}" for t, i in header]) + "\n"
 
-    def convert(self, sep="\t") -> str:
-        """
-            ww.convert() ``update ud_misc``, so code order do not changed
-        """
+    def convert(self, sep: str="\t") -> str:
+        """ww.convert() ``update ud_misc``, so code order do not changed."""
         self.update_word_pos()
         body = "\n".join([
             ww.convert(sep=sep) for ww in self.words()

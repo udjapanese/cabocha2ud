@@ -1,42 +1,33 @@
-# -*- coding: utf-8 -*-
+"""Bunsetu Dependencies document class."""
 
-"""
-Bunsetu Dependencies document class
-"""
-
-import os
 import re
 import xml.etree.ElementTree as ET
+from pathlib import Path
 from typing import TYPE_CHECKING, Optional, cast
-
-from cabocha2ud.lib.iterate_function import (iterate_seg_and_link,
-                                             iterate_sentence)
-from cabocha2ud.lib.logger import Logger
-from cabocha2ud.rule.bunsetu_rule import detect_bunsetu_jp_type
 
 if TYPE_CHECKING:
     from .word import Word
 
-from cabocha2ud.rule.bunsetu_rule import detect_dep_bunsetu
+from cabocha2ud.lib.iterate_function import iterate_seg_and_link, iterate_sentence
+from cabocha2ud.lib.logger import Logger
+from cabocha2ud.rule.bunsetu_rule import detect_bunsetu_jp_type, detect_dep_bunsetu
 from cabocha2ud.rule.dep import SubRule, detect_ud_label
 from cabocha2ud.rule.pos import detect_ud_pos
 from cabocha2ud.rule.remove_multi_subj import adapt_nsubj_to_dislocated_rule
 from cabocha2ud.rule.remove_space import skip_jsp_token_from_sentence
 
-from .annotation import (AnnotationList, DocAnnotation, generate_docannotation,
-                         get_annotation_object)
+from .annotation import AnnotationList, DocAnnotation, generate_docannotation, get_annotation_object
 from .sentence import Sentence
-from .word import Word
 
 RE_SAHEN_MATCH = re.compile("^名詞.*サ変.*")
 
 
-def __replace_pos_and_label(sent: "Sentence") -> None:
-    """
-    後処理のPOSとDEPRELの置換
+def replace_pos_and_label(sent: "Sentence") -> None:  # noqa: C901, PLR0912
+    """後処理のPOSとDEPRELの置換.
 
     Args:
         sent (Sentence): 対象の文
+
     """
     for wrd in sent.words():
         # UPOSについての置換
@@ -54,6 +45,11 @@ def __replace_pos_and_label(sent: "Sentence") -> None:
             continue
         if parent.dep_label == "fixed":
             # fixed -> fixed の場合
+            wrd.dep_num = parent.dep_num
+            continue
+        if (wrd.token_pos < parent.token_pos and wrd.dep_label in ["compound", "dep"]
+            and parent.dep_label == "det"):
+            # compound/dep -> det の場合
             wrd.dep_num = parent.dep_num
             continue
         if parent.dep_label == "cc" and wrd.dep_label in ["aux", "mark"]:
@@ -78,16 +74,16 @@ def __replace_pos_and_label(sent: "Sentence") -> None:
 
 
 class Document(list["Sentence"]):
-    """
-     Document object
-    """
+    """Document object."""
 
     def __init__(
-            self, text: Optional[list[str]]=None, prefix: Optional[list[str]]=None,
-            suffix: Optional[list[str]]=None,
-            base_file_name: Optional[str]="doc", word_unit_mode: str="suw",
-            space_marker: str="　", debug: bool=False, logger: Optional[Logger]=None
-    ):
+        # ruff: noqa: PLR0913
+        self, text: Optional[list[str]]=None, prefix: Optional[list[str]]=None,
+        suffix: Optional[list[str]]=None,
+        base_file_name: Optional[str]="doc", word_unit_mode: str="suw",
+        space_marker: str="　", debug: bool=False, logger: Optional[Logger]=None
+    ) -> None:
+        """Init."""
         self.base_file_name: Optional[str] = base_file_name
         self.debug: bool = debug
         self.logger: Logger = logger or Logger()
@@ -107,7 +103,7 @@ class Document(list["Sentence"]):
         self.suffix: Optional[list[str]] = suffix
 
     def parse(self) -> None:
-        """ Document parse function """
+        """Document parse function."""
         if self.text is not None and self.prefix is not None and self.suffix is not None:
             self.__parse(self.text, self.prefix, self.suffix)
         else:
@@ -117,9 +113,7 @@ class Document(list["Sentence"]):
         self, pos_rule: list, dep_rule: list[tuple[list[SubRule], str]],
         skip_space: bool=True, sep: str="\n"
     ) -> list[str]:
-        """
-            convert to UD format
-        """
+        """Convert to UD format."""
         self.detect_ud_dependencies()
         # UD掛かり先ラベルを付与
         for sent in self.sentences():
@@ -134,6 +128,7 @@ class Document(list["Sentence"]):
         ]
 
     def __str__(self) -> str:
+        """Str."""
         org = "\n".join([
             str(sent) for sent in self.sentences()
         ])
@@ -143,25 +138,23 @@ class Document(list["Sentence"]):
         return org
 
     def get_pos_from_word(self, word: "Word") -> tuple[int, int]:
-        """
-            word の位置を返す
-        """
+        """Word の位置を返す."""
         return cast(tuple[int, int], self.abs_pos_list[word.sent_pos][word.token_pos-1])
 
     def sentences(self) -> list["Sentence"]:
-        """
-            get sentences
-        """
+        """Get sentences."""
         return list(self)
 
     def __parse(self, text: list[str], prefix: list[str], suffix: list[str]) -> None:
         self.doc_attributes = generate_docannotation(prefix)
         # パース後に取得
+        self.logger.debug("debug: doc_attr = %s", self.doc_attributes.attrib)
         if self.doc_attributes.attrib is not None:
             doc_attrs = self.doc_attributes.attrib
             if doc_attrs is not None:
                 self.doc_attrib_xml = ET.fromstring(
-                    '<root>' + doc_attrs.replace('&', '&amp;') + '</root>'
+                    # ruff: noqa: S314
+                    "<root>" + doc_attrs.replace("&", "&amp;") + "</root>"
                 )
         self.doc_id = get_doc_id(self)
         doc_annotation = suffix
@@ -197,9 +190,10 @@ class Document(list["Sentence"]):
                     if "SpaceAfter" in wrd.ud_misc["SpaceAfter"]:
                         assert wrd.ud_misc["SpaceAfter"] == "No"
                         del wrd.ud_misc["SpaceAfter"]
+                        assert wrd.ud_misc.get("SpaceAfter") is None
 
-    def detect_ud_dependencies(self):
-        """ Detect UD label """
+    def detect_ud_dependencies(self) -> None:
+        """Detect UD label."""
         for sent_b in self:
             for bun in sent_b:
                 bun.update_bunsetu_pos()
@@ -209,10 +203,9 @@ class Document(list["Sentence"]):
                 bun.bunsetu_type = detect_bunsetu_jp_type(bun)
 
 
-def _loop_convud(sent: Sentence, pos_rule: list, dep_rule: list[tuple[list[SubRule], str]]):
-    """
-    親から順に実行
-    """
+def _loop_convud(
+    sent: Sentence, pos_rule: list, dep_rule: list[tuple[list[SubRule], str]]) -> Sentence:
+    """親から順に実行."""
     for word in sent.iterate_word_tree():
         detect_ud_pos(word, pos_rule)
     for word in sent.words():
@@ -221,17 +214,15 @@ def _loop_convud(sent: Sentence, pos_rule: list, dep_rule: list[tuple[list[SubRu
 
 
 def get_doc_id(doc: Document) -> str:
-    """
-        get doc id
-    """
+    """Get doc id."""
     if doc.doc_attributes.bibinfo is not None:
         return cast(str, doc.doc_attributes.bibinfo)
     if doc.doc_attributes.attrib is not None:
         return cast(
-            str, cast(ET.Element, doc.doc_attrib_xml.find('sent_id')).text
-        ).replace('# sent_id = ', '')
+            str, cast(ET.Element, doc.doc_attrib_xml.find("sent_id")).text
+        ).replace("# sent_id = ", "")
     assert doc.base_file_name is not None
-    return os.path.splitext(os.path.basename(doc.base_file_name))[0].split(".")[0]
+    return str(Path(doc.base_file_name).parent).split(".")[0]
 
 
 def __replace_allfix_deps(sent: Sentence, dep_rule: list[tuple[list[SubRule], str]]) -> None:
@@ -268,21 +259,16 @@ def __replace_iiyodomi(sent: Sentence) -> None:
 
 
 def __replace_fixed_gap(sent: Sentence) -> None:
-    """
-        条件として上の語も同じかかり先であることが条件
-    """
+    """条件として上の語も同じかかり先であることが条件."""
     print(sent)
 
 
 def post_proceeing_function(doc: Document, dep_rule: list[tuple[list[SubRule], str]]) -> None:
-    """
-        hook function
-    """
+    """Proceeding hook function."""
     for sent in doc.sentences():
         adapt_nsubj_to_dislocated_rule(sent)
-        __replace_pos_and_label(sent)
-        # 言い淀み
-        # __replace_iiyodomi(sent)
+        replace_pos_and_label(sent)
+        # 言い淀み __replace_iiyodomi(sent)
         # fixed
         __replace_allfix_deps(sent, dep_rule)
         __replace_allcase_deps(sent)

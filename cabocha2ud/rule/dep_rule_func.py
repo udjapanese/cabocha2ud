@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
-# pylint: disable=unused-argument
+# ruff: noqa: ARG001
 
-"""
-BCCWJ DepParaPAS rule function
-"""
+"""BCCWJ DepParaPAS rule function."""
 
 import re
 from collections.abc import Callable
@@ -12,11 +9,12 @@ from typing import Any, List, Literal, Optional, Tuple, Union, cast
 from cabocha2ud.bd.annotation import Annotation, Segment
 from cabocha2ud.bd.word import Word
 
-BPOS_LIST = set([
+BPOS_LIST = set({
     "SEM_HEAD", "SYN_HEAD", "CONT", "ROOT", "FUNC", "NO_HEAD"
-])
+})
 
 DEP_RULE_FUNC_LIST: dict[tuple[str, str], Callable[[Word, Any, Any], bool]] = {}
+FUNCTION_NAME_SIZE = 2
 
 """
 (include|match|regex)(word|parent|child|semhead|synhead)(pos|xpos|lemma|...)
@@ -26,19 +24,15 @@ pos... は属性名
 """
 
 def register_function(target_func: Callable[[Word, Any, Any], bool]) -> None:
-    """
-        関数名をそのままルール名として登録
-    """
+    """関数名をそのままルール名として登録."""
     funcname = target_func.__name__.split("_")
-    assert len(funcname) == 2
+    assert len(funcname) == FUNCTION_NAME_SIZE
     DEP_RULE_FUNC_LIST[(funcname[0], funcname[1])] = target_func
 
 
 @register_function
 def match_segment(self: Word, word: Optional[List[Word]], segment: str) -> bool:
-    """
-        いいよどみがあるか？  match_word_segment("Disfluency")
-    """
+    """いいよどみがあるか？  match_word_segment("Disfluency")."""
     if word is None:
         return False
     for wrd in word:
@@ -54,9 +48,7 @@ def match_segment(self: Word, word: Optional[List[Word]], segment: str) -> bool:
 
 # @register_function
 def is_appos(self: Word, word: Word, parent_word: Word) -> bool:
-    """
-        かかり関係であるかどうか ?
-    """
+    """かかり関係であるかどうか ?."""
     if word is None or parent_word is None:
         return False
     sent = word.get_sentence()
@@ -70,9 +62,7 @@ def is_appos(self: Word, word: Word, parent_word: Word) -> bool:
 
 # @register_function
 def is_conj(self: Word, word: Word, parent_word: Word) -> bool:
-    """
-        conj関係なのか？  ?
-    """
+    """conj関係なのか？  ?."""
     if word is None or parent_word is None:
         return False
     sent = word.get_sentence()
@@ -86,9 +76,7 @@ def is_conj(self: Word, word: Word, parent_word: Word) -> bool:
 
 @register_function
 def match_depnum(self: Word, word: Optional[List[Word]], depnum: int) -> bool:
-    """
-         その単語のdepnumであるかどうか
-    """
+    """その単語のdepnumであるかどうか."""
     assert word is None or isinstance(word, list)
     if word is None:
         return False
@@ -102,9 +90,7 @@ def match_depnum(self: Word, word: Optional[List[Word]], depnum: int) -> bool:
 
 @register_function
 def regex_katuyo(self: Word, word: Optional[List[Word]], katuyo: str) -> bool:
-    """
-         その単語はその活用形を持つ   match_word_katuyou(target_katuyo)
-    """
+    """その単語はその活用形を持つ   match_word_katuyou(target_katuyo)."""
     assert word is None or isinstance(word, list)
     if word is None:
         return False
@@ -118,9 +104,7 @@ def regex_katuyo(self: Word, word: Optional[List[Word]], katuyo: str) -> bool:
 
 @register_function
 def regex_xpos(self: Word, word: Optional[List[Word]], xpos: str) -> bool:
-    """
-        その単語はXPOSを持っている   regex_word_xpos(xpos)
-    """
+    """その単語はXPOSを持っている   regex_word_xpos(xpos)."""
     assert word is None or isinstance(word, list)
     if word is None:
         return False
@@ -134,9 +118,7 @@ def regex_xpos(self: Word, word: Optional[List[Word]], xpos: str) -> bool:
 
 @register_function
 def match_luwpos(self: Word, word: Optional[list[Word]], luwpos: str) -> bool:
-    """
-        その単語は長単位品詞を持っている   regex_word_luwpos(target_xpos)
-    """
+    """その単語は長単位品詞を持っている   regex_word_luwpos(target_xpos)."""
     assert word is None or isinstance(word, list)
     if word is None:
         return False
@@ -150,9 +132,7 @@ def match_luwpos(self: Word, word: Optional[list[Word]], luwpos: str) -> bool:
 
 @register_function
 def regex_luwpos(self: Word, word: Optional[List[Word]], luwpos: str) -> bool:
-    """
-        その単語は長単位品詞を持っている   regex_word_luwpos(target_xpos)
-    """
+    """その単語は長単位品詞を持っている   regex_word_luwpos(target_xpos)."""
     assert word is None or isinstance(word, list)
     if word is None:
         return False
@@ -165,9 +145,7 @@ def regex_luwpos(self: Word, word: Optional[List[Word]], luwpos: str) -> bool:
 
 @register_function
 def match_bpos(self: Word, word: Optional[List[Word]], bpos: str) -> bool:
-    """
-        その単語はそのBPOSの範囲である   include_word_bpos(target_bpos)
-    """
+    """その単語はそのBPOSの範囲である   include_word_bpos(target_bpos)."""
     assert word is None or isinstance(word, list)
     if word is None:
         return False
@@ -181,9 +159,7 @@ def match_bpos(self: Word, word: Optional[List[Word]], bpos: str) -> bool:
 
 @register_function
 def include_bpos(self: Word, word: Optional[List[Word]], bpos: List[str]) -> bool:
-    """
-        その単語はそのBPOSの範囲である   include_word_bpos(target_bpos)
-    """
+    """その単語はそのBPOSの範囲である   include_word_bpos(target_bpos)."""
     assert word is None or isinstance(word, list)
     assert set(bpos).issubset(BPOS_LIST)
     if word is None:
@@ -198,9 +174,7 @@ def include_bpos(self: Word, word: Optional[List[Word]], bpos: List[str]) -> boo
 
 @register_function
 def include_upos(self: Word, word: Optional[list[Word]], upos: list[str]) -> bool:
-    """
-       その単語はUPOSを持っている   include_word_upos(target_upos)
-    """
+    """その単語はUPOSを持っている   include_word_upos(target_upos)."""
     assert word is None or isinstance(word, list)
     if word is None:
         return False
@@ -213,10 +187,8 @@ def include_upos(self: Word, word: Optional[list[Word]], upos: list[str]) -> boo
 
 
 @register_function
-def regex_suffixstring(self, word: Optional[list[Word]], suffixstring: str) -> bool:
-    """
-       その単語からの末尾がre_str表現である
-    """
+def regex_suffixstring(self: Word, word: Optional[list[Word]], suffixstring: str) -> bool:
+    """その単語からの末尾がre_str表現である."""
     assert word is None or isinstance(word, list)
     if word is None:
         return False
@@ -233,9 +205,7 @@ def regex_suffixstring(self, word: Optional[list[Word]], suffixstring: str) -> b
 
 # @register_function
 def is_include_link(word: Word) -> bool:
-    """
-        include link information ?
-    """
+    """Include link information ?."""
     if word is None:
         return False
     return word.link_label != -1
@@ -243,9 +213,7 @@ def is_include_link(word: Word) -> bool:
 
 @register_function
 def match_lemma(self: Word, word: Optional[List[Word]], lemma: str) -> bool:
-    """
-        その単語の日本語原型はjp_origin_listにある  match_word_lemma()
-    """
+    """その単語の日本語原型はjp_origin_listにある  match_word_lemma()."""
     assert word is None or isinstance(word, list)
     if word is None:
         return False
@@ -259,9 +227,7 @@ def match_lemma(self: Word, word: Optional[List[Word]], lemma: str) -> bool:
 
 @register_function
 def regex_lemma(self: Word, word: Optional[List[Word]], lemma: str) -> bool:
-    """
-        その単語の日本語原型はjp_origin_listにある  regex_word_lemma()
-    """
+    """その単語の日本語原型はjp_origin_listにある  regex_word_lemma()."""
     assert word is None or isinstance(word, list)
     if word is None:
         return False
@@ -275,9 +241,7 @@ def regex_lemma(self: Word, word: Optional[List[Word]], lemma: str) -> bool:
 
 @register_function
 def include_lemma(self: Word, word: Optional[List[Word]], lemma: str) -> bool:
-    """
-        その単語の日本語原型はjp_origin_listにある  include_word_lemma()
-    """
+    """その単語の日本語原型はjp_origin_listにある  include_word_lemma()."""
     assert word is None or isinstance(word, list)
     if word is None:
         return False
@@ -292,16 +256,16 @@ def include_lemma(self: Word, word: Optional[List[Word]], lemma: str) -> bool:
 RE_CASE_MATCH = re.compile("助詞-[係格副]助詞")
 @register_function
 def include_case(self: Word, word: Optional[list[Word]], case: list[str]) -> bool:
-    """
-        指定したcaseがwordに含まれているか（基本的にinclude_child_caseでしか使わない）
-        case
-    """
+    """指定したcaseがwordに含まれているか（基本的にinclude_child_caseでしか使わない）."""
     assert word is None or isinstance(word, list)
     if word is None:
         return False
     check_case = [c.split(":") for c in case]
-    assert all(1 <= len(c) <=2 for c in check_case) and all(RE_CASE_MATCH.match(c[1]) for c in check_case if len(c)==2)
-    cword = (wrd for wrd in word if wrd.bunsetu_pos == self.bunsetu_pos and self.word_pos < wrd.word_pos)
+    check_size = 2
+    assert all(1 <= len(c) <= check_size for c in check_case)
+    assert all(RE_CASE_MATCH.match(c[1]) for c in check_case if len(c)== check_size)
+    cword = (wrd for wrd in word if wrd.bunsetu_pos == self.bunsetu_pos\
+        and self.word_pos < wrd.word_pos)
     for wrd in cword:
         if wrd is None:
             return False
@@ -309,14 +273,15 @@ def include_case(self: Word, word: Optional[list[Word]], case: list[str]) -> boo
             if len(ccc) == 1:
                 if RE_CASE_MATCH.match(wrd.get_xpos()) and ccc[0] == wrd.get_jp_origin():
                     return True
-            elif len(ccc) == 2:
-                if re.match(ccc[1], wrd.get_xpos()) and ccc[0] == wrd.get_jp_origin():
-                    return True
+            elif len(ccc) == check_size and re.match(ccc[1], wrd.get_xpos()) and\
+                ccc[0] == wrd.get_jp_origin():
+                return True
     return False
 
 
 @register_function
 def match_busetutype(self: Word, word: Optional[list[Word]], busetutype: str) -> bool:
+    """文節タイプbusetutypeと一致するか."""
     assert word is None or isinstance(word, list)
     if word is None:
         return False
@@ -330,6 +295,7 @@ def match_busetutype(self: Word, word: Optional[list[Word]], busetutype: str) ->
 
 @register_function
 def include_busetutype(self: Word, word: Optional[list[Word]], busetutype: list[str]) -> bool:
+    """文節タイプbusetutypeを含んでいるか."""
     assert word is None or isinstance(word, list)
     if word is None:
         return False
@@ -351,15 +317,16 @@ FORMULA_LIST: dict[str, Callable[[int, int, int], bool]] = {
 NUM_VRE = re.compile(".*?(-?[0-9]+)$")
 @register_function
 def match_disformula(self: Word, word: Optional[list[Word]], disformula: str) -> bool:
-    """
-    disformula: "X-Y==n"みたいなフォーマット、Xが対象の語、Yが比較の語
-        nが正の数なら右主辞であり、負の数なら左主辞
-    word: 比較する語のリスト
+    """disformula: "X-Y==n"みたいなフォーマット、Xが対象の語、Yが比較の語.
+
+    nが正の数なら右主辞であり、負の数なら左主辞
+        word: 比較する語のリスト
     """
     assert word is None or isinstance(word, list)
+    over_size = 2
     if word is None:
         return False
-    if len(word) > 2:  # 現状parentぐらいしか利用用途がないので
+    if len(word) > over_size:  # 現状parentぐらいしか利用用途がないので
         return False
     rem = NUM_VRE.match(disformula)
     assert(rem is not None)
@@ -376,8 +343,9 @@ def match_disformula(self: Word, word: Optional[list[Word]], disformula: str) ->
 
 @register_function
 def match_paslink(self: Word, word: Optional[list[Word]], paslink: str) -> bool:
-    """
-    case: ga, o, niのいずれか
+    """paslinkを確認する.
+
+    case: ga, o, niのいずれか.
     word: 比較する語のリスト 基本parentのみ match_parent_paslink
     """
     assert paslink in ["ga", "o", "ni"]
@@ -397,7 +365,8 @@ def match_paslink(self: Word, word: Optional[list[Word]], paslink: str) -> bool:
     assert parent_word is not None
     res_lst: list[bool] = []
     for wrd in self.get_luw_units():
-        _link_label: Union[Tuple[Annotation, Segment, Segment], Literal[-1]] = parent_word.get_link(wrd)
+        _link_label: Union[
+            Tuple[Annotation, Segment, Segment], Literal[-1]] = parent_word.get_link(wrd)
         if _link_label != -1:
             # 格情報を抽出 (ga, o, ni)]
             gcase = cast(Tuple[Annotation, Segment, Segment], _link_label)[0].name.split(":")[-1]
@@ -407,8 +376,8 @@ def match_paslink(self: Word, word: Optional[list[Word]], paslink: str) -> bool:
 
 def _main() -> None:
     for key, value in list(DEP_RULE_FUNC_LIST.items()):
-        print("{}\t{}".format(key, value))
+        print(f"{key}\t{value}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _main()

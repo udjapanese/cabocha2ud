@@ -21,21 +21,22 @@ class FixStuttersComponent(UDPipeLine):
     def __call__(self: "FixStuttersComponent") -> None:
         """Call func."""
         assert isinstance(self.target, UniversalDependencies)
-        self.logger.debug("do " + self.name)
+        self.logger.debug("do %s", self.name)
         for sent in self.target.sentences():
             hlst: list[int] = [-1] + [
-                int(wrd.get(Field.HEAD).get_content()) for wrd in sent.words()]
+                int(wrd.get(Field.HEAD).get_content()) for wrd in sent.words()
+            ]
             mlst: list[str] = ["dummy"] +  [
                 wrd.get(Field.DEPREL).get_content() for wrd in sent.words()
             ]
             res = [
                 (p, int(c), mlst[p], mlst[int(c)]) for p, c in enumerate(hlst)
                 if p > 0 and mlst[p] != "fixed" and mlst[p] != "punct" and\
-                    mlst[int(c)] in ["case", "mark", "aux", "cc"]
+                    mlst[int(c)] in ["case", "mark", "aux", "cc", "det"]
             ]
             if len(res) == 0:
                 continue
-            self.logger.debug(res)
+            self.logger.debug("%s %s", sent.get_header("sent_id"), res)
             for cpos, ppos, clabel, plabel in res:
                 self.logger.debug(cpos, ppos, clabel, plabel)
                 cwrd = sent[cpos-1]

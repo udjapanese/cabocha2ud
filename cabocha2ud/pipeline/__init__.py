@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-
-"""
-Pipeline base function
-"""
+"""Pipeline base function."""
 
 import argparse
 import importlib
@@ -10,12 +6,12 @@ import pathlib
 import re
 from typing import Optional, Type
 
-from cabocha2ud.bd import BunsetsuDependencies as BD
+from cabocha2ud.bd import BunsetsuDependencies
 from cabocha2ud.lib.logger import Logger
 from cabocha2ud.lib.yaml_dict import YamlDict
 from cabocha2ud.pipeline.component import PipeLineComponent
 from cabocha2ud.rule import dep, pos
-from cabocha2ud.ud import fit, UniversalDependencies as UD
+from cabocha2ud.ud import UniversalDependencies, fit
 
 MODULE_FILES = importlib.import_module("cabocha2ud.pipeline").__file__
 assert MODULE_FILES is not None
@@ -23,20 +19,22 @@ PIPE_FUNCS: list[Type[PipeLineComponent]] = [
     p.COMPONENT for p in [
         importlib.import_module(f'cabocha2ud.pipeline.{p.name.replace(".py", "")}')
         for p in pathlib.Path(MODULE_FILES).parent.glob("*.py") if re.match("^[^_].*.py$", p.name)
-    ] if 'COMPONENT' in p.__dict__
+    ] if "COMPONENT" in p.__dict__
 ]
 PIPE_FUNCS_NAMES = [f.name for f in PIPE_FUNCS]
 PIPE_FUNC_MAPS: dict[str, Type[PipeLineComponent]] = dict(zip(PIPE_FUNCS_NAMES, PIPE_FUNCS))
 
 
 class RunnerPipeline:
-    """
-        Pipeline class
-    """
+    """Pipeline class."""
 
     def __init__(
-        self, _bd: BD, _ud: UD, pipe: Optional[list[str]]=None, options: YamlDict=YamlDict()
-    ):
+        self, _bd: BunsetsuDependencies, _ud: UniversalDependencies,
+        pipe: Optional[list[str]]=None, options: Optional[YamlDict]=None
+    ) -> None:
+        """Init and prepare."""
+        if options is None:
+            options = YamlDict()
         self.logger: Logger = options.get("logger") or Logger()
         self._bd = _bd
         self._ud = _ud
@@ -51,8 +49,8 @@ class RunnerPipeline:
             self.pipe = pipe
         self.prepare(self.pipe)
 
-    def prepare(self, pipe_funcs: list[str]):
-        """ prepare pipeline functions
+    def prepare(self, pipe_funcs: list[str]) -> None:
+        """Prepare pipeline functions.
 
         Args:
             pipe_funcs (list[str]): list of pipeline
@@ -74,16 +72,16 @@ class RunnerPipeline:
             else:
                 raise KeyError
 
-    def get_bd(self) -> BD:
-        """ Get Bunsetu Dependencies Object """
+    def get_bd(self) -> BunsetsuDependencies:
+        """Get Bunsetu Dependencies Object."""
         return self._bd
 
-    def get_ud(self) -> UD:
-        """ Get Universal Dependencies Object """
+    def get_ud(self) -> UniversalDependencies:
+        """Get Universal Dependencies Object."""
         return self._ud
 
     def do_pipeline(self) -> None:
-        """ パイプラインを実行する """
+        """パイプラインを実行する."""
         for pre in self.components["pre"]:
             pre()
         fit(self._ud, self._bd, self.pos_rule, self.dep_rule)
@@ -95,8 +93,12 @@ def _main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
     _ = parser.parse_args()
-    print(PIPE_FUNC_MAPS)
+    for pfunc in PIPE_FUNC_MAPS:
+        print(pfunc,
+              str(PIPE_FUNC_MAPS[pfunc]).replace("<class 'cabocha2ud.", ""),
+              PIPE_FUNC_MAPS[pfunc].mode, sep="\t")
 
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     _main()

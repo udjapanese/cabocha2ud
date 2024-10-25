@@ -4,26 +4,23 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-ipython = "*"
-pylint = "*"
-tqdm = "*"
 pytest = "*"
 mypy = "*"
-flake8 = "*"
-pandas = "*"
 ruff = "*"
+ipython = "*"
+tqdm = "*"
+pandas = "*"
 
 [packages]
-configargparse = "*"
 logzero = "*"
-ruamel-yaml = "==0.17.4"
-tomlkit = "*"
-click = "*"
+ruamel-yaml = "*"
 tomli = "*"
-ruff = "*"
+click = "*"
+tomlkit = "*"
+configargparse = "*"
 
 [requires]
-python_version = "3.9"
+python_version = "3.11"
 
 [scripts]
 test = "pytest tests"

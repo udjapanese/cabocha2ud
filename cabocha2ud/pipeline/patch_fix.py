@@ -1,60 +1,61 @@
-# -*- coding: utf-8 -*-
-
-"""
-fix based patch file
-"""
+"""Fix based patch file."""
 
 import argparse
-from typing import Optional, TypedDict, Union, cast
+from typing import ClassVar, Optional, TypedDict, Union, cast
 
 from cabocha2ud.lib.logger import Logger
 from cabocha2ud.lib.yaml_dict import YamlDict, YamlList
 from cabocha2ud.pipeline.component import UDPipeLine
-from cabocha2ud.ud import UniversalDependencies as UD
+from cabocha2ud.ud import UniversalDependencies
 from cabocha2ud.ud.util import Field
 
 
 class Rule(TypedDict):
-    """ Rule Object """
+    """Rule Object."""
+
     ids: list[int]
     target: str
     value: Union[str, int]
 
 
 def load_path_file(patch_file_name: Optional[str]) -> dict[str, list[Rule]]:
-    """ load path file """
+    """Load path file."""
     if patch_file_name is None:
         return {}
     rule_list: list[dict[str, Union[str, list[Rule]]]] = cast(
         list[dict[str, Union[str, list[Rule]]]],
         list(YamlList(file_name=patch_file_name, auto_load=True))
     )
-    rule_set = dict(
-        (cast(str, rule["sent_id"]), cast(list[Rule], rule["rules"])) for rule in rule_list
-    )
-    return rule_set
+    return {
+        cast(str, rule["sent_id"]): cast(list[Rule], rule["rules"]) for rule in rule_list
+    }
 
 
 class PatchFixComponent(UDPipeLine):
-    """ patch fix
+    """Patch fix.
 
     Args:
         PipeLineComponent (_type_): _description_
-    """
-    name = "patch_fix"
-    need_opt = ["patch_file"]
 
-    def __init__(self, target: UD, opts: YamlDict) -> None:
+    """
+
+    name: str = "patch_fix"
+    need_opt: ClassVar[list[str]] = ["patch_file"]
+
+    def __init__(self, target: UniversalDependencies, opts: YamlDict) -> None:
+        """Init."""
         self.rule_list: dict[str, list[Rule]] = {}
         super().__init__(target, opts)
 
     def prepare(self) -> None:
+        """Prepere and load rule."""
         assert "patch_file" in self.opts, "please set path_file"
         self.rule_list = load_path_file(self.opts["patch_file"])
 
     def __call__(self) -> None:
-        assert isinstance(self.target, UD)
-        self.logger.debug(f"do {self.name}")
+        """Do pipeline."""
+        assert isinstance(self.target, UniversalDependencies)
+        self.logger.debug("do %s", self.name)
         if len(self.rule_list) == 0:
             return
         for sent in self.target.sentences():
@@ -94,10 +95,10 @@ def _main() -> None:
     options = YamlDict(
         init={"logger": Logger(debug=args.debug), "patch_file": args.patch_file}
     )
-    _ud = UD(file_name=args.conll_file, options=options)
+    _ud = UniversalDependencies(file_name=args.conll_file, options=options)
     COMPONENT(_ud,  opts=options)()
     _ud.write_ud_file(args.writer)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _main()

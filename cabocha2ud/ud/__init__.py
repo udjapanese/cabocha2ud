@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-
-"""
-
-Universal Dependency class
-"""
+"""Universal Dependency class."""
 
 from typing import Iterator, Optional, Union, cast
 
@@ -19,21 +14,26 @@ from cabocha2ud.ud.word import Misc
 
 
 class UniversalDependencies:
-    """
+    """UniversalDependencies.
+
     Attributes:
         file_name (str): file name, if the parameter set, load cabocha file
         file_obj (:obj:`TextObject`): file object class.
         sentences (:obj:`list[Sentence]`) list of `list[Sentence]`
         options (:obj:`YamlDict`): options
+
     """
 
     def __init__(
         self, file_name: Optional[str]=None, sentences: Optional[list[Sentence]]=None,
         logger: Optional[Logger]=None,
-        options: YamlDict=YamlDict()
-    ):
+        options: YamlDict|None=None
+    ) -> None:
+        """Init."""
         self.file_name: Optional[str] = file_name
         self.file_obj: Optional[TextObject] = None
+        if options is None:
+            options = YamlDict()
         self.options: YamlDict = options
         self._sp = None
         if self.options.get("space_marker") is not None:
@@ -52,30 +52,32 @@ class UniversalDependencies:
             self._sentences = sentences
 
     def __len__(self) -> int:
+        """Length."""
         return len(self._sentences)
 
     def __str__(self) -> str:
+        """Get string."""
         return "\n".join([str(s) for s in self._sentences])
 
     def get_sp(self) -> str:
-        """ get sp marker """
+        """Get sp marker."""
         assert isinstance(self._sp, str)
         return self._sp
 
     def sentences(self) -> list[Sentence]:
-        """ return sentences list """
+        """Return sentences list."""
         return self._sentences
 
     def set_sentences(self, sents: list[Sentence]) -> None:
-        """ return sentences list """
+        """Return sentences list."""
         self._sentences = list(sents)
 
     def get_sentence(self, index: int) -> Sentence:
-        """ return one sentence for index """
+        """Return one sentence for index."""
         return self._sentences[index]
 
     def remove_sentence_from_index(self, index: list[int]) -> None:
-        """ Remove sentence by index list """
+        """Remove sentence by index list."""
         ncontent: list[Sentence] = []
         sids: list[str] = []
         for spos, nsent in enumerate(self._sentences):
@@ -89,13 +91,13 @@ class UniversalDependencies:
         assert len(self.sentence_ids) == len(self._sentences)
 
     def remove_sentence_from_sentid(self, sent_id_list: list[str]) -> None:
-        """ remove sentence by sent_id's list """
+        """Remove sentence by sent_id's list."""
         self.remove_sentence_from_index([
             self.sentence_ids.index(sent_id) for sent_id in sent_id_list
         ])
 
     def update_sentence_of_index(self, index: int, sent: Sentence) -> None:
-        """ update sentence by index """
+        """Update sentence by index."""
         if index < 0:
             assert KeyError("`index` must be greater than or equal to 0")
         sent_id = sent.get_header("sent_id")
@@ -104,34 +106,35 @@ class UniversalDependencies:
             if sent_id is not None:
                 self.sentence_ids.append(sent_id.get_value())
             else:
-                self.sentence_ids.append("sent-{:02}".format(len(self._sentences)))
+                self.sentence_ids.append(f"sent-{len(self._sentences):02}")
         else:
             self._sentences[index] = sent
             if sent_id is not None:
                 self.sentence_ids[index] = sent_id.get_value()
             else:
-                self.sentence_ids[index] = "sent-{:02}".format(len(self._sentences))
+                self.sentence_ids[index] = f"sent-{len(self._sentences):02}"
         assert len(self.sentence_ids) == len(self._sentences)
 
     def update_sentence_of_sentid(self, sent_id: str, sent: Sentence) -> None:
-        """ update sentence of sent_id """
+        """Update sentence of sent_id."""
         self.update_sentence_of_index(self.sentence_ids.index(sent_id), sent)
 
     def read_ud_file(self, file_name: Optional[str]=None) -> None:
-        """ read UD file """
+        """Read UD file."""
         if file_name is not None:
             self.file_name = file_name
             self.file_obj = TextObject(file_name=self.file_name)
         if self.file_obj is None:
-            raise KeyError("must give file-like content")
+            msg = "must give file-like content"
+            raise KeyError(msg)
         self.load(self.file_obj.read(), spt=self._sp)
 
-    def load(self, str_content: Union[list[str], Iterator[str]], spt: Optional[str]=None):
-        """ load UD from str list """
+    def load(self, str_content: Union[list[str], Iterator[str]], spt: Optional[str]=None) -> None:
+        """Load UD from str list."""
         sent_datas = list(enumerate(iterate_ud_sentence(str_content)))
         # 一度スペースを決める必要がある
         if spt is None:
-            for sent_pos, sent in sent_datas:
+            for _, sent in sent_datas:
                 sss = [s for s in sent if s.startswith("# text = ")]
                 if len(sss) == 0:
                     continue
@@ -149,25 +152,20 @@ class UniversalDependencies:
             if sent_id is not None:
                 self.sentence_ids.append(sent_id.get_value())
             else:
-                self.sentence_ids.append("sent-{:02}".format(sent_pos))
+                self.sentence_ids.append(f"sent-{sent_pos:02}")
         assert len(self.sentence_ids) == len(self._sentences)
 
     def write_ud_file(self, file_name: str) -> None:
-        """ write UD file to `file_name` """
+        """Write UD file to `file_name`."""
         writer = TextObject(file_name=file_name, mode="w")
         writer.write([str(s) for s in self._sentences])
 
 
-def fit(
+def fit(  # noqa: C901, PLR0912, PLR0915
     uobj: UniversalDependencies, bobj: BunsetsuDependencies,
     pos_rule: list, dep_rule: list[tuple[list[dep.SubRule], str]]
 ) -> None:
-    """
-    Convert BD to UD
-
-    Args:
-        bobj (BunsetsuDependencies): converted BunsetsuDependencies
-    """
+    """Convert BD to UD."""
     prev_text: Optional[str] = None
     target_newdoc_text: Optional[str] = None
     tmp_content: list[Union[str, Sentence]] = []
@@ -180,11 +178,9 @@ def fit(
                 Sentence.load_from_string(sent, spt=doc.space_marker) for sent in sentences
             ])
             continue
-        target_newdoc_text = list(doc.doc_attrib_xml.iter("newdoc_id"))[0].text
-        if doc_id == 0 and target_newdoc_text is not None:
-            tmp_content.append(target_newdoc_text)
-            prev_text = target_newdoc_text
-        elif target_newdoc_text is not None and prev_text != target_newdoc_text:
+        target_newdoc_text = next(iter(doc.doc_attrib_xml.iter("newdoc_id"))).text
+        if doc_id == 0 and target_newdoc_text is not None or\
+            target_newdoc_text is not None and prev_text != target_newdoc_text:
             tmp_content.append(target_newdoc_text)
             prev_text = target_newdoc_text
         tmp_content.extend([
@@ -198,7 +194,7 @@ def fit(
             if sent_id is not None:
                 uobj.sentence_ids.append(sent_id.get_value())
             else:
-                uobj.sentence_ids.append("sent-{:02}".format(cpos))
+                uobj.sentence_ids.append(f"sent-{cpos:02}")
         assert len(uobj.sentence_ids) == len(uobj.sentences())
         return
 
@@ -220,7 +216,7 @@ def fit(
             if sent_id is not None:
                 uobj.sentence_ids.append(sent_id.get_value())
             else:
-                uobj.sentence_ids.append("sent-{:02}".format(len(_sentences)))
+                uobj.sentence_ids.append(f"sent-{len(_sentences):02}")
     uobj.set_sentences(_sentences)
     assert len(uobj.sentence_ids) == len(uobj.sentences())
     spos_lst: list[int] = []
