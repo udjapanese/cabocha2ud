@@ -6,19 +6,17 @@ import re
 import string
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Union, cast
 
-from cabocha2ud.bd.util import LUWFeaField as LField
-from cabocha2ud.bd.util import SUWFeaField as SField
-from cabocha2ud.bd.util import csv_join, csv_split
+from cabocha2ud.bd.util import DoNotExceptSizeError, LUWFeaField, SUWFeaField, csv_join, csv_split
 from cabocha2ud.lib.logger import Logger
 
 if TYPE_CHECKING:
     # ruff: noqa: TCH004
-    from .annotation import Annotation, AnnotationList, Segment
-    from .bunsetu import Bunsetu
-    from .document import Document
-    from .sentence import Sentence
+    from cabocha2ud.bd.annotation import Annotation, AnnotationList, Segment
+    from cabocha2ud.bd.bunsetu import Bunsetu
+    from cabocha2ud.bd.document import Document
+    from cabocha2ud.bd.sentence import Sentence
 
-from .annotation import Annotation, AnnotationList, Segment
+from cabocha2ud.bd.annotation import Annotation, AnnotationList, Segment
 
 JP_SP_MARK = "[JSP]"
 RE_CASE_MATH = re.compile("助詞-[係格副]助詞")
@@ -222,17 +220,17 @@ class SUW(Property):
     def parse_suw_part(self, token: list[str]) -> None:
         """Parse SUW part."""
         self.surface = token[0]
-        self.features = csv_split(token[1], expect_size=len(SField))
-        assert len(self.features) == len(SField)
-        self.jp_pos = self.features[SField.pos1]
-        self.origin = self.features[SField.lemma]
+        self.features = csv_split(token[1], expect_size=len(SUWFeaField))
+        assert len(self.features) == len(SUWFeaField)
+        self.jp_pos = self.features[SUWFeaField.pos1]
+        self.origin = self.features[SUWFeaField.lemma]
         if self.origin == "":
-            self.origin = self.features[SField.lemma]
-        if self.features[SField.pos2] == "数詞":
-            self.origin = self.features[SField.lemma]
-        self.usage = self.features[SField.iForm]
-        self.yomi = self.features[SField.lForm]
-        self.katuyo = self.features[SField.cForm]
+            self.origin = self.features[SUWFeaField.lemma]
+        if self.features[SUWFeaField.pos2] == "数詞":
+            self.origin = self.features[SUWFeaField.lemma]
+        self.usage = self.features[SUWFeaField.iForm]
+        self.yomi = self.features[SUWFeaField.lForm]
+        self.katuyo = self.features[SUWFeaField.cForm]
 
     def get_surface(self) -> str:
         """Get surface."""
@@ -245,7 +243,7 @@ class SUW(Property):
     def get_xpos(self) -> str:
         """Get xpos."""
         return "-".join(
-            f for f in self.features[SField.pos1:SField.cForm] if f not in ["*", ""]
+            f for f in self.features[SUWFeaField.pos1:SUWFeaField.cForm] if f not in ["*", ""]
         )
 
     def get_features(self) -> list[str]:
@@ -271,7 +269,8 @@ class SUW(Property):
             return self.origin.split("-")[0]
         if do_conv29:
             return conv_v29_lemma(
-                self.origin, self.features, SField.pos1, SField.lemma, SField.orthBase
+                self.origin, self.features,
+                SUWFeaField.pos1, SUWFeaField.lemma, SUWFeaField.orthBase
             )
         return self.origin
 
@@ -287,14 +286,14 @@ class SUW(Property):
         """
         usize = 8
         unidic_info: list[str] = [
-            SUW.get_features(self)[SField.lForm],
-            SUW.get_features(self)[SField.lemma],
-            SUW.get_features(self)[SField.orth],
-            SUW.get_features(self)[SField.orthBase],
-            SUW.get_features(self)[SField.pron],
-            SUW.get_features(self)[SField.pronBase],
-            SUW.get_features(self)[SField.form],
-            SUW.get_features(self)[SField.formBase]
+            SUW.get_features(self)[SUWFeaField.lForm],
+            SUW.get_features(self)[SUWFeaField.lemma],
+            SUW.get_features(self)[SUWFeaField.orth],
+            SUW.get_features(self)[SUWFeaField.orthBase],
+            SUW.get_features(self)[SUWFeaField.pron],
+            SUW.get_features(self)[SUWFeaField.pronBase],
+            SUW.get_features(self)[SUWFeaField.form],
+            SUW.get_features(self)[SUWFeaField.formBase]
         ]
         res = csv_join(unidic_info, delimiter=delimiter)
         csv_split(res, expect_size=usize)  # サイズチェック
@@ -349,7 +348,7 @@ class LUW(Property):
         if do_conv29:
             return conv_v29_lemma(
                 self.luw_origin, self.luw_features,
-                LField.l_pos1, LField.l_lemma, LField.l_lemma
+                LUWFeaField.l_pos1, LUWFeaField.l_lemma, LUWFeaField.l_lemma
             )
         return self.luw_origin
 
@@ -361,9 +360,12 @@ class LUW(Property):
 
         """
         lsize = 2
+        luw_features = LUW.get_features(self)
+        if len(luw_features) == 0:
+            return "_"
         unidic_info: list[str] = [
-            LUW.get_features(self)[LField.l_reading],
-            LUW.get_features(self)[LField.l_lemma]
+            LUW.get_features(self)[LUWFeaField.l_reading],
+            LUW.get_features(self)[LUWFeaField.l_lemma]
         ]
         res = csv_join(unidic_info, delimiter=delimiter)
         csv_split(res, expect_size=lsize)  # サイズチェック
@@ -390,12 +392,13 @@ class LUW(Property):
                 self.luw_label = "I"
                 self.luw_form = luw_info.luw_form
                 self.luw_features = luw_info.luw_features
-                self.luw_origin = luw_info.luw_features[LField.l_lemma]
-                self.luw_yomi = luw_info.luw_features[LField.l_reading]
+                self.luw_origin = luw_info.luw_features[LUWFeaField.l_lemma]
+                self.luw_yomi = luw_info.luw_features[LUWFeaField.l_reading]
                 self.luw_pos = "-".join(
-                    f for f in self.luw_features[LField.l_pos1:LField.l_cForm] if f not in ["*", ""]
+                    f for f in self.luw_features[LUWFeaField.l_pos1:LUWFeaField.l_cForm]
+                    if f not in ["*", ""]
                 )
-                self.luw_katuyo = luw_info.luw_features[LField.l_cForm]
+                self.luw_katuyo = luw_info.luw_features[LUWFeaField.l_cForm]
                 return
             if len(self.l_bunsetu) > 0:
                 target = self.l_bunsetu[-1]
@@ -413,16 +416,19 @@ class LUW(Property):
             self.luw_features = target.luw_features
         else:
             self.luw_label = "B"
-            self.luw_features = csv_split(token[3], expect_size=len(LField))
-            assert len(self.luw_features) == len(LField)
+            try:
+                self.luw_features = csv_split(token[3], expect_size=len(LUWFeaField))
+            except DoNotExceptSizeError:
+                self.luw_features = ["" for _ in range(len(LUWFeaField))]
+            assert len(self.luw_features) == len(LUWFeaField)
             self.luw_form = token[2]
-            self.luw_origin = self.luw_features[LField.l_lemma]
-            self.luw_yomi = self.luw_features[LField.l_reading]
+            self.luw_origin = self.luw_features[LUWFeaField.l_lemma]
+            self.luw_yomi = self.luw_features[LUWFeaField.l_reading]
             self.luw_pos = "-".join(
-                f for f in self.luw_features[LField.l_pos1:LField.l_cForm]
+                f for f in self.luw_features[LUWFeaField.l_pos1:LUWFeaField.l_cForm]
                 if f not in ["*", ""]
             )
-            self.luw_katuyo = self.luw_features[LField.l_cForm]
+            self.luw_katuyo = self.luw_features[LUWFeaField.l_cForm]
 
 
 class BunDepInfo(Property):
@@ -674,6 +680,13 @@ class Word(Reference, SUW, LUW, BunDepInfo, UD):
                 assert self.ud_misc.get("SpaceAfter") is None
                 # SpaceAfter Noを取り除く
             # BCCWJなどのYesを上書きする可能性があるのでNoにはしないこと
+        else:
+            self.ud_misc["SpaceAfter"] = "No"
+            if "SpacesAfter" in self.ud_misc:
+                assert self.ud_misc["SpacesAfter"] == "Yes"
+                del self.ud_misc["SpacesAfter"]
+                assert self.ud_misc.get("SpacesAfter") is None
+                # SpacesAfter Yesを取り除く
         if add_unidic_info:
             if self.get_origin() != self.get_origin(do_conv29=True):
                 self.ud_misc["PrevUDLemma"] = self.get_origin(do_conv29=True)

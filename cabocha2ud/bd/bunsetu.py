@@ -172,7 +172,7 @@ class Bunsetu(list["Word"]):
                 luw_lst[-1].append(wrd)
         return luw_lst
 
-    def update_word_list(self, wrd_lst:list[Word]) -> None:
+    def update_word_list(self, wrd_lst: list[Word]) -> None:
         """Update word list."""
         self.clear()
         for wpos, wrd in enumerate(wrd_lst):

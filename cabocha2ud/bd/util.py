@@ -3,6 +3,17 @@
 import csv
 from enum import IntEnum
 from io import StringIO
+from typing import Any
+
+
+class DoNotExceptSizeError(Exception):
+    """Exception raised for errors in the input size."""
+
+    def __init__(self, msg:str|None=None, *args: tuple[Any,...], **kwargs: dict) -> None:
+        """Init message."""
+        if not msg:
+            msg = "期待通りのサイズではありません"
+        super().__init__(msg, *args, **kwargs)
 
 
 class SUWFeaField(IntEnum):
@@ -98,7 +109,9 @@ class LUWFeaField(IntEnum):
     l_lemma = 7
 
 
-def csv_split(csv_str: str, delimiter: str=",", expect_size: int|None=None) -> list[str]:
+def csv_split(
+    csv_str: str, delimiter: str=",", expect_size: int|None=None
+) -> list[str]:
     """Csv split."""
     # ruff: noqa: RUF001
     if csv_str == "補助記号,読点,*,*,,,,，,,,,,,,記号,,,,,,,,,,,,,,,13752552530432,50":
@@ -106,7 +119,11 @@ def csv_split(csv_str: str, delimiter: str=",", expect_size: int|None=None) -> l
         csv_str = '補助記号,読点,*,*,,,,，,",",,",",,記号,,,,,,,,,,,,,,,13752552530432,50'
     splited =  next(iter(csv.reader(StringIO(csv_str), delimiter=delimiter)))
     if expect_size is not None:
-        assert len(splited) == expect_size, csv_str
+        try:
+            assert len(splited) == expect_size, csv_str
+        except AssertionError as e:
+            msg = f"期待通りのサイズではありません: {expect_size} 「{csv_str}」"
+            raise DoNotExceptSizeError(msg) from e
     return next(iter(csv.reader(StringIO(csv_str), delimiter=delimiter)))
 
 

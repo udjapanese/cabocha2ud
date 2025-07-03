@@ -10,6 +10,8 @@ ruff = "*"
 ipython = "*"
 tqdm = "*"
 pandas = "*"
+janome = "*"
+pydantic = "*"
 
 [packages]
 logzero = "*"
@@ -18,9 +20,11 @@ tomli = "*"
 click = "*"
 tomlkit = "*"
 configargparse = "*"
+pydantic = "*"
+pytest = "*"
 
 [requires]
-python_version = "3.11"
+python_version = "3.13"
 
 [scripts]
 test = "pytest tests"

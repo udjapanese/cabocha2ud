@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
-
-"""
-Utility Functions
-"""
+"""Utility Functions."""
 
 import itertools
 from typing import Iterable
 
 
 def flatten(lst: Iterable) -> list:
-    """ Flatten list
+    """Do flatten list.
 
     Args:
         lst (Iterable): list be flattend

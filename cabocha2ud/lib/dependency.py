@@ -1,14 +1,9 @@
-# -*- coding: utf-8 -*-
-
-"""
-Functions for checking Dependencies
-"""
+"""Functions for checking Dependencies."""
 
 
 def collect_ancestors(_id: int, tree: list[int], ancestors: list[int]) -> list[int]:
-    """
-    Usage: ancestors = collect_ancestors(nodeid, nodes, [])
-    
+    """Ancestors collect_ancestors nodeid, nodes, []).
+
     `tree` format is [-1] + [child1, child2, child3, ...], root is 0
     """
     pid = tree[_id]
@@ -22,8 +17,7 @@ def collect_ancestors(_id: int, tree: list[int], ancestors: list[int]) -> list[i
 
 
 def get_caused_nonprojectivities(iid: int, tree: list[int]) -> list[int]:
-    """
-    iid ノードに対して非交差(non-projective)が発生するノード（子）を返します
+    """`iid` ノードに対して非交差(non-projective)が発生するノード（子）を返します.
 
     `tree` format is [-1] + [child1, child2, child3, ...], root is 0
     """

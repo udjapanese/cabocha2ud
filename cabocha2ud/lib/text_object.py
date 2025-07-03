@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-
-"""
-utility File object
-"""
+"""Utility File object."""
 
 import argparse
 import sys
@@ -12,7 +8,7 @@ from typing import Iterable, Iterator, TextIO, Union
 
 
 class TextObject:
-    """TextObject class
+    """TextObject class.
 
     Utility File object class
 
@@ -23,6 +19,7 @@ class TextObject:
     """
 
     def __init__(self, file_name: Union[str, Path]="-", mode: str="r") -> None:
+        """Init."""
         self.file_path: Path = Path()
         self.file_name: str = "-"
         self.mode: str = mode
@@ -35,12 +32,13 @@ class TextObject:
                 self.file_path = file_name
                 self.file_name = str(self.file_path)
         if self.mode not in ["r", "w"]:
-            raise ValueError("Please choice [r: read mode | w: write mode]")
+            msg = "Please choice [r: read mode | w: write mode]"
+            raise ValueError(msg)
         if self.mode == "r" and not (self.file_name == "-" or self.file_path.exists()):
             raise FileNotFoundError("File not found: " + self.file_name)
 
     def set_filename(self, file_name: Union[str, Path]) -> None:
-        """ Set filename """
+        """Set filename."""
         if file_name == "-":
             self.file_path = Path()
             self.file_name = "-"
@@ -53,7 +51,7 @@ class TextObject:
 
     @contextmanager
     def open_data(self) -> Iterator[TextIO]:
-        """ Open data
+        """Open data.
 
         Yields:
             file stream: sys.stdin or OpenFile
@@ -64,18 +62,18 @@ class TextObject:
                 yield sys.stdin
             else:
                 yield sys.stdout
+        elif self.mode == "r":
+            with self.file_path.open("r", encoding=self.encoding) as rdr:
+                yield rdr
+        elif self.mode == "w":
+            with self.file_path.open("w", encoding=self.encoding) as wrd:
+                yield wrd
         else:
-            if self.mode == "r":
-                with self.file_path.open("r", encoding=self.encoding) as rdr:
-                    yield rdr
-            elif self.mode == "w":
-                with self.file_path.open("w", encoding=self.encoding) as wrd:
-                    yield wrd
-            else:
-                raise ValueError("Please choice [r: read mode | w: write mode]")
+            msg = "Please choice [r: read mode | w: write mode]"
+            raise ValueError(msg)
 
     def read(self) -> Iterator[str]:
-        """ Read method
+        """Read method.
 
         Yields:
             file stream: str lists
@@ -85,13 +83,14 @@ class TextObject:
 
         """
         if self.mode == "w":
-            raise ValueError("Value error: mode `w` not used `read` method")
+            msg = "Value error: mode `w` not used `read` method"
+            raise ValueError(msg)
         with self.open_data() as reader:
             for line in reader:
                 yield line.rstrip("\n")
 
     def write(self, content: Iterable[str]) -> None:
-        """ Write method
+        """Write method.
 
         Yields:
             file stream: str lists
@@ -101,14 +100,15 @@ class TextObject:
 
         """
         if self.mode == "r":
-            raise ValueError("Value error: mode `r` not used `write` method")
+            msg = "Value error: mode `r` not used `write` method"
+            raise ValueError(msg)
         with self.open_data() as writer:
             for line in content:
                 writer.write(line + "\n")
 
 
     def write_list(self, content: Iterable[list[str]], sep: str="\t") -> None:
-        """ Write method
+        """Write method.
 
         Yields:
             file stream: str lists
@@ -118,14 +118,15 @@ class TextObject:
 
         """
         if self.mode == "r":
-            raise ValueError("Value error: mode `r` not used `write` method")
+            msg = "Value error: mode `r` not used `write` method"
+            raise ValueError(msg)
         with self.open_data() as writer:
             for lst in content:
                 writer.write(sep.join(lst) + "\n")
 
 
-def _main():
-    """ function to check do """
+def _main() -> None:
+    """Check the main component function."""
     parser = argparse.ArgumentParser()
     parser.add_argument("file_name", type=str)
     args = parser.parse_args()
@@ -134,5 +135,5 @@ def _main():
         print(line)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _main()

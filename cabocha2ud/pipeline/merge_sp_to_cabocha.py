@@ -128,26 +128,6 @@ def get_merged_poslist(
     return pos_list
 
 
-def do_pipe(
-    _bd: BunsetsuDependencies, sp_data: list[list[dict[str, str]]],
-    logger: Logger|None=None
-) -> None:
-    """Do pipeline.
-
-    Args:
-        bd (BunsetsuDependencies): _description_
-        sp_data (list[list[dict[str, str]]]): _description_
-        logger (Optional[Logger], optional): logger object. Defaults to None.
-
-    """
-    if logger is None:
-        logger = Logger()
-    logger.debug("do merge sp to cabocha")
-    pos_list = get_merged_poslist(_bd, sp_data)
-    for bpos, spos in pos_list:
-        adapt_spafter_to_cabocha(_bd.get_sentence(bpos), sp_data[spos])
-
-
 class MergeSPtoCabochaComponent(BDPipeLine):
     """Build Sp Cabocha.
 
@@ -173,6 +153,8 @@ class MergeSPtoCabochaComponent(BDPipeLine):
         """Call Main function."""
         assert isinstance(self.target, BunsetsuDependencies)
         self.logger.debug("do %s", self.name)
+        for doc in self.target.documents():
+            doc.detect_ud_dependencies()
         pos_list = get_merged_poslist(self.target, self.sp_data)
         for bpos, spos in pos_list:
             adapt_spafter_to_cabocha(self.target.get_sentence(bpos), self.sp_data[spos])

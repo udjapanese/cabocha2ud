@@ -51,4 +51,3 @@ cp $BASE_DIR/*.cabocha $WORK_DIR/
 WORK_DIR=$WORK_DIR SP_DIR=$SP_DIR parallel 'python cabocha2ud $WORK_DIR/ud_{}.cabocha -c conf/default_{= s:_(dev|test|train):: =}_args.yaml --sp-file $SP_DIR/SpaceAfter_{= s:gsd_:: =}.txt -w $WORK_DIR/ud_{}.cabocha.conllu' ::: gsd_dev gsd_test gsd_train pud
 
 rm -f $WORK_DIR/*.cabocha
-

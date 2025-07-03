@@ -1,6 +1,7 @@
 
 """BCCWJ DepParaPAS Annotation class."""
 
+import copy
 from dataclasses import dataclass
 from itertools import permutations
 from typing import Literal, NamedTuple, Optional, Union
@@ -11,6 +12,12 @@ class AnnoPosition(NamedTuple):
 
     pos1: int
     pos2: int
+
+    def __eq__(self, value: object) -> bool:
+        """Equal func."""
+        if not isinstance(value, AnnoPosition):
+            return False
+        return value.pos1 == self.pos1 and value.pos2 == self.pos2
 
 
 @dataclass
@@ -56,6 +63,18 @@ class Attribute:
     #! ATTR <Key> <Value> "<Comment>"
     """
 
+    def __eq__(self, other: object) -> bool:
+        """Object Eqals."""
+        if not isinstance(other, Attribute):
+            return False
+        return (
+            self.items == other.items and
+            self.label == other.label and
+            self.value == other.value and
+            self.namespace == other.namespace and
+            self.comment == other.comment
+        )
+
     def __init__(self: "Attribute", items: list[str]) -> None:
         """Attrubute class."""
         assert items[0] == "#!"
@@ -96,6 +115,23 @@ class Attribute:
 
 class Annotation:
     """Annotation class."""
+
+    def copy(self) -> "Annotation":
+        """自分自身のコピーを返す."""
+        return copy.deepcopy(self)
+
+    def __eq__(self, other: object) -> bool:
+        """Object Eqals."""
+        if not isinstance(other, Annotation):
+            return False
+        return(
+            self.identifier == other.identifier and
+            self.attributes == other.attributes and
+            self.attrs_list == other.attrs_list and
+            self.pos == other.pos and
+            self.comment == other.comment and
+            self.name == other.name
+        )
 
     def __init__(self) -> None:
         """Init."""
@@ -152,6 +188,20 @@ class Segment(Annotation):
     #! SEGMENT_S <TagName> <StartPos> <EndPos> "<Comment>"
     """
 
+    def __eq__(self, other: object) -> bool:
+        """Object Eqals."""
+        if not isinstance(other, Annotation):
+            return False
+        return(
+            self.identifier == other.identifier and
+            self.attributes == other.attributes and
+            self.attrs_list == other.attrs_list and
+            self.pos == other.pos and
+            self.comment == other.comment and
+            self.name == other.name and
+            self.pos == other.pos
+        )
+
     def __init__(self, segment_lines: Optional[list[list[str]]]) -> None:
         """Init."""
         super().__init__()
@@ -165,6 +215,10 @@ class Segment(Annotation):
         _end_pos = int(segment_lines[0][4])
         self.pos = AnnoPosition(_start_pos, _end_pos)
 
+    def copy(self) -> "Segment":
+        """自分自身のコピーを返す."""
+        return copy.deepcopy(self)
+
     @property
     def start_pos(self) -> int:
         """Start pos."""
@@ -174,6 +228,10 @@ class Segment(Annotation):
     def end_pos(self) -> int:
         """Start pos."""
         return self.pos.pos2
+
+    def set_pos(self, start_pos: int, end_pos: int) -> None:
+        """Set start_pos and end_pos."""
+        self.pos = AnnoPosition(start_pos, end_pos)
 
     def __str__(self) -> str:
         """Get string."""
@@ -361,6 +419,15 @@ class AnnotationList:
         """Get full annotations."""
         return [a for a in self._annotation_list if a.get_attr_value(key)]
 
+    def update_segment(self, seg: Segment, nseg: Segment) -> None:
+        """Segment `seg`を `nseg`に入れ替える."""
+        assert seg in self._segments
+        sind = self._segments.index(seg)
+        self._segments[sind] = nseg
+        self._seg_dict: dict[AnnoPosition, int] = {
+            s.pos: p for p, s in enumerate(self._segments)
+        }
+
     def append_segment(self, seg: Union[Segment, list[list[str]]]) -> None:
         """Append segment."""
         if isinstance(seg, list):
@@ -371,8 +438,10 @@ class AnnotationList:
 
     def remove_segment(self, seg: Segment) -> None:
         """Remove segment."""
-        self._annotation_list.remove(seg)
-        self._segments.remove(seg)
+        assert self._seg_dict.get(seg.pos) is not None
+        npos = self._seg_dict[seg.pos]
+        self._annotation_list.remove(self._segments[npos])
+        self._segments.remove(self._segments[npos])
         self._seg_dict = {s.pos: p for p, s in enumerate(self._segments)}
 
 

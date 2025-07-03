@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from .bunsetu import Bunsetu
     from .document import Document
 
-from cabocha2ud.bd.annotation import AnnotationList, get_annotation_object
+from cabocha2ud.bd.annotation import AnnotationList, Segment, get_annotation_object
 from cabocha2ud.bd.bunsetu import Bunsetu
 from cabocha2ud.bd.word import Word
 from cabocha2ud.lib.dependency import get_caused_nonprojectivities
@@ -135,7 +135,10 @@ class Sentence(list["Bunsetu"]):
             stree = _tree[now_tokenpos]
             for near in stree:
                 qlst.append(near)
-        assert len(self.words()) == len(norder)
+        assert len(self.words()) == len(norder), (
+            self.sent_pos, len(self.words()), len(norder), norder,
+            [w.get_surface() for w in self.words()]
+        )
         return [self.words()[n] for n in norder]
 
     def words(self) -> list[Word]:
@@ -211,6 +214,42 @@ class Sentence(list["Bunsetu"]):
             raise KeyError(msg)
         return True
 
+    def remove_bunsetu_pos(self, bun_pos: list[int]) -> None:
+        """Remove bunsetu pos."""
+        nbuns: list[Bunsetu] = []
+        nbun_map: dict[int, int] = {}
+        nwrd_map: dict[int, int] = {}
+        nbcnt = 0
+        nwcnt = 0
+        for pos, bun in enumerate(self):
+            if pos in bun_pos:
+                continue
+            nbuns.append(bun)
+            for wrd in bun.words():
+                nwrd_map[wrd.token_pos] = nwcnt + 1
+                wrd.token_pos = nwcnt + 1
+                nwcnt += 1
+            nbun_map[pos] = nbcnt
+            nbcnt += 1
+        self.clear()
+        self.extend(nbuns)
+        for pos, bun in enumerate(self):
+            # update bunsetu pos
+            assert bun.dep_pos is not None
+            if bun.dep_pos >= 0:
+                if bun.dep_pos in bun_pos:
+                    bun.dep_pos = -1
+                elif bun.dep_pos in nbun_map:
+                    bun.dep_pos = nbun_map[bun.dep_pos]
+                else:
+                    msg = "Something mapping error."
+                    raise KeyError(msg)
+            bun.bunsetu_pos = pos
+            for wrd in bun.words():
+                if wrd.dep_num is not None and wrd.dep_num > 0 and wrd.dep_num in nwrd_map:
+                    wrd.dep_num = nwrd_map[wrd.dep_num]
+        self.update_word_pos()
+
     def update_word_pos(self) -> None:
         """単語の位置を決める."""
         self.abs_pos_list = []
@@ -223,6 +262,11 @@ class Sentence(list["Bunsetu"]):
                 last = self.abs_pos_list[-1]
                 self.abs_pos_list.append((last[1], last[1] + len(word.get_surface())))
         self.abs_pos_dict = {s: p for p, s in enumerate(self.abs_pos_list)}
+
+    def include_segment_pos(self, seg: Segment) -> bool:
+        """Segment`seg`の指定する位置のWordのPositionがあるかどうか."""
+        start_pos, end_pos = seg.start_pos, seg.end_pos
+        return (start_pos, end_pos) in self.abs_pos_dict
 
     def set_sent_id(self) -> None:
         """Set sent_id to self.
@@ -244,8 +288,8 @@ class Sentence(list["Bunsetu"]):
         self.set_sent_id()
         header: list = [("sent_id", self.sent_id)]
         header.append(("text", self.get_text().strip(self.space_marker)))
-        if self.doc.doc_attrib_xml is not None and\
-            self.doc.doc_attrib_xml.find("english_text") is not None:
+        if (self.doc.doc_attrib_xml is not None and
+            self.doc.doc_attrib_xml.find("english_text") is not None):
             txt = self.doc.doc_attrib_xml.find("english_text")
             eng_txt = cast(str, cast(ET.Element, txt).text).replace("# english_text = ", "")
             header.append(("text_en", eng_txt))

@@ -145,6 +145,24 @@ class Document(list["Sentence"]):
         """Get sentences."""
         return list(self)
 
+    def remove_sentence_pos(self, sent_pos: list[int]) -> None:
+        """Remove the sentence pos."""
+        if len(sent_pos) == 0:
+            return
+        nsents: list[Sentence] = []
+        for spos, sent in enumerate(self):
+            assert spos == sent.sent_pos
+            if spos in sent_pos:
+                continue
+            nsents.append(sent)
+        self.clear()
+        self.extend(nsents)
+        for nspos, sent in enumerate(self):
+            sent.sent_pos = nspos
+            for bpos, bun in enumerate(sent):
+                for wpos, _ in enumerate(bun):
+                    self[nspos][bpos][wpos].sent_pos = nspos
+
     def __parse(self, text: list[str], prefix: list[str], suffix: list[str]) -> None:
         self.doc_attributes = generate_docannotation(prefix)
         # パース後に取得
@@ -191,6 +209,8 @@ class Document(list["Sentence"]):
                         assert wrd.ud_misc["SpaceAfter"] == "No"
                         del wrd.ud_misc["SpaceAfter"]
                         assert wrd.ud_misc.get("SpaceAfter") is None
+                else:
+                    wrd.ud_misc["SpaceAfter"] = "No"
 
     def detect_ud_dependencies(self) -> None:
         """Detect UD label."""

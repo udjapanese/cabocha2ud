@@ -4,7 +4,8 @@ import argparse
 import importlib
 import pathlib
 import re
-from typing import Optional, Type
+import tempfile
+from typing import Type
 
 from cabocha2ud.bd import BunsetsuDependencies
 from cabocha2ud.lib.logger import Logger
@@ -30,7 +31,7 @@ class RunnerPipeline:
 
     def __init__(
         self, _bd: BunsetsuDependencies, _ud: UniversalDependencies,
-        pipe: Optional[list[str]]=None, options: Optional[YamlDict]=None
+        pipe: list[str]|None=None, options: YamlDict|None=None
     ) -> None:
         """Init and prepare."""
         if options is None:
@@ -82,11 +83,47 @@ class RunnerPipeline:
 
     def do_pipeline(self) -> None:
         """パイプラインを実行する."""
+        if self.opts.get("temporary_file"):
+            temp_dir = tempfile.mkdtemp()
+            self.logger.info("saved %s", temp_dir)
+        step_count = 0
         for pre in self.components["pre"]:
             pre()
+            step_count = step_count + 1
+            if self.opts.get("temporary_file"):
+                self.save_temporary_file(step_count, pre, temp_dir)
         fit(self._ud, self._bd, self.pos_rule, self.dep_rule)
+        step_count = step_count + 1
+        if self.opts.get("temporary_file"):
+            self.save_temporary_file(step_count, None, temp_dir)
         for post in self.components["post"]:
             post()
+            step_count = step_count + 1
+            if self.opts.get("temporary_file"):
+                self.save_temporary_file(step_count, post, temp_dir)
+
+    def save_temporary_file(
+        self, step: int, comp: PipeLineComponent|None,
+        save_dir: str
+    ) -> None:
+        """一時ファイルを保存する."""
+        assert self.opts.get("temporary_file")
+        save_dir_p = pathlib.Path(save_dir)
+        if comp is None:
+            save_file = f"{step:02}_cab2ud.conllu"
+            wrt = str(save_dir_p / pathlib.Path(save_file))
+            self.get_ud().write_ud_file(wrt)
+            self.logger.info("saved %s", wrt)
+        elif comp.mode == "bd":
+            save_file = f"{step:02}_{comp.name}_bd.cabocha"
+            wrt = str(save_dir_p / pathlib.Path(save_file))
+            self.get_bd().write_cabocha_file(wrt)
+            self.logger.info("saved %s", wrt)
+        elif comp.mode == "ud":
+            save_file = f"{step:02}_{comp.name}_ud.conllu"
+            wrt = str(save_dir_p / pathlib.Path(save_file))
+            self.get_ud().write_ud_file(wrt)
+            self.logger.info("saved %s", wrt)
 
 
 def _main() -> None:

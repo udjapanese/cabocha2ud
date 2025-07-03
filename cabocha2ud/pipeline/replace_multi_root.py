@@ -1,37 +1,30 @@
-# -*- coding: utf-8 -*-
-
-"""
-マルチルートを係り先を変更してシングルにする
-プログラム
-"""
+"""マルチルートを係り先を変更してシングルにするプログラム."""
 
 import argparse
-from typing import cast
+from typing import ClassVar, cast
 
 from cabocha2ud.lib.dependency import get_caused_nonprojectivities
 from cabocha2ud.lib.logger import Logger
 from cabocha2ud.lib.yaml_dict import YamlDict
 from cabocha2ud.pipeline.component import UDPipeLine
-from cabocha2ud.ud import UniversalDependencies as UD
+from cabocha2ud.ud import UniversalDependencies
 from cabocha2ud.ud.sentence import Sentence
 from cabocha2ud.ud.util import DEPREL, HEAD, ID, UPOS, XPOS, Field
 
 
 def fix_projectivity_rule_to_punct(data: list[list[str]]) -> list[list[str]]:
-    """
-        punctの非交差を直す
-    """
+    """punctの非交差を直す."""
     nonproj_list: dict[int, list[int]] = {}
     for line in data:
         # 再び非交差を確認する
-        if line[DEPREL] == 'punct':
+        if line[DEPREL] == "punct":
             num = int(line[ID])
             tree = [-1] + [int(line[HEAD]) for line in data]
             nonprojnodes = get_caused_nonprojectivities(num, tree)
             if len(nonprojnodes) > 0:
                 nonproj_list[num] = nonprojnodes
     if len(nonproj_list) > 0:
-        for fix_target, _ in nonproj_list.items():
+        for fix_target in nonproj_list:
             kakko_pos = data[fix_target-1][XPOS]
             if kakko_pos == "補助記号-括弧開":
                 # 外にあるのが問題なので括弧開直後の単語にかける
@@ -53,20 +46,20 @@ def fix_projectivity_rule_to_punct(data: list[list[str]]) -> list[list[str]]:
 
 
 def fix_leafpunct_rule_to_punct(data: list[list[str]]) -> list[list[str]]:
-    """ fix left punct """
+    """Fix left punct."""
     errors = []
     for line in data:
         num, parent_num = int(line[ID]), int(line[HEAD])
-        if line[DEPREL] != 'punct' and data[parent_num-1][XPOS] == '補助記号-括弧開':
+        if line[DEPREL] != "punct" and data[parent_num-1][XPOS] == "補助記号-括弧開":
             errors.append([num, parent_num])
     if len(errors) == 0:
         return data
-    if len(set(parent_num for _, parent_num in errors)) != 1:
+    if len({parent_num for _, parent_num in errors}) != 1:
         # おなじ親がふさわしい
         return data
-    parent_num = [parent_num for _, parent_num in errors][0]
+    parent_num = next(parent_num for _, parent_num in errors)
     cand_parent = int(parent_num) + 1
-    if cand_parent > len(data) or data[cand_parent-1][DEPREL] == 'punct':
+    if cand_parent > len(data) or data[cand_parent-1][DEPREL] == "punct":
         return data
     assert int(data[cand_parent-1][HEAD]) == parent_num
     data[cand_parent-1][HEAD] = data[parent_num-1][HEAD]
@@ -80,7 +73,7 @@ def fix_leafpunct_rule_to_punct(data: list[list[str]]) -> list[list[str]]:
         data[int(enum)-1][HEAD] = str(cand_parent)
     for line in data:
         num, aparent_num = int(line[ID]), int(line[HEAD])
-        if line[DEPREL] == 'punct' and aparent_num == parent_num:
+        if line[DEPREL] == "punct" and aparent_num == parent_num:
             line[HEAD] = str(cand_parent)
     return data
 
@@ -98,7 +91,7 @@ def __restore_rel(line: list[str]) -> None:
 
 
 def detect_true_root(data: list[list[str]], numlst: list[int]) -> tuple[list[int], int]:
-    """ ひとまずひとつの root を決める関数 """
+    """ひとまずひとつの root を決める関数."""
     target_pos = 1
     true_root = numlst[len(numlst)-1]
     num_line = {int(line[0]): line for line in data}
@@ -115,9 +108,7 @@ def detect_true_root(data: list[list[str]], numlst: list[int]) -> tuple[list[int
 
 
 def convert_to_single_root(data: list[list[str]]) -> list[list[str]]:
-    """
-        複数あるルートの中で基本のルートを決める
-    """
+    """複数あるルートの中で基本のルートを決める."""
     nsent_st: list[list[str]] = []
     tree: dict[int, set[int]] = {}
     for pos, dnum in [(int(line[ID]), int(line[HEAD])) for line in data]:
@@ -140,29 +131,34 @@ def convert_to_single_root(data: list[list[str]]) -> list[list[str]]:
 
 
 class ReplaceMultiRootComponent(UDPipeLine):
-    """ replace_multi_root
+    """Replace multi root component.
 
     Args:
         PipeLineComponent (_type_): _description_
-    """
-    name = "replace_multi_root"
-    need_opt = ["rep_multi_root_mode"]
 
-    def __init__(self, target: UD, opts: YamlDict) -> None:
+    """
+
+    name = "replace_multi_root"
+    need_opt: ClassVar[list[str]] = ["rep_multi_root_mode"]
+
+    def __init__(self, target: UniversalDependencies, opts: YamlDict) -> None:
+        """Init."""
         self.rep_multi_root_mode: str = ""
-        self.sp_marker: str = " "
+        self.space_marker: str = " "
         super().__init__(target, opts)
 
     def prepare(self) -> None:
+        """Prepare func."""
         if self.opts.get("rep_multi_root_mode") is not None:
             self.rep_multi_root_mode = cast(str, self.opts.get("rep_multi_root_mode"))
-        if self.opts.get("sp_marker") is not None:
-            self.sp_marker = cast(str, self.opts.get("sp_marker"))
+        if self.opts.get("space_marker") is not None:
+            self.space_marker = cast(str, self.opts.get("space_marker"))
         assert self.rep_multi_root_mode in ["convert", "remove"]
 
     def __call__(self) -> None:
-        assert isinstance(self.target, UD)
-        self.logger.debug(f"do {self.name}")
+        """Call Main function."""
+        assert isinstance(self.target, UniversalDependencies)
+        self.logger.debug(self.name)
         if self.rep_multi_root_mode == "convert":
             for pos, ud_sent in enumerate(self.target.sentences()):
                 heads_size = sum(c.get_content() == "0" for c in ud_sent.get_colmuns(Field.HEAD))
@@ -180,7 +176,7 @@ class ReplaceMultiRootComponent(UDPipeLine):
                 # ここにpunct修正ルール
                 data = fix_leafpunct_rule_to_punct(data)
                 sent = header + ["\t".join(ll) for ll in data]
-                nsent = Sentence.load_from_list(sent, spt=self.sp_marker)
+                nsent = Sentence.load_from_list(sent, spt=self.space_marker)
                 self.target.update_sentence_of_index(pos, nsent)
         elif self.rep_multi_root_mode == "remove":
             rm_sent_lst: list[int] = []
@@ -192,7 +188,8 @@ class ReplaceMultiRootComponent(UDPipeLine):
                 rm_sent_lst.append(pos)
             self.target.remove_sentence_from_index(rm_sent_lst)
         else:
-            raise ValueError("mode must be `remove` or `convert`")
+            msg = "mode must be `remove` or `convert`"
+            raise ValueError(msg)
 
 
 COMPONENT = ReplaceMultiRootComponent
@@ -212,12 +209,12 @@ def _main() -> None:
     options = YamlDict(
         init={"logger": Logger(debug=args.debug), "rep_multi_root_mode": args.mode}
     )
-    _ud = UD(file_name=args.conll_file, options=options)
-    if options.get("sp_marker") is None:
-        options["sp_marker"] = _ud.get_sp()
+    _ud = UniversalDependencies(file_name=args.conll_file, options=options)
+    if options.get("space_marker") is None:
+        options["space_marker"] = _ud.get_sp()
     COMPONENT(_ud,  opts=options)()
     _ud.write_ud_file(args.writer)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _main()

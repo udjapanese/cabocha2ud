@@ -1,35 +1,38 @@
-# -*- coding: utf-8 -*-
-
-"""
-Cabocha Bunsetu Dependency class
-"""
+"""Cabocha Bunsetu Dependency class."""
 
 import collections
 from typing import Optional
 
+from cabocha2ud.bd.document import Document
+from cabocha2ud.bd.sentence import Sentence
 from cabocha2ud.lib.iterate_function import iterate_document
 from cabocha2ud.lib.logger import Logger
 from cabocha2ud.lib.text_object import TextObject
 from cabocha2ud.lib.yaml_dict import YamlDict
-from .document import Document
-from .sentence import Sentence
 
 
 class BunsetsuDependencies(collections.UserList[Document]):
-    """
+    """BD object.
+
     Attributes:
         file_name (str): file name, if the parameter set, load cabocha file
         file_obj (:obj:`TextObject`): file object class.
+
     """
 
     def __init__(
-        self, file_name: Optional[str]=None, options: YamlDict=YamlDict(),
+        self, file_name: Optional[str]=None, options: YamlDict|None=None,
         logger: Optional[Logger]=None
-    ):
+    ) -> None:
+        """Init."""
         super().__init__()
+        self.options: YamlDict
+        if options is not None:
+            self.options = options
+        else:
+            self.options = YamlDict()
         self.file_name: Optional[str] = file_name
         self.file_obj: TextObject = TextObject()
-        self.options: YamlDict = options
         self.logger: Logger
         if logger:
             self.logger = logger
@@ -41,22 +44,23 @@ class BunsetsuDependencies(collections.UserList[Document]):
             self.read_cabocha_file()
 
     def __str__(self) -> str:
+        """Return string."""
         return "\n".join([str(doc) for doc in self.documents()])
 
     def documents(self) -> collections.UserList[Document]:
-        """ return documents """
+        """Return documents."""
         return self
 
     def sentences(self) -> list[Sentence]:
-        """ return sentence list """
+        """Return sentence list."""
         return [s for doc in self for s in doc.sentences()]
 
     def get_sentence(self, spos: int) -> Sentence:
-        """ return sentence """
+        """Return sentence."""
         return self.sentences()[spos]
 
     def read_cabocha_file(self, file_name: Optional[str]=None) -> bool:
-        """ read cabocha file """
+        """Read cabocha file."""
         if file_name is not None:
             self.file_name = file_name
             self.file_obj = TextObject(file_name=self.file_name)
@@ -74,7 +78,7 @@ class BunsetsuDependencies(collections.UserList[Document]):
         return True
 
     def write_cabocha_file(self, file_name: str="-") -> None:
-        """ write Cabocha file """
+        """Write Cabocha file."""
         self.file_name = file_name
         wrt_obj = TextObject(file_name=self.file_name, mode="w")
         wrt_obj.write([str(self)])

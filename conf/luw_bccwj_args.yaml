@@ -1,3 +1,3 @@
 skip-space: True
 space-marker: zenkaku
-pipeline: change_dep_det,build_luw
+pipeline: extract_sp_to_cabocha,change_dep_det,build_luw

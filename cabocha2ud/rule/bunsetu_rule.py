@@ -1,17 +1,13 @@
-# -*- coding: utf-8 -*-
-
-"""
-BCCWJ DepParaPAS rule function: for bunsetu
-"""
+"""BCCWJ DepParaPAS rule function: for bunsetu."""
 
 import re
 from typing import TYPE_CHECKING, Optional, cast
 
 if TYPE_CHECKING:
-    from ..bd.bunsetu import Bunsetu
-    from ..bd.sentence import Sentence
+    from cabocha2ud.bd.bunsetu import Bunsetu
+    from cabocha2ud.bd.sentence import Sentence
 
-REGEX_TYPE = type(re.compile(''))
+REGEX_TYPE = type(re.compile(""))
 BUNSETU_FUNC_MATCH_RE = re.compile(
     r"(?:助詞|助動詞|接尾辞,形容詞的|接尾辞,形状詞的|接尾辞,動詞的)"
 )
@@ -31,9 +27,7 @@ BUNSETU_NO_POS_SUBJ_MATCH_RE = re.compile(
 
 
 def _get_features(features: list[str]) -> str:
-    """
-        素性をすべて,区切りに（フォーマット統一のため）
-    """
+    """素性をすべて,区切りに（フォーマット統一のため）."""
     nfes = []
     for fff in features:
         nfes.extend(fff.split("-"))
@@ -41,9 +35,7 @@ def _get_features(features: list[str]) -> str:
 
 
 def detect_bunsetu_pos(bunsetu: "Bunsetu") -> None:
-    """
-        detect subject and function position in bunsetu
-    """
+    """Detect subject and function position in bunsetu."""
     # 初期位置はどちらも 最初の単語
     bunsetu.subj_pos, bunsetu.func_pos = 0, 0
     tmp_subj_pos: list[int] = []
@@ -88,14 +80,19 @@ def detect_bunsetu_pos(bunsetu: "Bunsetu") -> None:
     bunsetu.logger.debug(bunsetu.subj_pos, bunsetu.func_pos)
     if bunsetu.subj_pos > bunsetu.func_pos:
         # 主辞が機能語より右だったら、主辞と機能語を同じ位置にする
-        bunsetu.func_pos = bunsetu.subj_pos
+        result  = check_subj_and_funcword(bunsetu)
+        if not result:
+            # 主辞と機能語の入れ替えがおきてなければ。
+            bunsetu.func_pos = bunsetu.subj_pos
     assert len(bunsetsu_features) == len(bunsetu.words())
     # 補助記号,括弧|接頭辞などは主辞ではない
     bunsetu.subj_pos = check_special_nosubj(
-        bunsetsu_features, bunsetu.subj_pos, bunsetu.func_pos)
+        bunsetsu_features, bunsetu.subj_pos, bunsetu.func_pos
+    )
     # 「XX」＋さ は「XX」がheadになるように変更
     bunsetu.subj_pos = check_special_subject_pos(
-        bunsetu, bunsetsu_features[bunsetu.subj_pos], bunsetu.subj_pos)
+        bunsetu, bunsetsu_features[bunsetu.subj_pos], bunsetu.subj_pos
+    )
     # 括弧内部がheadになっていたら別のものをheadに変更
     bunsetu.subj_pos = check_special_blacket_head(
         bunsetsu_features, bunsetu.subj_pos)
@@ -105,14 +102,23 @@ def detect_bunsetu_pos(bunsetu: "Bunsetu") -> None:
     # そうして
     bunsetu.subj_pos = check_sousite_subj(bunsetu)
     assert bunsetu.subj_pos <= bunsetu.func_pos
-    bunsetu.logger.debug("result->>>", bunsetu.subj_pos, bunsetu.func_pos)
+    bunsetu.logger.debug("result->>> %s %s", bunsetu.subj_pos, bunsetu.func_pos)
 
+
+def check_subj_and_funcword(bunsetu: "Bunsetu") -> bool:
+    """Check 主辞 and 機能語 order."""
+    assert bunsetu.subj_pos > bunsetu.func_pos
+    if (bunsetu[bunsetu.func_pos].get_luw_pos().split("-")[0] not in ["助動詞", "助詞"] and
+        bunsetu[bunsetu.subj_pos].get_luw_pos().split("-")[0] in ["助動詞", "助詞"]):
+        bunsetu.subj_pos, bunsetu.func_pos = bunsetu.func_pos, bunsetu.subj_pos
+        return True
+    return False
 
 def check_other_subj(
     bun_fes: list[str], tmp_s_pos: list[int], tmp_f_pos: list[int], bun: "Bunsetu"
 ) -> tuple[int, int]:
-    """
-    お/願い/申し上げ/ます -> 「願い」主辞を「申し上げ」に
+    """お/願い/申し上げ/ます -> 「願い」主辞を「申し上げ」に.
+
     見た/目、揚げ/アイス なども対象
     長単位/助詞or接続助詞or助動詞or補助記号除く
 
@@ -124,6 +130,7 @@ def check_other_subj(
 
     Returns:
         tuple[int, int]: subject_pos, function_pos 新しい主辞番号、機能語番号
+
     """
     if not (bun_fes[bun.subj_pos].startswith("動詞,非自立可能")) \
             and not (bun[bun.subj_pos].get_origin() in ["もの", "物"]\
@@ -133,18 +140,19 @@ def check_other_subj(
         return bun.subj_pos, bun.func_pos
     tmp_subj_pos = [
         t for t in tmp_s_pos
-        if bun[t].get_luw_pos().split("-")[0] not in ["助詞", "接続助詞", "助動詞", "補助記号", "接尾辞"]
+        if bun[t].get_luw_pos().split("-")[0] not in [
+            "助詞", "接続助詞", "助動詞", "補助記号", "接尾辞"]
         # and bun[t].get_origin() not in ["する", "できる", "くださる", "いただく", "なさる"]
         and bun[t].get_origin() not in ["為る", "出来る", "下さる", "頂く", "為さる"]
         and not bun.is_inner_brank_word(t)  # かっこ内部ではない
     ]
-    bun.logger.debug("dd->>>", bun.subj_pos, bun.func_pos, tmp_subj_pos)
-    bun.logger.debug("aaa->", bun.subj_pos, bun.func_pos,
+    bun.logger.debug("dd->>>", bun.subj_pos, bun.func_pos, tmp_subj_pos)  # noqa: PLE1205
+    bun.logger.debug("aaa->", bun.subj_pos, bun.func_pos,  # noqa: PLE1205
                      [t < bun.subj_pos for t in tmp_subj_pos])
     old_subj, old_func = bun.subj_pos, bun.func_pos
     new_subj, new_func = bun.subj_pos, bun.func_pos
     for tpos in tmp_subj_pos:
-        bun.logger.debug("ccc", tpos, new_subj, tpos < old_subj)
+        bun.logger.debug("ccc", tpos, new_subj, tpos < old_subj)  # noqa: PLE1205
         if tpos < old_subj:
             new_subj = tpos
     if new_subj > new_func:
@@ -158,31 +166,32 @@ def check_other_subj(
             # おそらくむりなんで戻す
             bun.logger.debug(3333)
             return old_subj, old_func
-    bun.logger.debug("dd->>>", new_subj, new_func, old_subj, old_func)
+    bun.logger.debug("dd->>>", new_subj, new_func, old_subj, old_func)  # noqa: PLE1205
     return new_subj, new_func
 
 
 def check_sousite_subj(bunsetu: "Bunsetu") -> int:
-    """[summary]
+    """[summary].
+
         そう/し/てのとき fixed的に左主辞じゃないといけない
+
     Args:
         bunsetu (Bunsetu): [description]
+
     """
     if not (bunsetu[bunsetu.subj_pos].get_luw_pos().split("-")[0] == "接続詞"
             and bunsetu[0].get_luw_pos().split("-")[0] == "接続詞"):
         return bunsetu.subj_pos
-    bunsetu.logger.debug("eaea->", bunsetu.subj_pos, bunsetu.func_pos)
+    bunsetu.logger.debug("eaea->", bunsetu.subj_pos, bunsetu.func_pos)  # noqa: PLE1205
     tpos = bunsetu.subj_pos
     while tpos > 0 and bunsetu[tpos].get_luw_pos().split("-")[0] == "接続詞":
         tpos = tpos - 1
-    bunsetu.logger.debug("eaea->", bunsetu.subj_pos, bunsetu.func_pos, tpos)
+    bunsetu.logger.debug("eaea->", bunsetu.subj_pos, bunsetu.func_pos, tpos)  # noqa: PLE1205
     return tpos
 
 
 def check_special_nosubj(bunsetsu_features: list[str], subj_pos: int, func_pos: int) -> int:
-    """
-    補助記号,括弧|接頭辞など 弾かれないものを弾く
-    """
+    """補助記号,括弧|接頭辞など 弾かれないものを弾く."""
     subj_fes = bunsetsu_features[subj_pos]
     if not BUNSETU_NO_SUBJ_MATCH_RE.match(subj_fes):
         return subj_pos
@@ -198,13 +207,14 @@ RE_KIGO_EXP = re.compile("^補助記号.*")
 
 
 def check_special_blacket_head(bunsetsu_features: list[str], subj_pos: int) -> int:
-    """
-        括弧内部がheadになっていたら別のものをheadに
-        ここでは単純に最初のかっこより右側を括弧内部と仮定する
-         1  2  3  4  5  6
-        X1 X2 （ X3  X4  ）
-         このばあい  X3をX2にかえる
-         （かなり単純化しているため精密に文構造をみるならば細かく作業が必要）
+    """[summary].
+
+    括弧内部がheadになっていたら別のものをheadに
+    ここでは単純に最初のかっこより右側を括弧内部と仮定する
+        1  2  3  4  5  6
+    X1 X2 （ X3  X4  ）
+        このばあい  X3をX2にかえる
+        （かなり単純化しているため精密に文構造をみるならば細かく作業が必要）
     """
     if all(RE_OPEN_EXP.match(fes) is None for fes in bunsetsu_features):
         return subj_pos
@@ -233,9 +243,7 @@ SPECIAL_MATCH_RE = re.compile(r"(?:接尾辞,名詞的)")
 
 
 def check_special_subject_pos(bunsetu: "Bunsetu", subj_fes: str, subj_pos: int) -> int:
-    """
-        「XX」＋さ は「XX」がheadに
-    """
+    """「XX」＋さ は「XX」がheadに."""
     if not (SPECIAL_MATCH_RE.match(subj_fes) and bunsetu.words()[subj_pos].get_origin() == "さ"):
         return subj_pos
     subj_pos -= 1
@@ -282,11 +290,12 @@ def _detect_dep_inbunsetu(bunsetu: "Bunsetu", parent_pos: Optional[int]) -> None
 
 
 def detect_dep_bunsetu(sentence: "Sentence") -> None:
-    """
-        detect bunsetu type
-        同時にUDの係り受り先も決める
+    """Detect bunsetu type.
 
-        特殊な掛かり先の変更は`is_the_special_bunsetu_word`に
+    同時にUDの係り受り先も決める
+
+    特殊な掛かり先の変更は`is_the_special_bunsetu_word`に
+
     """
     is_the_special_bunsetu_word(sentence)
     for bunsetu in sentence.bunsetues():
@@ -299,15 +308,11 @@ def detect_dep_bunsetu(sentence: "Sentence") -> None:
                 assert dep_pos is not None
                 parent = sentence.bunsetues()[dep_pos]
             except Exception as exc:
-                raise ValueError(
-                    "cannot bunsetu of dependency bunsetu: {} {} {}".format(
-                        sentence.sent_id, bunsetu.bunsetu_pos, dep_pos
-                    )
-                ) from exc
+                msg = (f"cannot bunsetu of dependency bunsetu: "
+                    f"{sentence.sent_id} {bunsetu.bunsetu_pos} {dep_pos}")
+                raise ValueError(msg) from exc
             parent_pos = parent[parent.subj_pos].token_pos
-        for word in bunsetu:
-            # 基本的な文節内係り関係の設定
-            _detect_dep_inbunsetu(bunsetu, parent_pos)
+        _detect_dep_inbunsetu(bunsetu, parent_pos)
         for word in bunsetu:
             # NO_HEADにどうしてもなってしまうものはNO_HEAD（ほとんどない）
             if word.dep_num == word.token_pos:
@@ -327,7 +332,7 @@ TARGET_AUX = ["だ", "わけにはいかない", "こともある", "ことと�
      "ことになる", "ことがある", "こともない", "ことができない", "ではない"]
 
 def change_dependency_outbunsetu(sentence: "Sentence") -> None:
-    """ change dependencies for out bunsetu """
+    """Change dependencies for out bunsetu."""
     for bunsetu_pos, bunsetu in enumerate(sentence.bunsetues()):
         subj_tok = bunsetu[bunsetu.subj_pos]
         if subj_tok.dep_num == 0:
@@ -342,7 +347,8 @@ def change_dependency_outbunsetu(sentence: "Sentence") -> None:
             nonpro_flag = False
             for ctok in range(1, subj_tok.token_pos):
                 wrd = sentence.get_word_from_tokpos(ctok-1)
-                assert wrd is not None and wrd.dep_num is not None
+                assert wrd is not None
+                assert wrd.dep_num is not None
                 if subj_tok.token_pos <= wrd.dep_num <= parent.token_pos:
                     nonpro_flag = True
                     break
@@ -363,7 +369,12 @@ def change_dependency_outbunsetu(sentence: "Sentence") -> None:
                 continue
             new_target = sentence[parent.bunsetu_pos + 1]
             nsubj_tok = new_target[new_target.subj_pos]
-            subj_tok.dep_num = nsubj_tok.token_pos
+            if subj_tok.token_pos == nsubj_tok.token_pos:
+                # ループしてしまうため、括弧開と同じかかり先にする。
+                assert parent.dep_num is not None
+                subj_tok.dep_num = parent.dep_num
+            else:
+                subj_tok.dep_num = nsubj_tok.token_pos
         elif parent.get_xpos().split("-")[0] == "助動詞" and parent.get_origin() in ["つう"]:
             # AUXが掛かり先の場合、AUXがかかっている先にかける
             if parent.dep_num == 0:
@@ -424,15 +435,16 @@ RE_JODOUSI_MATCH = re.compile("^(助動詞|助詞)")
 
 
 def change_dependency_inbunsetu_luw_post_particle(bunsetu: "Bunsetu") -> None:
-    """ 「について」みたいな「長単位」は一番上のにかかるように変更する
+    """「について」みたいな「長単位」は一番上のにかかるように変更する.
 
     Args:
         bunsetu (Bunsetu): 対象文節
+
     """
-    target_positions = []
-    for word in bunsetu:
-        if word.luw_label == "B" and RE_JODOUSI_MATCH.match(word.get_luw_pos()):
-            target_positions.append(word.word_pos)
+    target_positions: list[int] = [
+        word.word_pos for word in bunsetu
+        if word.luw_label == "B" and RE_JODOUSI_MATCH.match(word.get_luw_pos())
+    ]
     if len(target_positions) == 0:
         return
     for target_position in target_positions:
@@ -442,8 +454,8 @@ def change_dependency_inbunsetu_luw_post_particle(bunsetu: "Bunsetu") -> None:
         last_pos = last_pos - 1
         if last_pos >= len(bunsetu) or last_pos == target_position:
             continue
-        assert len(list(set([bunsetu[w].get_luw_pos()
-                             for w in range(target_position, last_pos+1)]))) == 1
+        assert len(list({bunsetu[w].get_luw_pos()
+                             for w in range(target_position, last_pos+1)})) == 1
         for wrd in range(target_position, last_pos+1):
             if wrd == target_position:
                 continue
@@ -451,10 +463,11 @@ def change_dependency_inbunsetu_luw_post_particle(bunsetu: "Bunsetu") -> None:
 
 
 def change_dependency_outbunsetu_blanck_replace(bunsetu: "Bunsetu") -> None:
-    """ 
-    括弧『「』が逆になっているものがあれば、内部にさすようにする
+    """括弧『「』が逆になっているものがあれば、内部にさすようにする.
+
     Args:
         bunsetu (Bunsetu): 対象文節
+
     """
     if not (bunsetu[bunsetu.subj_pos].get_xpos() == "補助記号-括弧開"
             and bunsetu[bunsetu.subj_pos].ud_misc["BunsetuPositionType"] == "SEM_HEAD"
@@ -480,10 +493,11 @@ def change_dependency_outbunsetu_blanck_replace(bunsetu: "Bunsetu") -> None:
 
 
 def change_dependency_inbunsetu_innner_luw_teki(bunsetu: "Bunsetu") -> None:
-    """ 「地形/的/理由」などを「地形」がHEADではなく「理由」をHEADにする
+    """「地形/的/理由」などを「地形」がHEADではなく「理由」をHEADにする.
 
     Args:
         bunsetu (Bunsetu): 対象文節
+
     """
     if not (bunsetu.subj_pos+1 < len(bunsetu) and bunsetu[bunsetu.subj_pos+1].get_origin() == "的"
             and bunsetu[bunsetu.subj_pos+1].get_xpos() == "接尾辞-形状詞的"):
@@ -505,7 +519,8 @@ def change_dependency_inbunsetu_innner_luw_teki(bunsetu: "Bunsetu") -> None:
             assert lwrd.get_xpos() == "接尾辞-形状詞的", "{} {} {}".format(
                 cast("Sentence", bunsetu.parent_sent).sent_id,
                 bunsetu[bunsetu.subj_pos+1].get_xpos(), lwrd.get_xpos())
-            if lpos == len(luw_unit) - 1 or bunsetu[lwrd.word_pos+1].get_xpos() != "名詞-普通名詞-一般":
+            if (lpos == len(luw_unit) - 1 or
+                bunsetu[lwrd.word_pos+1].get_xpos() != "名詞-普通名詞-一般"):
                 done_flag = True
                 break
             cnt = 1
@@ -544,8 +559,10 @@ def change_dependency_inbunsetu_innner_luw_teki(bunsetu: "Bunsetu") -> None:
 
 
 def is_the_special_bunsetu_word(sent: "Sentence") -> None:
-    """
-        特殊な文節だ
+    """[summary].
+
+    特殊な文節だ
+
     """
     for bunsetu in sent:
         if _is_the_special_bunsetu_word(bunsetu):
@@ -557,9 +574,10 @@ def is_the_special_bunsetu_word(sent: "Sentence") -> None:
 
 
 def _is_the_special_bunsetu_word(bunsetu: "Bunsetu") -> bool:
-    """
-        主辞と機能語を入れ替える対象であるか
-            - 名詞-普通名詞-サ変可能/動詞-非自立可能
+    """主辞と機能語を入れ替える対象であるか.
+
+    - 名詞-普通名詞-サ変可能/動詞-非自立可能
+
     """
     txpos = bunsetu[bunsetu.subj_pos].get_xpos()
     if bunsetu.subj_pos > 0 and re.match("動詞-非自立可能", txpos):
@@ -569,7 +587,8 @@ def _is_the_special_bunsetu_word(bunsetu: "Bunsetu") -> bool:
 
 
 def detect_bunsetu_jp_type(bunsetu: "Bunsetu") -> Optional[str]:
-    """
+    """[summary].
+
     コピュラ：名詞+だ
     用言：動詞、形容詞、形容動詞、など
     体言：名詞、代名詞、形式名詞など
@@ -579,17 +598,15 @@ def detect_bunsetu_jp_type(bunsetu: "Bunsetu") -> Optional[str]:
     subj_pos, func_pos = bunsetu.subj_pos, bunsetu.func_pos
     subj_luw_pos = bunsetu[subj_pos].get_luw_pos().split("-")[0]
     func_luw_pos = bunsetu[func_pos].get_luw_pos().split("-")[0]
-    if func_luw_pos == "助動詞" and any([
-        wrd.get_origin() == "だ"
+    if func_luw_pos == "助動詞" and any(wrd.get_origin() == "だ"
         for wrd in bunsetu if wrd.get_bunsetu_position_type() in ["FUNC", "SYN_HEAD"]
-    ]):
+    ) and subj_luw_pos in ["名詞", "代名詞", "形式名詞", "形状詞"]:
         # 体言っぽいもの + 助動詞「だ」
-        if subj_luw_pos in ["名詞", "代名詞", "形式名詞", "形状詞"]:
-            return "コピュラ"
+        return "コピュラ"
     if subj_luw_pos in ["動詞", "形容詞", "形容動詞"]:
         # 主辞(長単位レベル)が"動詞", "形容詞", "形容動詞"だ
         return "用言"
-    elif subj_luw_pos in ["記号", "名詞", "代名詞", "形式名詞", "形状詞"]:
+    if subj_luw_pos in ["記号", "名詞", "代名詞", "形式名詞", "形状詞"]:
         # 主辞(長単位レベル)が"名詞", "代名詞", "形式名詞", "形状詞"
         return "体言"
     return "その他"
