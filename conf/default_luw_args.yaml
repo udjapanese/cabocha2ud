@@ -1,0 +1,4 @@
+skip-space: True
+space-marker: hankaku
+pipeline: extract_sp_to_cabocha,merge_number,change_dep_det,build_luw,replace_multi_root
+rep-multi-root-mode: convert

@@ -506,6 +506,14 @@ order_rule:
   ]
   res: nsubj
 
+- rule: [
+    [match_word_bpos, "SEM_HEAD"],
+    [include_word_upos, ["NOUN"]],
+    [include_child_case, ["が:助詞-格助詞"]],
+  ]
+  res: nsubj
+
+
 # ADV＋「は」
 - rule: [
     [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],

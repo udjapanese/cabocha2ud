@@ -1,6 +1,7 @@
 """Cabocha Bunsetu Dependency class."""
 
 import collections
+from pathlib import Path
 from typing import Optional
 
 from cabocha2ud.bd.document import Document
@@ -64,7 +65,13 @@ class BunsetsuDependencies(collections.UserList[Document]):
         if file_name is not None:
             self.file_name = file_name
             self.file_obj = TextObject(file_name=self.file_name)
-        for text in iterate_document(list(self.file_obj.read()), separate_info=True):
+        doc_name = "doc"
+        if self.file_name and self.file_name not in {"-"}:
+            doc_name = Path(self.file_name).name or "doc"
+        for text in iterate_document(
+            list(self.file_obj.read()), separate_info=True,
+            default_doc_name=doc_name,
+        ):
             prefix, ddoc, suffix = text
             doc: Document = Document(
                 text=ddoc, prefix=prefix, suffix=suffix, base_file_name=self.file_name,

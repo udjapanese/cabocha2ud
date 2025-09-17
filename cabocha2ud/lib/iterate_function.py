@@ -37,10 +37,13 @@ def separate_information_from_excabocha(doc: list[str]) -> tuple[list[str], list
 
 
 def iterate_document(
-    lines: list[str], separate_info: bool=True, strip_end: bool=True
+    lines: list[str], separate_info: bool=True, strip_end: bool=True,
+    default_doc_name: str="doc",
 ) -> Iterator[tuple[Optional[list[str]], list[str], Optional[list[str]]]]:
     """Create iterate per document."""
     doc: list[str] = []
+    if len(lines) == 0:
+        return
     if strip_end and lines[-1] == "":  # 下に空行があるとエラーになるため空行を除く
         pos = -1
         while lines[pos] == "":
@@ -53,8 +56,12 @@ def iterate_document(
     elif lines[0].startswith("#! DOC"):
         target_header = re.compile(r"^#! DOC\s+.*")
     else:
-        msg = "parse Error: first line must be `#! DOC` or `#! DOCID`"
-        raise TypeError(msg)
+        target_header = re.compile(r"^#! DOC\s+.*")
+        lines = [
+            "#! DOC 0",
+            f"#! DOCID\t1\t{default_doc_name}",
+            *lines,
+        ]
 
     for line in lines:
         if target_header.match(line) and len(doc) > 0:

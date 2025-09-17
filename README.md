@@ -21,24 +21,41 @@ pipenv install
 フォーマットは以下を確認してください。
 
 ```zsh
-python -m cabocha2ud [長単位つきcabochaファイル] -c conf/default_(bccwj|gsd)_args.yaml -w [出力ファイル名(指定しない場合は標準出力)]
+python -m cabocha2ud [長単位つきcabochaファイル] -c conf/(default|bccwj|gsd)_suw_args.yaml -w [出力ファイル名(指定しない場合は標準出力)]
 ```
 
-`conf/default_(bccwj|gsd)_args.yaml`はそれぞれのコーパス名を指定してください（PUDはGSDを指定してください）
-（現在コーパスで入力フォーマットが微妙に違うなどがあり、コーパスごとで設定が分かれています）
+`conf/(default|bccwj|gsd)_suw_args.yaml`などを使います。
+（現在コーパスで若干変換内容が異なるなどがあり、コーパスごとで設定が分かれています）
 
-とりあえずGSDファイルは以下のスクリプトで一括変換できます
+以下のスクリプトで一括変換できます
 (`parallel`コマンドを使っているため、ない場合自力でお願いします）
 
 ```shell
-# GSDの変換
-./script/cab2ud_gsd_full.sh
-# BCCWJの変換
-./script/cab2ud_bccwj_full.sh
-# GSDLUW
-./script/cab2ud_gsd_luw_full.sh
-# BCCWJLUW
-./script/cab2ud_bccwj_luw_full.sh
+./scripts/convert_ud.sh -w [WORK_DIR] -c [CONF_FILE]
+```
+
+- `WORK_DIR`: 変換したいcabochaファイルが入っていてUDを保存するディレクトリ
+  - `$WORK_DIR/cabocha`: 変換したいcabochaファイルを入れる
+- `CONF_FILE`: 変換設定ファイル (`conf/default_suw_args.yaml`)
+
+## CONF_FILEの中身
+
+CONF_FILEの中身は以下のようになっています
+
+```yaml
+skip-space: True
+space-marker: hankaku
+pipeline: extract_sp_to_cabocha,merge_number,change_dep_det,replace_multi_root
+rep-multi-root-mode: convert
+```
+
+長単位の場合、`pipeline`に`build_luw`を指定します。（変更予定）
+
+```yaml
+skip-space: True
+space-marker: hankaku
+pipeline: extract_sp_to_cabocha,merge_number,change_dep_det,build_luw,replace_multi_root
+rep-multi-root-mode: convert
 ```
 
 ## 変換ルールについて
@@ -48,8 +65,8 @@ python -m cabocha2ud [長単位つきcabochaファイル] -c conf/default_(bccwj
 ルールは上から順番に対応がとれたものを先に採用して返します。
 
 ```text
-conf/bccwj_pos_suw_rule.yaml: UD POSの変換
-conf/bccwj_dep_suw_rule.yaml: UD labelの変換
+conf/pos_suw_rule.yaml: UD POSの変換
+conf/dep_suw_rule.yaml: UD labelの変換
 ```
 
 ### 変換ルール詳細

@@ -1,3 +1,5 @@
 skip-space: True
 space-marker: zenkaku
-pipeline: extract_sp_to_cabocha,merge_number,change_dep_det
+pipeline: extract_sp_to_cabocha,merge_number,change_dep_det,replace_multi_root,patch_fix
+patch-file: conf/auto_hand_fix.yaml
+rep-multi-root-mode: convert

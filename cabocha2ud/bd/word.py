@@ -220,7 +220,24 @@ class SUW(Property):
     def parse_suw_part(self, token: list[str]) -> None:
         """Parse SUW part."""
         self.surface = token[0]
-        self.features = csv_split(token[1], expect_size=len(SUWFeaField))
+        try:
+            self.features = csv_split(token[1], expect_size=len(SUWFeaField))
+        except DoNotExceptSizeError:
+            features = csv_split(token[1])
+            full_size = len(SUWFeaField)
+            if len(features) < full_size:
+                min_trusted_size = SUWFeaField.goshu + 1
+                if len(features) < min_trusted_size:
+                    features.extend([""] * (min_trusted_size - len(features)))
+                if len(features) < full_size:
+                    features.extend([""] * (full_size - len(features)))
+            else:
+                trusted_limit = SUWFeaField.iConType + 1
+                if len(features) > trusted_limit:
+                    features = features[:trusted_limit]
+                if len(features) < full_size:
+                    features.extend([""] * (full_size - len(features)))
+            self.features = features[:len(SUWFeaField)]
         assert len(self.features) == len(SUWFeaField)
         self.jp_pos = self.features[SUWFeaField.pos1]
         self.origin = self.features[SUWFeaField.lemma]
