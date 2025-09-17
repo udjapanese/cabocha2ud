@@ -160,65 +160,66 @@ class UniversalDependencies:
         writer = TextObject(file_name=file_name, mode="w")
         writer.write([str(s) for s in self._sentences])
 
+def _generate_sentences(
+    doc, pos_rule: list, dep_rule: list[tuple[list[dep.SubRule], str]], skip_space: bool
+) -> Iterator[Sentence]:
+    """BunsetsuDependencies から Sentence を生成する。"""
+    sentences = doc.convert_ud(pos_rule, dep_rule, skip_space=skip_space)
+    for sent in sentences:
+        yield Sentence.load_from_string(sent, spt=doc.space_marker)
 
-def fit(  # noqa: C901, PLR0912, PLR0915
-    uobj: UniversalDependencies, bobj: BunsetsuDependencies,
-    pos_rule: list, dep_rule: list[tuple[list[dep.SubRule], str]]
-) -> None:
-    """Convert BD to UD."""
+
+def _get_newdoc_text(doc) -> Optional[str]:
+    """doc から newdoc のテキストを取得する。"""
+    if doc.doc_attrib_xml is None:
+        return None
+    elem = next(doc.doc_attrib_xml.iter("newdoc_id"), None)
+    return elem.text if elem is not None else None
+
+
+def _should_add_newdoc(doc_id: int, newdoc_text: Optional[str], prev_text: Optional[str]) -> bool:
+    """newdoc を切り替えるべきか判定する。"""
+    return newdoc_text is not None and (doc_id == 0 or newdoc_text != prev_text)
+
+
+def _iter_doc_contents(
+    bobj: BunsetsuDependencies,
+    pos_rule: list,
+    dep_rule: list[tuple[list[dep.SubRule], str]],
+    skip_space: bool,
+) -> Iterator[Union[str, Sentence]]:
+    """文書を巡回し newdoc と Sentence を順番に返すジェネレータ。"""
     prev_text: Optional[str] = None
-    target_newdoc_text: Optional[str] = None
-    tmp_content: list[Union[str, Sentence]] = []
     for doc_id, doc in enumerate(bobj):
-        sentences = doc.convert_ud(
-            pos_rule, dep_rule, skip_space=uobj.options.get("skip_space", False)
-        )
-        if doc.doc_attrib_xml is None or len(list(doc.doc_attrib_xml.iter("newdoc_id"))) == 0:
-            tmp_content.extend([
-                Sentence.load_from_string(sent, spt=doc.space_marker) for sent in sentences
-            ])
+        newdoc_text = _get_newdoc_text(doc)
+        if _should_add_newdoc(doc_id, newdoc_text, prev_text):
+            assert newdoc_text is not None
+            prev_text = newdoc_text
+            yield newdoc_text
+        yield from _generate_sentences(doc, pos_rule, dep_rule, skip_space)
+
+
+def _merge_newdoc_and_sentences(
+    items: Iterator[Union[str, Sentence]]
+) -> tuple[list[Sentence], bool]:
+    """newdoc の文字列を直後の Sentence に統合する。"""
+    headers: list[str] = []
+    sentences: list[Sentence] = []
+    has_newdoc = False
+    for item in items:
+        if isinstance(item, str):
+            headers.append(item)
+            has_newdoc = True
             continue
-        target_newdoc_text = next(iter(doc.doc_attrib_xml.iter("newdoc_id"))).text
-        if doc_id == 0 and target_newdoc_text is not None or\
-            target_newdoc_text is not None and prev_text != target_newdoc_text:
-            tmp_content.append(target_newdoc_text)
-            prev_text = target_newdoc_text
-        tmp_content.extend([
-            Sentence.load_from_string(sent, spt=doc.space_marker) for sent in sentences
-        ])
+        for head in headers:
+            item.set_header(0, Header(cont=head))
+        headers = []
+        sentences.append(item)
+    return sentences, has_newdoc
 
-    if all(isinstance(c, Sentence) for c in tmp_content):
-        uobj.set_sentences(cast(list[Sentence], tmp_content))
-        for cpos, cont in enumerate(uobj.sentences()):
-            sent_id = cont.get_header("sent_id")
-            if sent_id is not None:
-                uobj.sentence_ids.append(sent_id.get_value())
-            else:
-                uobj.sentence_ids.append(f"sent-{cpos:02}")
-        assert len(uobj.sentence_ids) == len(uobj.sentences())
-        return
 
-    # new doc の処理をする
-    tmp_lst: list[str] = []
-    _sentences: list[Sentence] = []
-    for ccc in tmp_content:
-        if isinstance(ccc, str):
-            tmp_lst.append(ccc)
-        else:
-            assert isinstance(ccc, Sentence)
-            sent: Sentence = ccc
-            if len(tmp_lst) > 0:  # 統合する
-                for hhh in tmp_lst:
-                    sent.set_header(0, Header(cont=hhh))
-                tmp_lst = []
-            _sentences.append(sent)
-            sent_id = _sentences[-1].get_header("sent_id")
-            if sent_id is not None:
-                uobj.sentence_ids.append(sent_id.get_value())
-            else:
-                uobj.sentence_ids.append(f"sent-{len(_sentences):02}")
-    uobj.set_sentences(_sentences)
-    assert len(uobj.sentence_ids) == len(uobj.sentences())
+def _remove_space_after(uobj: UniversalDependencies) -> None:
+    """newdoc 境界の SpaceAfter を調整する。"""
     spos_lst: list[int] = []
     for spos, sent in enumerate(uobj.sentences()):
         header_keys = sent.get_header_keys()
@@ -233,3 +234,25 @@ def fit(  # noqa: C901, PLR0912, PLR0915
         misc = cast(Misc, sent.words()[-1][UField.MISC])
         if "SpaceAfter" in misc:
             misc.remove("SpaceAfter")
+
+
+def fit(
+    uobj: UniversalDependencies,
+    bobj: BunsetsuDependencies,
+    pos_rule: list,
+    dep_rule: list[tuple[list[dep.SubRule], str]],
+) -> None:
+    """Convert BD to UD."""
+    skip_space = uobj.options.get("skip_space", False)
+    items = _iter_doc_contents(bobj, pos_rule, dep_rule, skip_space)
+    sentences, has_newdoc = _merge_newdoc_and_sentences(items)
+    uobj.set_sentences(sentences)
+    for cpos, cont in enumerate(uobj.sentences()):
+        sent_id = cont.get_header("sent_id")
+        if sent_id is not None:
+            uobj.sentence_ids.append(sent_id.get_value())
+        else:
+            uobj.sentence_ids.append(f"sent-{cpos:02}")
+    assert len(uobj.sentence_ids) == len(uobj.sentences())
+    if has_newdoc:
+        _remove_space_after(uobj)

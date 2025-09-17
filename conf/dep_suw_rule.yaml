@@ -48,7 +48,8 @@ elements:  ## 説明は/cabocha2ud/README.mdもご参照に
 - disformula
 # 述語項
 - paslink
-
+# 長単位品詞
+- luwpos
 
 order_rule:
 
@@ -65,11 +66,27 @@ order_rule:
 #########################################################
 
 
+
 # ROOTはroot
 - rule: [
     [include_word_bpos, ["ROOT"]],    #  [include_bpos [word, ["ROOT"]]]
   ]
   res: root
+
+### FOR CEJC (※ほとんどはreplace_multi_rootで変換される)
+# 言いよどみはreparandum
+- rule: [
+    [regex_word_xpos, "^言いよどみ"],
+  ]
+  res: reparandum
+
+# フィラーはdiscourse (:filler)
+- rule: [
+    [regex_word_xpos, "^感動詞-フィラー"],    #  [is_disf [word, ]]
+  ]
+  res: discourse
+
+####
 
 
 # NO_HEADのためのルール
@@ -121,6 +138,12 @@ order_rule:
   ]
   res: discourse
 
+## 長単位用ルール
+- rule : [
+    [regex_word_lemma, "^(ことができる|事が出来る|ことになる|事に成る|ことがある|事が有る|こともある|事も有る|ことにする|事にする|こととなる|事と成る)$"]
+  ]
+  res: compound
+## ここまで
 
 # 接続詞の複合語表現
 - rule: [
@@ -160,11 +183,11 @@ order_rule:
   ]
   res: fixed
 
-# 親「接続詞」につく「か」はfixed
+# 親「接続詞」かAUXにつく「か」はfixed
 - rule: [
     [match_word_lemma, "か"],
     [include_word_upos, ["PART"]],
-    [include_parent_upos, ["CCONJ"]],
+    [include_parent_upos, ["CCONJ", "AUX"]],
   ]
   res: fixed
 
@@ -195,7 +218,7 @@ order_rule:
 
 # 「って/な」はfixed
 - rule: [
-    [match_word_lemma, "だ"],
+    [include_word_lemma, ["だ", "です"]],
     [include_word_upos, ["AUX"]],
     [match_parent_lemma, "って"],
     [include_parent_upos, ["ADP"]],
@@ -233,16 +256,16 @@ order_rule:
 - rule: [
     [match_word_lemma, "けれど"],
     [include_word_upos, ["SCONJ"]],
-    [match_parent_lemma, "だ"],
+    [include_parent_lemma, ["だ", "です"]],
     [include_parent_upos, ["AUX"]],
   ]
   res: fixed
 
 # 「だ/と/すれ(する)/ば」はfixed
 - rule: [
-    [include_word_lemma, ["と", "ば", "する"]],
+    [include_word_lemma, ["と", "ば", "為る"]],
     [include_word_upos, ["SCONJ"]],
-    [match_parent_lemma, "だ"],
+    [include_parent_lemma, ["だ", "です"]],
     [include_parent_upos, ["AUX"]],
   ]
   res: fixed
@@ -259,7 +282,7 @@ order_rule:
 # 「じゃ/なく/て」はfixed
 - rule: [
     [include_word_lemma, ["て", "ない"]],
-    [match_parent_lemma, "だ"],
+    [include_parent_lemma, ["だ", "です"]],
     [include_parent_upos, ["AUX"]],
   ]
   res: fixed
@@ -268,15 +291,15 @@ order_rule:
 - rule: [
     [include_word_lemma, ["の", "が"]],
     [include_word_upos, ["SCONJ"]],
-    [match_parent_lemma, "だ"],
+    [include_parent_lemma, ["だ", "です"]],
     [include_parent_upos, ["AUX"]],
   ]
   res: fixed
 
 - rule: [
-    [include_word_lemma, ["だ"]],
+    [include_word_lemma, ["だ", "です"]],
     [include_word_upos, ["AUX"]],
-    [match_parent_lemma, "だ"],
+    [include_parent_lemma, ["だ", "です"]],
     [include_parent_upos, ["AUX"]],
   ]
   res: fixed
@@ -292,7 +315,7 @@ order_rule:
 #  できる
 - rule: [
     [include_word_upos, ["AUX", "SCONJ", "PART", "ADP"]],
-    [match_parent_lemma, "できる"],
+    [match_parent_lemma, "出来る"],
     [include_parent_upos, ["AUX"]],
   ]
   res: fixed
@@ -300,7 +323,7 @@ order_rule:
 #  すぎる
 - rule: [
     [include_word_upos, ["AUX", "SCONJ", "PART", "ADP"]],
-    [match_parent_lemma, "すぎる"],
+    [match_parent_lemma, "過ぎる"],
     [include_parent_upos, ["AUX"]],
   ]
   res: fixed
@@ -339,7 +362,7 @@ order_rule:
 #  である
 - rule: [
     [include_word_upos, ["AUX"]],
-    [regex_parent_lemma, "だ"],
+    [include_parent_lemma, ["だ", "です"]],
     [include_parent_upos, ["AUX"]],
   ]
   res: fixed
@@ -371,12 +394,29 @@ order_rule:
 #  こと/が/できる  ことにする ことになる ことはない
 - rule: [
     [match_word_luwpos, "助動詞"],
-    [include_word_lemma, ["できる", "する", "なる", "ない", "ある"]],
+    [include_word_lemma, ["出来る", "為る", "なる", "ない", "ある"]],
     [regex_word_xpos, "^.*詞-非自立可能"],
     [regex_parent_luwpos, "助動詞"],
     [regex_parent_lemma, "事"]
   ]
   res: fixed
+
+#  連体詞+(くらい|ぐらい/を想定)+* detに子はないのでfixed
+- rule: [
+    [match_parent_bpos, "SEM_HEAD"],
+    [include_word_bpos, ["SYN_HEAD", "FUNC", "CONT"]],
+    [include_parent_upos, ["DET"]],
+    [match_parent_disformula, "X-Y>0"]
+  ]
+  res: dep
+
+- rule: [
+    [match_parent_bpos, "SEM_HEAD"],
+    [include_word_bpos, ["SYN_HEAD", "FUNC", "CONT"]],
+    [include_parent_upos, ["DET"]]
+  ]
+  res: fixed
+
 
 #  （別文節から）こと/が/できる  ことにする ことになる ことはない
 - rule: [
@@ -390,7 +430,7 @@ order_rule:
 
 # cc だが
 - rule: [
-    [match_word_lemma, "だ"],
+    [include_word_lemma, ["だ", "です"]],
     [include_word_upos, ["AUX"]],    #  [include_upos [word, ["AUX"]]],
     [regex_word_luwpos, "接続詞"],    #  [match_luwpos [word, 接続詞]]
   ]
@@ -437,35 +477,34 @@ order_rule:
   ]
   res: ccomp
 
-# iobjルール
 
+# D050p_OW6X_00073-85 - ほか
 - rule: [
     [include_word_bpos, ["SEM_HEAD"]],
-    [include_child_case, ["に"]],
-    [match_parent_paslink, "ni"],
+    [regex_word_lemma, "他"],
+    [regex_parent_xpos, "^動詞-一般.*"],
+    [regex_child_xpos, "^動詞-一般.*"],
+  ]
+  res: advcl
+
+
+- rule: [
+    [match_word_bpos, "SEM_HEAD"],
+    [match_word_busetutype, "体言"],
+    [include_child_case, ["は"]],
+    [regex_word_xpos, "^名詞-普通名詞-副詞可能"],
     [include_parent_busetutype, ["用言", "コピュラ"]]
   ]
-  res: iobj
+  res: obl
 
-# csubj
-- rule: [
-    [include_word_bpos, ["SEM_HEAD"]],
-    [include_word_upos, ["VERB", "ADJ"]],
-    [match_parent_paslink, "ga"],
-    [include_child_case, ["が", "は"]],
-    [include_parent_busetutype, ["用言", "コピュラ"]]
-  ]
-  res: csubj
 
-# nsubjルール
+# が nsubj
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],
-    [include_child_case, ["が", "は"]],
-    [match_parent_paslink, "ga"],
-    [include_parent_busetutype, ["用言", "コピュラ"]]
+    [match_word_bpos, "SEM_HEAD"],
+    [match_word_busetutype, "体言"],
+    [include_child_case, ["が:助詞-格助詞"]],
   ]
   res: nsubj
-
 
 # ADV＋「は」
 - rule: [
@@ -478,12 +517,112 @@ order_rule:
   order: ["X", "s2-ha-mo-nsubj", "advmod-1"]
 
 
-# objルール
+# 「を通じて」 短単位：「を/通じ/て」
 - rule: [
     [include_word_bpos, ["SEM_HEAD"]],
-    [include_child_case, ["を"]],
-    [match_parent_paslink, "o"],
-    [include_parent_busetutype, ["用言", "コピュラ"]]
+    [match_word_busetutype, "体言"],
+    [regex_word_suffixstring, "^.*を通じ[て]?[、,，]?$"]
+  ]
+  res: obl
+  label: "s-ex-obl-1-suw"
+
+
+# 「として」 短単位：「を/し/て」
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],
+    [match_word_busetutype, "体言"],
+    [regex_word_suffixstring, "^.*とし[て]?[、,，]?$"]
+  ]
+  res: obl
+  label: "s-ex-obl-2"
+
+
+# 「(で|と|に)（も）」 短単位：「で（も）」
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],
+    [match_word_busetutype, "体言"],
+    [regex_word_suffixstring, "^.*(で|と|に)[も]?[、,，]?$"]
+  ]
+  res: obl
+  label: "s-ex-obl-3-1"
+
+
+# 「で（も）」 短単位：「で（も）」
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [match_word_busetutype, "体言"],
+    [regex_word_suffixstring, "^.*で[も]?（.+）$"]
+  ]
+  res: obl
+  label: "s-ex-obl-3-2"
+
+
+# 「については」
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [match_word_busetutype, "体言"],
+    [regex_word_suffixstring, "^.*[に]?ついては[、,，]?$"]
+  ]
+  res: nsubj:outer
+  label: "s-ex-obl-4"
+
+
+# 「〜（.+）は」
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [match_word_busetutype, "体言"],
+    [regex_word_suffixstring, "^.*（.+）は[、,，]?$"]
+  ]
+  res: nsubj
+  label: "s-ex-obl-4"
+
+
+# 「をもって」 短単位：「を/もっ/て」
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [match_word_busetutype, "体言"],
+    [regex_word_suffixstring, "^.*をもって[、,，]?$"]
+  ]
+  res: obl
+  label: "s-ex-obl-5"
+
+
+# ADV＋「か」＋「を」
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [regex_child_lemma, "^か$"],
+    [regex_child_xpos, "^助詞-副助詞"],
+    [include_child_case, ["を"]],    #  [include_child_case [word, ["を"]]]
+  ]
+  res: obj
+  label: "adv-obj"
+
+# 表層格「を」 (「を/も」も対象)
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [match_word_busetutype, "体言"],
+    [include_child_case, ["を"]],    #  [include_child_case [word, ["を"]]]
+  ]
+  res: obj
+  label: "s1-obj"
+  order: ["X", "s2-ha-mo-nsubj"]
+
+# は、も nsubj
+- rule: [
+    [match_word_bpos, "SEM_HEAD"],
+    [match_word_busetutype, "体言"],
+    [include_child_case, ["は:助詞-係助詞", "も:助詞-係助詞"]],
+  ]
+  res: nsubj
+  label: "s2-ha-mo-nsubj"
+
+# ADJ+さ を
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_child_case, ["を"]],    #  [include_child_case [word, ["を"]]],
+    [include_word_upos, ["ADJ"]],    #  [include_upos [word, ["ADJ"]]],
+    [regex_word_luwpos, "^名詞"],    #  [match_luwpos [word, 名詞-普通名詞-一般]],
+    [regex_word_suffixstring, "^.*を[、,，]?$"],    #  [match_suffix_string [word, ^.*を[、,，]?$]]
   ]
   res: obj
 
@@ -498,6 +637,16 @@ order_rule:
   res: nmod
 
 
+# ADJ+さ 動詞
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["ADJ"]],    #  [include_upos [word, ["ADJ"]]],
+    [regex_word_luwpos, "^名詞"],    #  [match_luwpos [word, 名詞-普通名詞-一般]],
+    [include_parent_upos, ["VERB", "ADJ"]],    #  [include_upos [parent_word, ["VERB", "ADJ"]]]
+  ]
+  res: obl
+
+
 # ADJ+さ 名詞
 - rule: [
     [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
@@ -506,6 +655,27 @@ order_rule:
     [include_parent_upos, ["NOUN", "PRON", "PROPN", "NUM"]],    #  [include_upos [parent_word, ["NOUN", "PRON", "PROPN", "NUM"]]]
   ]
   res: nmod
+
+
+# 表層格「が」
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_child_case, ["が"]],    #  [include_child_case [word, ["が"]]],
+    [include_word_upos, ["VERB", "ADJ"]],    #  [include_upos [word, ["VERB", "ADJ"]]],
+    [regex_word_suffixstring, "^.*が[、,，]?$"],    #  [match_suffix_string [word, ^.*が[、,，]?$]]
+  ]
+  res: csubj
+
+
+# 名詞+なのが
+- rule: [
+    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_child_case, ["が"]],    #  [include_child_case [word, ["が"]]],
+    [include_word_upos, ["NOUN", "ADV"]],    #  [include_upos [word, ["NOUN", "ADV"]]],
+    [regex_word_suffixstring, "^.*が[、,，]?$"],    #  [match_suffix_string [word, ^.*が[、,，]?$]],
+    [regex_child_xpos, "助動詞"],    #  [include_child_xpos [word, 助動詞]]
+  ]
+  res: csubj
 
 
 # SCONJ(mark)が子に含まれていればNOUN|ADV|ADJである主辞(SEM_HEAD)はadvcl
@@ -528,7 +698,7 @@ order_rule:
 
 # 動詞or形容詞->動詞or形容詞(orPARTorAUX)
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["VERB", "ADJ"]],    #  [include_upos [word, ["VERB", "ADJ"]]],
     [include_parent_upos, ["VERB", "ADJ"]],    #  [include_upos [parent_word, ["VERB", "ADJ"]]]
   ]
@@ -537,7 +707,7 @@ order_rule:
 
 # 名詞+だ->動詞or形容詞(orPARTorAUX)
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["NOUN", "PRON", "PROPN", "NUM"]],    #  [include_upos [word, ["NOUN", "PRON", "PROPN", "NUM"]]],
     [include_parent_upos, ["VERB", "ADJ"]],    #  [include_upos [parent_word, ["VERB", "ADJ"]]],
     [regex_child_xpos, "助動詞"],    #  [include_child_xpos [word, 助動詞]]
@@ -547,7 +717,7 @@ order_rule:
 
 # 主辞がADVならadvmodだ
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["ADV"]],    #  [include_upos [word, ["ADV"]]]
   ]
   res: advmod
@@ -571,27 +741,6 @@ order_rule:
   res: nmod
 
 
-# oblのルール
-
-# XXの[ため]/に/は/〜  [XX]/で/は〜
-- rule: [
-    [match_word_bpos, "SEM_HEAD"],
-    [match_word_busetutype, "体言"],
-    [include_child_case, ["は"]],
-    [regex_word_xpos, "^名詞-普通名詞-副詞可能"],
-    [include_parent_busetutype, ["用言", "コピュラ"]]
-  ]
-  res: obl
-
-# ADJ+さ 動詞
-- rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
-    [include_word_upos, ["ADJ"]],    #  [include_upos [word, ["ADJ"]]],
-    [regex_word_luwpos, "^名詞"],    #  [match_luwpos [word, 名詞-普通名詞-一般]],
-    [include_parent_upos, ["VERB", "ADJ"]],    #  [include_upos [parent_word, ["VERB", "ADJ"]]]
-  ]
-  res: obl
-
 # 表層格「も」「に」
 - rule: [
     [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
@@ -599,7 +748,8 @@ order_rule:
   ]
   res: obl
 
-# 用言にかかる名詞はobl  〜〜為、XXする とか
+
+# 用言にかかる名詞はobl
 - rule: [
     [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["NOUN", "PRON", "PROPN"]],    #  [include_upos [word, ["NOUN", "PRON", "PROPN"]]],
@@ -607,6 +757,7 @@ order_rule:
     [regex_child_xpos, "助詞-格助詞"],    #  [include_child_xpos [word, 助詞-格助詞]]
   ]
   res: obl
+
 
 # では、からは、へは
 - rule: [
@@ -616,9 +767,20 @@ order_rule:
   ]
   res: obl
 
-# 用言にかかる名詞はobl
+
+# 表層格「は」
 - rule: [
     [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_upos, ["VERB"]],    #  [include_upos [word, ["VERB"]]],
+    [regex_word_suffixstring, "^.*は[、,，]?$"],    #  [match_suffix_string [word, ^.*は[、,，]?$]]
+  ]
+  res: csubj
+
+
+
+# 用言にかかる名詞はobl
+- rule: [
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["NOUN", "PRON", "PROPN"]],    #  [include_upos [word, ["NOUN", "PRON", "PROPN"]]],
     [include_parent_upos, ["VERB", "ADJ", "ADV"]],    #  [include_upos [parent_word, ["VERB", "ADJ", "ADV"]]]
   ]
@@ -640,7 +802,7 @@ order_rule:
 
 # 主辞が連体詞ならamodだ
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["ADJ"]],    #  [include_upos [word, ["ADJ"]]],
     [regex_word_xpos, "^連体詞"],    #  [match_xpos [word, ^連体詞]]
   ]
@@ -649,7 +811,7 @@ order_rule:
 
 # 動詞->名詞はacl
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["VERB", "ADJ"]],    #  [include_upos [word, ["VERB", "ADJ"]]],
     [include_parent_upos, ["NOUN", "PRON", "PROPN", "NUM"]],    #  [include_upos [parent_word, ["NOUN", "PRON", "PROPN", "NUM"]]]
   ]
@@ -667,7 +829,7 @@ order_rule:
 
 # 主辞がADJならaclだ
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["ADJ"]],    #  [include_upos [word, ["ADJ"]]]
   ]
   res: acl
@@ -675,7 +837,7 @@ order_rule:
 
 # 名詞+だ->名詞はacl
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["NOUN", "PRON", "PROPN", "NUM"]],    #  [include_upos [word, ["NOUN", "PRON", "PROPN", "NUM"]]],
     [include_parent_upos, ["NOUN", "PRON", "PROPN", "NUM"]],    #  [include_upos [parent_word, ["NOUN", "PRON", "PROPN", "NUM"]]],
     [regex_child_xpos, "助動詞"],    #  [include_child_xpos [word, 助動詞]]
@@ -685,7 +847,7 @@ order_rule:
 
 # よう,そうの場合
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [regex_word_xpos, "^形状詞-[助]+"],    #  [match_xpos [word, ^形状詞-[助]+]],
     [include_parent_upos, ["NOUN"]],    #  [include_upos [parent_word, ["NOUN"]]]
   ]
@@ -694,7 +856,7 @@ order_rule:
 
 # よう,そうの場合
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [regex_word_xpos, "^形状詞-[助]+"],    #  [match_xpos [word, ^形状詞-[助]+]],
     [include_parent_upos, ["VERB"]],    #  [include_upos [parent_word, ["VERB"]]]
   ]
@@ -761,7 +923,7 @@ order_rule:
 
 #  ?
 - rule: [
-    [include_word_bpos, ["SEM_HEAD", "CONT"]],    #  [include_bpos [word, ["SEM_HEAD", "CONT"]]],
+    [include_word_bpos, ["SEM_HEAD", "CONT", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD", "CONT"]]],
     [include_word_upos, ["PART"]],    #  [include_upos [word, ["PART"]]],
     [regex_word_xpos, ".+形[状容]詞的"],    #  [match_xpos [word, .+形[状容]詞的]],
     [include_parent_upos, ["NOUN", "PRON", "PROPN", "PART"]],    #  [include_upos [parent_word, ["NOUN", "PRON", "PROPN", "PART"]]]
@@ -771,7 +933,7 @@ order_rule:
 
 #  ?
 - rule: [
-    [include_word_bpos, ["SEM_HEAD", "CONT"]],    #  [include_bpos [word, ["SEM_HEAD", "CONT"]]],
+    [include_word_bpos, ["SEM_HEAD", "CONT", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD", "CONT"]]],
     [include_word_upos, ["PART"]],    #  [include_upos [word, ["PART"]]],
     [regex_word_xpos, ".+名詞的"],    #  [match_xpos [word, .+名詞的]]
   ]
@@ -789,7 +951,7 @@ order_rule:
 # 動詞->動詞or形容詞
 - rule: [
     [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
-    [match_word_lemma, "する"],    #  [include_jp_origin [word, する]],
+    [match_word_lemma, "為る"],    #  [include_jp_origin [word, する]],
     [include_word_upos, ["AUX"]],    #  [include_upos [word, ["AUX"]]],
     [include_parent_upos, ["VERB", "ADJ"]],    #  [include_upos [parent_word, ["VERB", "ADJ"]]]
   ]
@@ -799,9 +961,9 @@ order_rule:
 # 動詞->動詞or形容詞(or PART or AUX)
 - rule: [
     [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
-    [match_word_lemma, "する"],    #  [include_jp_origin [word, する]],
+    [match_word_lemma, "為る"],    #  [include_jp_origin [word, する]],
     [include_word_upos, ["AUX"]],    #  [include_upos [word, ["AUX"]]],
-    [match_parent_lemma, "する"],    #  [include_jp_origin [parent_word, する]]
+    [match_parent_lemma, "為る"],    #  [include_jp_origin [parent_word, する]]
   ]
   res: advcl
 
@@ -810,7 +972,7 @@ order_rule:
 - rule: [
     [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["VERB"]],    #  [include_upos [word, ["VERB"]]],
-    [match_parent_lemma, "する"],    #  [include_jp_origin [parent_word, する]],
+    [match_parent_lemma, "為る"],    #  [include_jp_origin [parent_word, する]],
     [include_parent_upos, ["AUX"]],    #  [include_upos [parent_word, ["AUX"]]]
   ]
   res: advcl
@@ -819,7 +981,7 @@ order_rule:
 # 動詞->名詞はacl x
 - rule: [
     [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
-    [match_word_lemma, "する"],    #  [include_jp_origin [word, する]],
+    [match_word_lemma, "為る"],    #  [include_jp_origin [word, する]],
     [include_word_upos, ["AUX"]],    #  [include_upos [word, ["AUX"]]],
     [include_parent_upos, ["NOUN", "PRON", "NUM"]],    #  [include_upos [parent_word, ["NOUN", "PRON", "NUM"]]]
   ]
@@ -829,7 +991,7 @@ order_rule:
 # 動詞->名詞はacl x
 - rule: [
     [include_word_bpos, ["SEM_HEAD", "SYN_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD", "SYN_HEAD"]]],
-    [match_word_lemma, "する"],    #  [include_jp_origin [word, する]],
+    [match_word_lemma, "為る"],    #  [include_jp_origin [word, する]],
     [include_word_upos, ["AUX"]],    #  [include_upos [word, ["AUX"]]],
     [regex_parent_xpos, "^接尾辞-名詞的"],    #  [match_xpos [parent_word, ^接尾辞-名詞的]]
   ]
@@ -864,7 +1026,7 @@ order_rule:
 
 # ?
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],    #  [include_bpos [word, ["SEM_HEAD"]]],
     [include_word_upos, ["ADP"]],    #  [include_upos [word, ["ADP"]]],
     [include_parent_upos, ["NOUN"]],    #  [include_upos [parent_word, ["NOUN"]]]
   ]
@@ -907,7 +1069,7 @@ order_rule:
 
 # NOUN系にかかる主辞のSYMはnmod
 - rule: [
-    [include_word_bpos, ["SEM_HEAD"]],
+    [include_word_bpos, ["SEM_HEAD", "ROOT"]],
     [include_word_upos, ["SYM", "X"]],
     [include_parent_upos, ["NOUN", "PRON", "PROPN", "NUM", "SYM"]],
   ]
@@ -919,7 +1081,7 @@ order_rule:
     [include_word_bpos, ["SEM_HEAD"]],
     [include_word_upos, ["SYM"]],
     [include_child_upos, ["AUX"]],
-    [include_child_lemma, ["だ"]],
+    [include_child_lemma, ["だ", "です"]],
     [include_parent_upos, ["VERB"]],
   ]
   res: advcl
@@ -978,7 +1140,7 @@ order_rule:
 - rule: [
     [include_word_bpos, ["CONT", "SYN_HEAD"]],    #  [include_bpos [word, ["CONT", "SYN_HEAD"]]],
     [regex_parent_xpos, ".+-サ変"],    #  [match_xpos [parent_word, .+-サ変]],
-    [include_word_lemma, ["する"]],    #  [include_jp_origin [word, ["する"]]]
+    [include_word_lemma, ["為る"]],    #  [include_jp_origin [word, ["為る"]]]
   ]
   res: compound
 

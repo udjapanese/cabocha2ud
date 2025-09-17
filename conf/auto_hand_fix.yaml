@@ -256,6 +256,10 @@
     - ids: [1]
       target: DEPREL
       value: advcl
+    - ids: [4]
+      target: HEAD
+      value: 1
+
 - sent_id: B300n_OY15_05298-18
   rules:
     - ids: [1]
@@ -264,6 +268,16 @@
     - ids: [1]
       target: DEPREL
       value: advcl
+    - ids: [4]
+      target: HEAD
+      value: 1
+    - ids: [5]
+      target: HEAD
+      value: 4
+    - ids: [5]
+      target: DEPREL
+      value: fixed
+
 - sent_id: OC02_00003-6
   rules:
     - ids: [17]
@@ -319,6 +333,9 @@
     - ids: [84]
       target: HEAD
       value: 83
+    - ids: [83]
+      target: HEAD
+      value: 104
 # memo: 「です/。/と」「。であるならば」
 
 - sent_id: C042n_PM21_00086-23

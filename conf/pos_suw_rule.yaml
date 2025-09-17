@@ -98,6 +98,14 @@ rule:
     base_lexeme: "^あらゆる"
   - - DET
 
+- - pos: "^接頭辞"
+    base_lexeme: "^全"
+  - - DET
+
+- - pos: "^接頭辞"
+    base_lexeme: "^各"
+  - - DET
+
 - - pos: "^連体詞"
     base_lexeme: "^[こそあど此其]"
   - - PRON

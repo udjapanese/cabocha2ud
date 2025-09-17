@@ -24,7 +24,8 @@ class Content:
         self.content: str = content if content is not None else "_"
 
     def __eq__(self, __value: object) -> bool:
-        assert isinstance(__value, Content)
+        if not isinstance(__value, Content):
+            return NotImplemented
         return self.id_ == __value.id_ and self.content == __value.content
 
     def __str__(self) -> str:
@@ -74,7 +75,7 @@ class Misc(Content):
         if "SpacesAfter" in self.dcont and self.dcont["SpacesAfter"] == "Yes":
             if "SpaceAfter" in self.dcont and self.dcont["SpaceAfter"] == "No":
                 self.remove("SpaceAfter")
-                self.remove("SpacesAfter")
+            self.remove("SpacesAfter")
 
     def get_content_from_key(self, key: str) -> str:
         """ Get from key """
@@ -84,7 +85,9 @@ class Misc(Content):
 
     def remove(self, key: str) -> None:
         """ remove by str """
-        assert key in self.keys, "cant't remove {} because {} not contained in MISC"
+        if key not in self.keys:
+            msg = f"cant't remove {key} because {key} not contained in MISC"
+            raise KeyError(msg)
         self.keys.remove(key)
         del self.dcont[key]
         super().set_content("|".join(["{}={}".format(k, self.dcont[k]) for k in self.keys]))
@@ -92,17 +95,12 @@ class Misc(Content):
     def update(self, key: str, value: str) -> None:
         """ update the value by key """
         if key not in self.keys:
-            bisect.insort_left(self.keys, value)
+            bisect.insort_left(self.keys, key)
         self.dcont[key] = value
         super().set_content("|".join(["{}={}".format(k, self.dcont[k]) for k in self.keys]))
 
     def get_content(self) -> str:
         """ get content """
-        if "SpaceAfter=No|SpacesAfter=Yes" in str(self.content):
-            self.remove("SpaceAfter")
-            self.remove("SpacesAfter")
-        if "SpacesAfter=Yes" in str(self.content):
-            self.remove("SpacesAfter")
         return self.content
 
     def set_content(self, content: str) -> None:
@@ -111,7 +109,7 @@ class Misc(Content):
         super().set_content(content)
 
 
-class Word(list[Content]):
+class Word:
     """
     Word class object
 
@@ -134,7 +132,7 @@ class Word(list[Content]):
     """
 
     def __init__(self, content: Optional[Union[str, list[str]]]=None):
-        super().__init__()
+        self._contents: list[Content] = []
         if content is not None:
             if isinstance(content, str):
                 self.set_by_str(content)
@@ -161,7 +159,8 @@ class Word(list[Content]):
 
     def set_by_list(self, content: list[str]):
         """ set by str list """
-        assert len(content) == len(Field), "must set filed size " + str(len(Field))
+        if len(content) != len(Field):
+            raise ValueError("must set filed size " + str(len(Field)))
         self.clear()
         self.extend([
             Misc(id_, cont) if id_ == Field.MISC else Content(id_, cont)
@@ -185,3 +184,30 @@ class Word(list[Content]):
     def get_value_str_list(self) -> list[str]:
         """ get value """
         return [str(content) for content in self]
+
+    def __eq__(self, __value: object) -> bool:
+        if not isinstance(__value, Word):
+            return NotImplemented
+        return self.get_value_str_list() == __value.get_value_str_list()
+
+    # --- list like interface ---
+    def __iter__(self):
+        return iter(self._contents)
+
+    def __len__(self) -> int:
+        return len(self._contents)
+
+    def __getitem__(self, index: int) -> Content:
+        return self._contents[index]
+
+    def __setitem__(self, index: int, value: Content) -> None:
+        self._contents[index] = value
+
+    def append(self, value: Content) -> None:
+        self._contents.append(value)
+
+    def extend(self, values: list[Content]) -> None:
+        self._contents.extend(values)
+
+    def clear(self) -> None:
+        self._contents.clear()

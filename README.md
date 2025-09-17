@@ -1,62 +1,45 @@
-# cab2ud.py
+# cabocha2ud
 
 ## 動作環境
 
-Python3.9（3.9.X）にて動作確認済み。
+Python3.13（3.13.X）にて動作確認済み。
 pipで必要なライブラリをインストールします
 
 ```zsh
-pip install configargparse pyyaml tqdm ruamel.yaml
+pip install configargparse pyyaml tqdm ruamel.yaml tomli
 ```
 
-（Pipenvを導入済みの場合、Pipfileで上記ライブラリがインストール可能）（おそらく）
+Pipenvを導入済みの場合、Pipfileで上記ライブラリがインストール可能
 
 ```zsh
-pipenv --install
+pipenv install
 ```
 
 ## 動かし方
 
 現在入力には、長単位データつきのcabochaファイルが必要です。
-（現在のルールの一部が長単位を参照しているため）
-長単位つきcabochaファイルは`../cabocha_files`ディレクトリをみてください。
-
-```text
-../cabocha_files/GSD/UD_Japanese-GSDPUD-CaboCha/*.cabocha: GSDとPUDの長単位情報つきcabocha (元は[masayu-a/UD_Japanese-GSDPUD-CaboCha](https://github.com/masayu-a/UD_Japanese-GSDPUD-CaboCha ))
-../cabocha_files/BCCWJ/(dev/train/test)/*.cabocha: BCCWJの長単位情報つきcabocha
-```
+フォーマットは以下を確認してください。
 
 ```zsh
-python cab2ud.py [長単位つきcabochaファイル] -c conf/default_(bccwj|gsd)_args.yaml --debug -w [出力ファイル名(指定しない場合標準出力)]
+python -m cabocha2ud [長単位つきcabochaファイル] -c conf/default_(bccwj|gsd)_args.yaml -w [出力ファイル名(指定しない場合は標準出力)]
 ```
 
 `conf/default_(bccwj|gsd)_args.yaml`はそれぞれのコーパス名を指定してください（PUDはGSDを指定してください）
-（現在コーパスで入力フォーマットが微妙に違うなどがあり、コーパスごとで設定が分れてます）
+（現在コーパスで入力フォーマットが微妙に違うなどがあり、コーパスごとで設定が分かれています）
 
 とりあえずGSDファイルは以下のスクリプトで一括変換できます
 (`parallel`コマンドを使っているため、ない場合自力でお願いします）
 
 ```shell
 # GSDの変換
-./cab2ud_gsd_full.sh
+./script/cab2ud_gsd_full.sh
 # BCCWJの変換
-./cab2ud_bccwj_full.sh
+./script/cab2ud_bccwj_full.sh
 # GSDLUW
-./cab2ud_gsd_luw_full.sh
+./script/cab2ud_gsd_luw_full.sh
 # BCCWJLUW
-./cab2ud_bwccj_full_luw.sh
+./script/cab2ud_bccwj_luw_full.sh
 ```
-
-## 出力ファイルについて
-
-### GSD
-
-`../cabocha_files/GSD/work`に出力された`*.conllu`ファイルが該当物です
-
-### BCCWJ
-
-BCCWJについては[/cabocha_files/BCCWJ/README.md](/cabocha_files/BCCWJ/README.md)を参照のこと
-UDには`../cabocha_files/BCCWJ/output/ja_bccwj-ud-*.csr.conllu`を提出しています。
 
 ## 変換ルールについて
 
@@ -216,21 +199,3 @@ elements:
 下記に揃えていく、フォーマットは以下参照
 
 <https://github.com/udjapanese/UD-Japanese-GSDPUD-Cabocha>
-
-
-## PUBLISH command
-
-```shell
-# validateの確認
-./validate_gsd_and_bccwj.sh
-
-# GSD
-./publish_gsd_ud.sh
-
-# BCCWJ
-./release_bccwj_ud.sh -w suw -s ../../core_SUW.txt
-./release_bccwj_ud.sh -w luw -s ../../core_LUW.txt
-./publish_bccwjud.sh
-```
-
-

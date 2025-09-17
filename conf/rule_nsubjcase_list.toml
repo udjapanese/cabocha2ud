@@ -28,7 +28,7 @@ pos = 1
 dep = "obj"
 [[rule.eval]]
 pos = 2
-dep = "obj"
+dep = "iobj"
 
 [[rule]]
 # 1つめ「も」、2つめ「は」、3つめ「も」 1 obl  2 obl
@@ -446,7 +446,7 @@ pos = 0
 dep = "obj"
 [[rule.eval]]
 pos = 1
-dep = "obj"
+dep = "iobj"
 
 [[rule]]
 [rule.condition]
@@ -566,7 +566,7 @@ pos = 2
 dep = "obj"
 [[rule.eval]]
 pos = 3
-dep = "obj"
+dep = "iobj"
 
 [[rule]]
 [rule.condition]
@@ -610,7 +610,7 @@ pos = 1
 dep = "obj"
 [[rule.eval]]
 pos = 2
-dep = "obj"
+dep = "iobj"
 
 [[rule]]
 [rule.condition]
@@ -629,5 +629,5 @@ pos = 1
 dep = "obj"
 [[rule.eval]]
 pos = 2
-dep = "obj"
+dep = "iobj"
 

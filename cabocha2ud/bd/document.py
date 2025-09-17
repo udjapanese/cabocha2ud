@@ -13,7 +13,9 @@ from cabocha2ud.lib.logger import Logger
 from cabocha2ud.rule.bunsetu_rule import detect_bunsetu_jp_type, detect_dep_bunsetu
 from cabocha2ud.rule.dep import SubRule, detect_ud_label
 from cabocha2ud.rule.pos import detect_ud_pos
+from cabocha2ud.rule.swap_dep import swap_dep_without_child_from_sent
 from cabocha2ud.rule.remove_multi_subj import adapt_nsubj_to_dislocated_rule
+from cabocha2ud.rule.remove_multi_obj import adapt_obj_to_dislocated_rule
 from cabocha2ud.rule.remove_space import skip_jsp_token_from_sentence
 
 from .annotation import AnnotationList, DocAnnotation, generate_docannotation, get_annotation_object
@@ -22,7 +24,7 @@ from .sentence import Sentence
 RE_SAHEN_MATCH = re.compile("^名詞.*サ変.*")
 
 
-def replace_pos_and_label(sent: "Sentence") -> None:  # noqa: C901, PLR0912
+def replace_pos_and_label(sent: "Sentence") -> None:
     """後処理のPOSとDEPRELの置換.
 
     Args:
@@ -33,44 +35,53 @@ def replace_pos_and_label(sent: "Sentence") -> None:  # noqa: C901, PLR0912
         # UPOSについての置換
         if wrd.dep_label == "punct":
             wrd.en_pos = ["PUNCT"]
-        if len(wrd.en_pos) > 0:
-            if wrd.en_pos[0] == "AUX" and wrd.dep_label == "compound":
+
+        pos0 = wrd.en_pos[0] if wrd.en_pos else None
+        match (pos0, wrd.dep_label, wrd.get_luw_pos()):
+            case ("AUX", "compound", _):
                 wrd.dep_label = "aux"
-            elif wrd.en_pos[0] == "AUX" and wrd.dep_label == "cc":
+            case ("AUX", "cc", _):
                 wrd.en_pos[0] = "CCONJ"
-            elif wrd.en_pos[0] == "NOUN" and wrd.get_luw_pos() == "助動詞":
+            case ("NOUN", _, "助動詞"):
                 wrd.en_pos[0] = "AUX"
+
         parent = wrd.get_parent_word()
         if parent is None:
             continue
-        if parent.dep_label == "fixed":
-            # fixed -> fixed の場合
-            wrd.dep_num = parent.dep_num
-            continue
-        if (wrd.token_pos < parent.token_pos and wrd.dep_label in ["compound", "dep"]
-            and parent.dep_label == "det"):
-            # compound/dep -> det の場合
-            wrd.dep_num = parent.dep_num
-            continue
-        if parent.dep_label == "cc" and wrd.dep_label in ["aux", "mark"]:
-            wrd.dep_label = "fixed"
-            continue
-        if parent.dep_label == "aux" and wrd.dep_label in ["case", "mark"]:
-            wrd.dep_label = "fixed"
-            continue
-        if parent.word_pos == 0 and parent.dep_label == "case" and wrd.dep_label in ["aux", "mark"]:
-            wrd.dep_label = "fixed"
-            continue
-        if (
-            wrd.en_pos[0] == "ADP" and wrd.dep_label in ["fixed"]
-                and wrd.token_pos < parent.token_pos
-        ):
-            if parent.dep_label != "case":
-                wrd.dep_label = "case"
+
+        pos0 = wrd.en_pos[0] if wrd.en_pos else None
+        key = (
+            parent.dep_label,
+            wrd.dep_label,
+            wrd.token_pos < parent.token_pos,
+            parent.word_pos,
+            pos0,
+        )
+        match key:
+            case ("fixed", _, _, _, _):
+                # fixed -> fixed の場合
+                wrd.dep_num = parent.dep_num
                 continue
-            if wrd.token_pos == 1:
+            case ("det", ("compound" | "dep"), True, _, _):
+                # compound/dep -> det の場合
+                wrd.dep_num = parent.dep_num
                 continue
-            wrd.dep_label = "case" # わりと特殊  B024n_PM25_00027-131
+            case ("cc", ("aux" | "mark"), _, _, _):
+                wrd.dep_label = "fixed"
+                continue
+            case ("aux", ("case" | "mark"), _, _, _):
+                wrd.dep_label = "fixed"
+                continue
+            case ("case", ("aux" | "mark"), _, 0, _):
+                wrd.dep_label = "fixed"
+                continue
+            case (_, "fixed", True, _, "ADP"):
+                if parent.dep_label != "case":
+                    wrd.dep_label = "case"
+                    continue
+                if wrd.token_pos == 1:
+                    continue
+                wrd.dep_label = "case"  # わりと特殊  B024n_PM25_00027-131
 
 
 class Document(list["Sentence"]):
@@ -287,7 +298,9 @@ def post_proceeing_function(doc: Document, dep_rule: list[tuple[list[SubRule], s
     """Proceeding hook function."""
     for sent in doc.sentences():
         adapt_nsubj_to_dislocated_rule(sent)
+        adapt_obj_to_dislocated_rule(sent)
         replace_pos_and_label(sent)
+        swap_dep_without_child_from_sent(sent)
         # 言い淀み __replace_iiyodomi(sent)
         # fixed
         __replace_allfix_deps(sent, dep_rule)

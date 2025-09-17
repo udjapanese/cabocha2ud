@@ -28,7 +28,8 @@ class Header:
         self.key = ""
         self.value = ""
         if cont is not None:
-            assert cont.startswith("# ")
+            if not cont.startswith("# "):
+                raise ValueError("header line must start with '# '")
             self.key, self.value = cont.replace("# ", "").split(" = ")
         elif isinstance(key, str) and isinstance(value, str):
             self.key = key
@@ -37,7 +38,8 @@ class Header:
             raise KeyError("please set key and value or cont")
 
     def __eq__(self, __value: object) -> bool:
-        assert isinstance(__value, Header)
+        if not isinstance(__value, Header):
+            return NotImplemented
         return self.key == __value.key and self.value == __value.value
 
     def __str__(self) -> str:
@@ -57,7 +59,7 @@ class Header:
         self.value = value
 
 
-class Sentence(list[Word]):
+class Sentence:
     """
         Sentence class for Universal Dependencies
 
@@ -69,7 +71,7 @@ class Sentence(list[Word]):
         self, content: Optional[list[str]]=None, spt: str=" ",
         logger: Optional[Logger]=None
     ):
-        super().__init__()
+        self._words: list[Word] = []
         self.logger: Logger = logger or Logger()
         self.headers: ListBasedKey[Header] = ListBasedKey()
         self.sentence_text: str = ""
@@ -87,12 +89,13 @@ class Sentence(list[Word]):
 
     def update_sentence(self) -> None:
         """ update sentence text """
-        assert self._sp is not None
+        if self._sp is None:
+            raise ValueError("space marker is not set")
         self.sentence_text = "".join([
             wrd.get(Field.FORM).get_content() + (
                 self._sp if wrd.is_spaceafter() else ""
             )
-            for wrd in self
+        for wrd in self
         ]).rstrip(self._sp)
         self.fix_header_by_key("text", self.sentence_text)
 
@@ -102,15 +105,17 @@ class Sentence(list[Word]):
 
     def word(self, id_: int) -> Word:
         """ return word for _id """
-        assert 0 < id_ <= len(self.words()), f"must be word id 0 < {id_} <= {len(self.words())}"
-        return self[id_ - 1]
+        if not (0 < id_ <= len(self._words)):
+            raise IndexError(f"must be word id 0 < {id_} <= {len(self._words)}")
+        return self._words[id_ - 1]
 
     def set_word_content(self, id_: int, _field: Union[int, Field], cnt: Union[str, int]) -> None:
         """
             Set word content id_: Word
         """
-        assert 0 < id_ <= len(self.words()), f"must be word id 0 < {id_} <= {len(self.words())}"
-        self[id_ - 1].set(_field, cnt)
+        if not (0 < id_ <= len(self._words)):
+            raise IndexError(f"must be word id 0 < {id_} <= {len(self._words)}")
+        self._words[id_ - 1].set(_field, cnt)
 
     def get_header_keys(self) -> list[str]:
         """ get header's key """
@@ -126,9 +131,11 @@ class Sentence(list[Word]):
 
     def fix_header_by_key(self, key: str, value: str) -> None:
         """ alias to str key """
-        assert self.headers.include_key(key)
+        if not self.headers.include_key(key):
+            raise KeyError(key)
         hdr_ = self.headers.get_item(key)
-        assert hdr_ is not None
+        if hdr_ is None:
+            raise KeyError(key)
         hdr_.set_value(value)
         self.headers.set_item(key, hdr_)
 
@@ -138,7 +145,9 @@ class Sentence(list[Word]):
 
     def remove_header(self, key: str) -> None:
         """ remove header """
-        assert key in self.headers
+        if not self.headers.include_key(key):
+            msg = f"header `{key}` is not contained"
+            raise KeyError(msg)
         self.headers.remove_obj_by_key(key)
 
     def get_str_list(self, mode: str="full") -> list[str]:
@@ -158,6 +167,8 @@ class Sentence(list[Word]):
     def load(self, content: list[str]) -> None:
         """ load content list[str] """
         count = 0
+        if not content:
+            return
         while content[count].startswith("# "):
             header = Header(cont=content[count])
             self.set_header(count, header)
@@ -173,7 +184,8 @@ class Sentence(list[Word]):
         nlist: list[list[Word]] = []
         for word in self.words():
             misc_info = word[Field.MISC]
-            assert isinstance(misc_info, Misc)
+            if not isinstance(misc_info, Misc):
+                raise TypeError("MISC field must be Misc instance")
             if misc_info.get_content_from_key("BunsetuBILabel") == "B":
                 nlist.append([])
             nlist[-1].append(word)
@@ -193,3 +205,19 @@ class Sentence(list[Word]):
     ) -> Sentence:
         """ load Sentence object from string list """
         return Sentence(content=sent_lst, spt=spt, logger=logger)
+
+    # --- list like interface ---
+    def __iter__(self):
+        return iter(self._words)
+
+    def __len__(self) -> int:
+        return len(self._words)
+
+    def __getitem__(self, index: int) -> Word:
+        return self._words[index]
+
+    def append(self, word: Word) -> None:
+        self._words.append(word)
+
+    def clear(self) -> None:
+        self._words.clear()

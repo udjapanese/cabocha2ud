@@ -5,8 +5,8 @@
 ルールファイルを少し見やすい形に変換する
 
 ```shell
-> pipenv run python misc/show_tab_rule_file.py -f pos conf/bccwj_pos_suw_rule.yaml
-> pipenv run python misc/show_tab_rule_file.py -f dep conf/bccwj_dep_suw_rule.yaml
+> pipenv run python misc/show_tab_rule_file.py -f pos conf/pos_suw_rule.yaml
+> pipenv run python misc/show_tab_rule_file.py -f dep conf/dep_suw_rule.yaml
 ```
 
 ## show_bd_position.py

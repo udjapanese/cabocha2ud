@@ -30,7 +30,7 @@ class Bunsetu(list["Word"]):
         word_unit_mode: str="suw"
     ) -> None:
         """Init."""
-        super().__init__(self)
+        super().__init__()
         self.base_file_name: str | None = base_file_name
         self.debug: bool = debug
         self.logger: Logger = logger or Logger()

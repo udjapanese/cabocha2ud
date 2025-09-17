@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cabocha2ud"
+version = "0.1.0"
+description = "BCCWJ DepParaPAS to universal dependencies."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "logzero",
+    "ruamel-yaml",
+    "tomli",
+    "click",
+    "tomlkit",
+    "configargparse",
+    "pydantic",
+]
+
+[project.scripts]
+cabocha2ud = "cabocha2ud.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["cabocha2ud"]

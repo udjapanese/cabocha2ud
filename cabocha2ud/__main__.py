@@ -44,9 +44,9 @@ def _get_argparser() -> ArgumentParser:
                         choices=["remove", "convert"], help="for replace_multi_root")
     parser.add_argument("--patch-file", default=None, help="file for patch_fix")
     parser.add_argument("--sp-file", default=None, help="file for merge_sp_to_conll")
-    parser.add_argument("--pos-rule-file", default="conf/bccwj_pos_suw_rule.yaml",
+    parser.add_argument("--pos-rule-file", default="conf/pos_suw_rule.yaml",
                         help="file for fit rule")
-    parser.add_argument("--dep-rule-file", default="conf/bccwj_dep_suw_rule.yaml",
+    parser.add_argument("--dep-rule-file", default="conf/dep_suw_rule.yaml",
                         help="file for fit rule")
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("-t", "--temporary-file", action="store_true")

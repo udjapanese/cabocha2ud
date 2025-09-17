@@ -2,9 +2,15 @@
 
 
 def collect_ancestors(_id: int, tree: list[int], ancestors: list[int]) -> list[int]:
-    """Ancestors collect_ancestors nodeid, nodes, []).
+    """指定したノードから祖先ノードを再帰的に収集します。
 
-    `tree` format is [-1] + [child1, child2, child3, ...], root is 0
+    Args:
+        _id (int): 祖先を収集したいノードのインデックスです。
+        tree (list[int]): ノード間の依存関係を表すリストで、形式は ``[-1] + [child1, child2, ...]`` とし、根は ``0`` です。
+        ancestors (list[int]): 既に収集された祖先ノードのインデックスを保持するリストです。
+
+    Returns:
+        list[int]: 収集した祖先ノードのインデックスを格納したリストを返します。
     """
     pid = tree[_id]
     if pid == 0:

@@ -215,6 +215,15 @@
     - ids: [1]
       target: DEPREL
       value: advcl
+    - ids: [4]
+      target: HEAD
+      value: 1
+    - ids: [5]
+      target: HEAD
+      value: 4
+    - ids: [5]
+      target: DEPREL
+      value: fixed
 ## [Line 445 Sent B300n_OY15_05298-18 Node 1]: [L3 Syntax leaf-punct] 'punct' not expected to have children (1:、:punct --> 4:って:aux)
 ## [Line 446 Sent B300n_OY15_05298-18 Node 1]: [L3 Syntax leaf-punct] 'punct' not expected to have children (1:、:punct --> 5:か:mark)
 
@@ -226,17 +235,11 @@
     - ids: [1]
       target: DEPREL
       value: advcl
+    - ids: [4]
+      target: HEAD
+      value: 1
 # [Line 126 Sent B300n_OY15_05298-8 Node 1]: [L3 Syntax leaf-punct] 'punct' not expected to have children (1:、:punct --> 4:と:case)
-
-- sent_id: B300n_OY15_05298-8
-  rules:
-    - ids: [1]
-      target: UPOS
-      value: NOUN
-    - ids: [1]
-      target: DEPREL
-      value: advcl
-# [Line 126 Sent B300n_OY15_05298-8 Node 1]: [L3 Syntax leaf-punct] 'punct' not expected to have children (1:、:punct --> 4:と:case)
+# [Line 127 Sent B300n_OY15_05298-8 Node 5]: [L3 Syntax punct-is-nonproj] Punctuation must not be attached non-projectively over nodes [Node<B300n_OY15_05298-8#4, と>]
 
 - sent_id: A233n_OY14_02975-40
   rules:
@@ -426,3 +429,12 @@
 #37      の      の      ADP     助詞-格助詞     _       34      fixed   _     
 #38      ）      ）      PUNCT   補助記号-括弧閉 _       34      punct   _     
 #39      よう    様      NOUN    形状詞-助動詞語幹       _       43      advcl   _ 
+
+- sent_id: D050p_OW6X_00073-51
+  rules:
+    - ids: [9]
+      target: HEAD
+      value: 7
+    - ids: [9]
+      target: DEPREL
+      value: nmod

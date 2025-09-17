@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
-
-"""
-BCCWJ DepParaPAS swaping rule
+"""BCCWJ DepParaPAS swaping rule.
 
 主にcc周り
-
 """
 
 from typing import TYPE_CHECKING, cast
@@ -15,16 +11,14 @@ from cabocha2ud.bd.word import Word
 
 
 def _check_bunsetu_cc_and_punct(word: "Word") -> tuple[bool, int]:
-    """
-    子の中に文節外の子があれば除く
-    """
+    """子の中に文節外の子があれば除く."""
     cc_and_punct_flag: bool = True
     save_tpos: int = 0
     for tpos, twrd in enumerate(word.bunsetu):
         save_tpos = twrd.token_pos
         # print(tpos, len(word.bunsetu), twrd.dep_label)
         if tpos == len(word.bunsetu) - 1:
-            if twrd.dep_label != 'punct':
+            if twrd.dep_label != "punct":
                 cc_and_punct_flag = False
                 break
         elif twrd.dep_label != "cc":
@@ -34,21 +28,18 @@ def _check_bunsetu_cc_and_punct(word: "Word") -> tuple[bool, int]:
 
 
 def filter_cand_children(sent: "Sentence", word: "Word", chrd: list[int]) -> list[int]:
-    """
-    子の中に文節外の子があれば除く
-    """
+    """子の中に文節外の子があれば除く."""
     return [
         c_pos for c_pos in chrd
-        if word.bunsetu_pos == cast(Word, sent.get_word_from_tokpos(c_pos-1)).bunsetu_pos
+        if word.bunsetu_pos == cast("Word", sent.get_word_from_tokpos(c_pos-1)).bunsetu_pos
     ]
 
 
 def _detect_new_parent(sent: "Sentence", word: "Word", chrd: list[int]) -> int:
-    chrd = filter_cand_children(sent, word, chrd)
     for c_pos in reversed(chrd):
         ctok = sent.get_word_from_tokpos(c_pos-1)
         assert ctok is not None
-        if ctok.dep_label not in ['punct', 'aux', 'cc', 'case', "mark"]:
+        if ctok.dep_label not in ["punct", "aux", "cc", "case", "mark"]:
             return c_pos
     return -1
 
@@ -56,14 +47,17 @@ def _detect_new_parent(sent: "Sentence", word: "Word", chrd: list[int]) -> int:
 UDEP_LABEL_WITHOUT_CHILD = ["cc", "aux", "punct", "mark", 'case']
 
 def swap_dep_without_child_from_sent(sent: "Sentence"):
-    """
-        swap position
-            cc <- X を cc -> Xに変更
-            （主に子をもっていけないもの対策）
+    """Swap position.
+    
+    cc <- X を cc -> Xに変更
+    （主に子をもっていけないもの対策）
     """
     for word in sent.words():
         if word.dep_label in UDEP_LABEL_WITHOUT_CHILD:
-            chrd = list(sent.get_ud_children(word, is_reconst=True))
+            chrd = [
+                d for d in sent.get_ud_children(word, is_reconst=True)
+                if cast("Word", sent.get_word_from_tokpos(d-1)).dep_label not in ["punct", "fixed"]
+            ]
             if len(chrd) == 0:
                 continue
             org_dep_num = word.dep_num
@@ -73,16 +67,16 @@ def swap_dep_without_child_from_sent(sent: "Sentence"):
                 # すべて子を持てないdep_labelの子しかかかってなかった場合
                 # しょうがないので、swapではなくccの親に全部かける
                 for cwrd_pos in chrd:
-                    cast(Word, sent.get_word_from_tokpos(cwrd_pos-1)).dep_num = org_dep_num
+                    cast("Word", sent.get_word_from_tokpos(cwrd_pos-1)).dep_num = org_dep_num
                 # 文節内すべてccとpunctだったらpunctは最後のccにかける
                 cc_and_punct_flag, save_tpos = _check_bunsetu_cc_and_punct(word)
                 if cc_and_punct_flag:
-                    cast(Word, sent.get_word_from_tokpos(save_tpos-1)).dep_num = save_tpos-1
+                    cast("Word", sent.get_word_from_tokpos(save_tpos-1)).dep_num = save_tpos-1
             else:
                 # 子をもてるのがあった場合
                 last_chrd = sent.get_word_from_tokpos(last_chrd_pos-1)
                 assert isinstance(last_chrd, Word)
                 for cwrd_pos in [c for c in chrd if c != last_chrd]:
-                    cast(Word, sent.get_word_from_tokpos(cwrd_pos-1)).dep_num = last_chrd.token_pos
+                    cast("Word", sent.get_word_from_tokpos(cwrd_pos-1)).dep_num = last_chrd.token_pos
                 word.dep_num = last_chrd.token_pos
                 last_chrd.dep_num = org_dep_num

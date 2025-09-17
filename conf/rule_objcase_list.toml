@@ -1,0 +1,64 @@
+
+[[rule]]
+# 一つの語に obj の子が2つあって、1つめが「を」、2つめが「を」の場合：2つめを iobj に
+[rule.condition]
+size = 2
+[[rule.condition.is_case]]
+pos = 0
+case = ["を"]
+[[rule.condition.is_case]]
+pos = 1
+case = ["を"]
+[[rule.eval]]
+pos = 1
+dep = "iobj"
+
+[[rule]]
+# 一つの語に obj の子が2つあって、1つめが「を」、2つめが「を」の場合：2つめを iobj に
+[rule.condition]
+size = 2
+[[rule.condition.is_case]]
+pos = 0
+case = ["で"]
+[[rule.condition.is_case]]
+pos = 1
+case = ["を"]
+[[rule.eval]]
+pos = 0
+dep = "iobj"
+
+
+[[rule]]
+# 一つの語に obj の子が2つあって、1つめが「を/と」（を、と）、2つめが「を」の場合：1つめを ccomp （多分節の可能性が高い） に
+[rule.condition]
+size = 2
+[[rule.condition.is_case]]
+pos = 0
+case = ["を", "と"]
+[[rule.condition.is_case]]
+pos = 1
+case = ["を"]
+[[rule.eval]]
+pos = 0
+dep = "ccomp"
+
+
+[[rule]]
+# 一つの語に obj の子が2つあって、1つめが「を/と」（を、と）、2つめが「を」の場合：1つめを ccomp （多分節の可能性が高い） に
+[rule.condition]
+size = 3
+[[rule.condition.is_case]]
+pos = 0
+case = ["を"]
+[[rule.condition.is_case]]
+pos = 1
+case = ["を"]
+[[rule.condition.is_case]]
+pos = 2
+case = ["を"]
+[[rule.eval]]
+pos = 0
+dep = "iobj"
+[[rule.eval]]
+pos = 1
+dep = "iobj"

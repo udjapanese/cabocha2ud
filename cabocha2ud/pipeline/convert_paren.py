@@ -136,6 +136,61 @@ def cleanup_after(
             tok.head_ = prev_head
 
 
+def cleanup_all(
+    sentence: Sentence, prev: Token, open_t: Token, in_head: Token, close: Token, logger: Logger
+) -> None:
+    """Run cleanup helpers in order."""
+    cleanup_before(sentence, prev, open_t, in_head, close, logger)
+    cleanup_inside(sentence, open_t, in_head, close)
+    cleanup_after(sentence, prev, open_t, close, logger)
+
+
+def preprocess_parentheses(
+    sentence: Sentence, open_t: Token, close_t: Token, logger: Logger
+) -> tuple[Token, Token, Token]:
+    """Preprocess tokens around parentheses.
+
+    Returns the previous token, the last token inside the parentheses and the
+    head token inside the parentheses.
+    """
+    prev_t = sentence.tokens_[open_t.id_ - 2]
+    if prev_t.upos_ == "PUNCT" and prev_t.lemma_ != "「":
+        # 「XX/、/（」のときはXXに変更
+        prev_t = sentence.tokens_[open_t.id_ - 3]
+    elif prev_t.lemma_ == "た":
+        # 「XX/た/（」のときはXXに
+        prev_t = sentence.tokens_[prev_t.head_ - 1]
+
+    # last_t は「XX/）」のXX
+    last_t = sentence.tokens_[close_t.id_ - 2]
+
+    inhead = last_t
+    if last_t.head_ != close_t.id_:
+        # かっこの最後の親が末尾かっこではないとき
+        if last_t.head_ > open_t.id_ and last_t.head_ < close_t.id_:
+            # ちゃんとかっこ内にヘッドがある
+            for tok in sentence.tokens_[last_t.head_: close_t.id_ - 1]:
+                assert tok.head_ == last_t.head_, "wrong inparenHead 0" + tok.to_conllu()
+            inhead = sentence.tokens_[last_t.head_ - 1]
+            if (
+                last_t.deprel_ == "fixed"
+                and inhead.deprel_ == "case"
+                and inhead.head_ > open_t.id_
+            ):
+                inhead = sentence.tokens_[inhead.head_ - 1]
+                logger.debug("****CHANGED INHEAD")
+        else:
+            # そうではない
+            inhead = last_t
+            if inhead.deprel_ == "punct":  # for sent_id = w01020020
+                sentence.tokens_[open_t.id_].upos_ = "NOUN"
+                inhead.upos_ = "NOUN"
+                logger.debug("****CHANGED INHEAD UPOS")
+
+    logger.debug("inHead:" + inhead.to_conllu())
+    logger.debug("prev:" + prev_t.to_conllu())
+    return prev_t, last_t, inhead
+
 def check_outgoing_nodes(sent: Sentence, open_t: Token, close_t: Token, lgr: Logger) -> list[Token]:
     """外に出ていくトークンを抽出する.
 
@@ -165,56 +220,13 @@ def check_outgoing_nodes(sent: Sentence, open_t: Token, close_t: Token, lgr: Log
 
 
 def convparen_sub(sentence: Sentence, open_t: Token, close_t: Token, logger: Logger) -> bool:
-    """ convert paren sub function """
+    """Convert a pair of parentheses."""
 
-    prev_t = sentence.tokens_[open_t.id_-1-1]
-    if prev_t.upos_ == "PUNCT" and prev_t.lemma_ != "「":
-        # 「XX/、/（」のときはXXに変更
-        prev_t = sentence.tokens_[open_t.id_-1-2]
-    elif prev_t.lemma_ == "た":
-        # 「XX/た/（」のときはXXに
-        prev_t = sentence.tokens_[prev_t.head_-1]
-
-    # last_t は「XX/）」のXX
-    last_t = sentence.tokens_[close_t.id_-1-1]
-
+    prev_t, last_t, inhead = preprocess_parentheses(sentence, open_t, close_t, logger)
     print_tokens(sentence, prev_t, last_t, logger, start="--aaa--", end="----bbb---")
     print_tokens(sentence, open_t, close_t, logger, start="--ddd--", end="----eee---")
 
-    inhead = last_t
-    if last_t.head_ != close_t.id_:
-        # かっこの最後の親が末尾かっこではないとき
-        if last_t.head_ > open_t.id_ and last_t.head_ < close_t.id_:
-            # ちゃんとかっこ内にヘッドがある
-            for tok in sentence.tokens_[last_t.head_:close_t.id_-1]:
-                assert tok.head_ == last_t.head_, "wrong inparenHead 0" + tok.to_conllu()
-            inhead = sentence.tokens_[last_t.head_-1]
-            if last_t.deprel_ == "fixed" and inhead.deprel_ == "case" and inhead.head_ > open_t.id_:
-                inhead = sentence.tokens_[inhead.head_-1]
-                logger.debug("****CHANGED INHEAD")
-        else:
-            # そうではない
-            inhead = last_t
-            if inhead.deprel_ == "punct":   #  for sent_id = w01020020
-                sentence.tokens_[open_t.id_].upos_ = "NOUN"
-                inhead.upos_ = "NOUN"
-                logger.debug("****CHANGED INHEAD UPOS")
-
-    logger.debug("inHead:" + inhead.to_conllu())
-    logger.debug("prev:" + prev_t.to_conllu())
-
-    outgoing_nodes: list[Token] = []
-    for tok in sentence.tokens_[open_t.id_-1:close_t.id_]:
-        # （）内部を確認、親がかっこの外にあるものを追加する
-        logger.debug(tok.to_conllu())
-        if tok.head_ < open_t.id_ or tok.head_ > close_t.id_:
-            if tok.head_ == 0:
-                logger.debug("===============ROOT")
-            elif tok.head_ < open_t.id_:
-                assert True, "back outside dependency"
-            logger.debug("OUTSIDE!")
-            outgoing_nodes.append(tok)
-    logger.debug("---- outgoing_nodes -> " + str(len(outgoing_nodes)))
+    outgoing_nodes = check_outgoing_nodes(sentence, open_t, close_t, logger)
 
     if prev_t.deprel_ in ["case", "mark", "punct"] and prev_t.lemma_ not in ["さ"]:
         # forward modification
@@ -231,9 +243,7 @@ def convparen_sub(sentence: Sentence, open_t: Token, close_t: Token, logger: Log
         logger.debug(sentence.tokens_[prev_t.head_-1].to_conllu())
         if sentence.tokens_[prev_t.head_-1].head_ == prev_t.id_:
             assert False, "ERROR"
-        cleanup_before(sentence, prev_t, open_t, inhead, close_t, logger)
-        cleanup_inside(sentence, open_t, inhead, close_t)
-        cleanup_after(sentence, prev_t, open_t, close_t, logger)
+        cleanup_all(sentence, prev_t, open_t, inhead, close_t, logger)
 
         print_tokens(sentence, prev_t, close_t, logger, start="===0===", end="^^^^")
         return True
@@ -253,9 +263,7 @@ def convparen_sub(sentence: Sentence, open_t: Token, close_t: Token, logger: Log
                 open_t.head_ = inhead.id_
                 open_t.deprel_ = "punct"
 
-                cleanup_before(sentence, prev_t, open_t, inhead, close_t, logger)
-                cleanup_inside(sentence, open_t, inhead, close_t)
-                cleanup_after(sentence, prev_t, open_t, close_t, logger)
+                cleanup_all(sentence, prev_t, open_t, inhead, close_t, logger)
 
                 print_tokens(sentence, prev_t, close_t, logger, start="===1===", end="^^^^")
                 return True
@@ -266,9 +274,7 @@ def convparen_sub(sentence: Sentence, open_t: Token, close_t: Token, logger: Log
                 last_t.deprel_ = "appos"
                 close_t.head_ = last_t.id_
                 close_t.deprel_ = "punct"
-                cleanup_before(sentence, prev_t, open_t, inhead, close_t, logger)
-                cleanup_inside(sentence, open_t, inhead, close_t)
-                cleanup_after(sentence, prev_t, open_t, close_t, logger)
+                cleanup_all(sentence, prev_t, open_t, inhead, close_t, logger)
 
                 print_tokens(sentence, prev_t, close_t, logger, start="===2===", end="^^^^")
                 return True
@@ -288,9 +294,7 @@ def convparen_sub(sentence: Sentence, open_t: Token, close_t: Token, logger: Log
             open_t.head_ = inhead.id_
             open_t.deprel_ = "punct"
 
-            cleanup_before(sentence, prev_t, open_t, inhead, close_t, logger)
-            cleanup_inside(sentence, open_t, inhead, close_t)
-            cleanup_after(sentence, prev_t, open_t, close_t, logger)
+            cleanup_all(sentence, prev_t, open_t, inhead, close_t, logger)
 
             print_tokens(sentence, prev_t, close_t, logger, start="===5===", end="^^^^")
             return True
@@ -363,9 +367,7 @@ def convparen_sub(sentence: Sentence, open_t: Token, close_t: Token, logger: Log
             open_t.head_ = inhead.id_
             open_t.deprel_ = "punct"
 
-            cleanup_before(sentence, prev_cnt, open_t, inhead, close_t, logger)
-            cleanup_inside(sentence, open_t, inhead, close_t)
-            cleanup_after(sentence, prev_cnt, open_t, close_t, logger)
+            cleanup_all(sentence, prev_cnt, open_t, inhead, close_t, logger)
 
             print_tokens(sentence, prev_t, close_t, logger, start="===6===", end="^^^^")
             return True

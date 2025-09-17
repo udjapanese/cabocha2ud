@@ -21,7 +21,7 @@ BUNSETU_NOHEAD_MATCH_RE = re.compile(
     r"(?!空白|補助記号|記号|URL)"
 )
 
-POS_RULE_FILE = "conf/bccwj_pos_suw_rule.yaml"
+POS_RULE_FILE = "conf/pos_suw_rule.yaml"
 
 POS_RULE_FUNC: dict = {
     "pos": re.compile,

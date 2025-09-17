@@ -196,7 +196,7 @@ def regex_suffixstring(self: Word, word: Optional[list[Word]], suffixstring: str
         if wrd is None:
             return False
         bunmatu_str = "".join([
-            w.surface for w in wrd.bunsetu[wrd.word_pos+1:]
+            w.get_surface() for w in wrd.bunsetu[wrd.word_pos+1:]
         ])
         if re.match(suffixstring, bunmatu_str):
             return True
